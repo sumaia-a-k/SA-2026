@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Framework UML</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de; --edge:#6b7487;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --iface:#0b7f91; --iface-bg:#e1f5f7;
+  --abs:#6741d9;   --abs-bg:#eee8fd;
+  --cls:#1971c2;   --cls-bg:#e4f0fb;
+  --uninf:#d9480f; --uninf-bg:#fff0e6;
+  --inf:#2b8a3e;   --inf-bg:#e5f5e9;
+  --local:#7a828c; --local-bg:#f1f3f5;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --str:#2b8a3e; --com:#868e96; --num:#c2410c;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052; --edge:#8a93a6;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --iface:#4fd1e0; --iface-bg:#0f2e34;
+    --abs:#b9a3ff;   --abs-bg:#271f3f;
+    --cls:#7cc4ff;   --cls-bg:#13283c;
+    --uninf:#ffa463; --uninf-bg:#3a2414;
+    --inf:#6fdc85;   --inf-bg:#152f1c;
+    --local:#aab2bc; --local-bg:#252a33;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --str:#8ce99a; --com:#7d8696; --num:#ffa94d;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052; --edge:#8a93a6;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --iface:#4fd1e0; --iface-bg:#0f2e34;
+  --abs:#b9a3ff;   --abs-bg:#271f3f;
+  --cls:#7cc4ff;   --cls-bg:#13283c;
+  --uninf:#ffa463; --uninf-bg:#3a2414;
+  --inf:#6fdc85;   --inf-bg:#152f1c;
+  --local:#aab2bc; --local-bg:#252a33;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --str:#8ce99a; --com:#7d8696; --num:#ffa94d;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+
+header {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  padding: 18px 24px 10px; max-width: 1500px; margin: 0 auto;
+}
+header h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.actions { display: flex; gap: 8px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 7px 14px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+:root[data-theme="dark"] button.primary { color: #10131a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) button.primary { color: #10131a; } }
+
+main {
+  display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr); gap: 18px;
+  padding: 8px 24px 28px; max-width: 1500px; margin: 0 auto; align-items: start;
+}
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+#diagramCard { padding: 10px; }
+#diagram { width: 100%; height: auto; display: block; }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 8px 8px 4px; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 6px;
+}
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; display: inline-block; }
+.legend svg { overflow: visible; }
+
+#panel { padding: 22px 24px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+#panel h2 { margin: 6px 0 4px; font-size: 24px; }
+#panel h3 { margin: 22px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+#panel .lead { font-size: 16px; margin: 6px 0 12px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 99px; }
+.b-interface { color: var(--iface); background: var(--iface-bg); }
+.b-abstract  { color: var(--abs);   background: var(--abs-bg); }
+.b-class     { color: var(--cls);   background: var(--cls-bg); }
+.b-uninf     { color: var(--uninf); background: var(--uninf-bg); }
+.b-inf       { color: var(--inf);   background: var(--inf-bg); }
+.b-local     { color: var(--local); background: var(--local-bg); }
+.analogy {
+  background: var(--accent-bg); border-radius: 10px; padding: 10px 14px; margin: 12px 0;
+  border-left: 4px solid var(--accent);
+}
+.analogy b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.tip { border-left: 4px solid var(--uninf); background: var(--uninf-bg); border-radius: 10px; padding: 10px 14px; margin: 12px 0; }
+.tip b { color: var(--uninf); }
+.formula { font-family: ui-monospace, Consolas, monospace; font-size: 15px; font-weight: 600; text-align: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px; margin: 8px 0 4px; }
+.fnote { font-size: 13px; color: var(--muted); }
+ul.tight { margin: 6px 0 0; padding-left: 20px; } ul.tight li { margin: 3px 0; }
+dl.members { margin: 0; }
+dl.members dt { margin-top: 10px; }
+dl.members dt code { font-size: 13px; background: var(--code-bg); padding: 2px 7px; border-radius: 6px; border: 1px solid var(--line); }
+dl.members dd { margin: 4px 0 0 2px; color: var(--ink); }
+pre {
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 8px 0;
+}
+.kw { color: var(--kw); } .ty { color: var(--ty); } .str { color: var(--str); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+td.yes { color: var(--inf); font-weight: 600; } td.no { color: var(--uninf); font-weight: 600; }
+.facts td:first-child { color: var(--muted); width: 40%; }
+.links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.links button { padding: 3px 10px; font-size: 13px; }
+.tourbox { background: var(--accent-bg); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+.tourbox .step { font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.tourbox h4 { margin: 4px 0 6px; font-size: 17px; }
+.tourbox p { margin: 0 0 10px; }
+.tourbox .nav { display: flex; gap: 8px; }
+.howto li { margin: 4px 0; }
+
+/* ---------- SVG ---------- */
+.cls { cursor: pointer; outline: none; transition: opacity .2s; }
+.cls .box { fill: var(--surface); stroke-width: 1.6; }
+.cls .div { stroke-width: 1; }
+.cls text { fill: var(--ink); }
+.cls .name { font-weight: 700; font-size: 15px; }
+.cls .stereo { font-size: 11px; fill: var(--muted); }
+.cls .mem { font-size: 11.5px; }
+.cls .mem .c { fill: var(--muted); }
+.cls .sub { font-size: 11px; fill: var(--muted); }
+.cls .abs-m { font-style: italic; }
+.k-interface .box { stroke: var(--iface); } .k-interface .head { fill: var(--iface-bg); } .k-interface .div { stroke: var(--iface); }
+.k-abstract  .box { stroke: var(--abs); }   .k-abstract  .head { fill: var(--abs-bg); }   .k-abstract  .div { stroke: var(--abs); }
+.k-class     .box { stroke: var(--cls); }   .k-class     .head { fill: var(--cls-bg); }   .k-class     .div { stroke: var(--cls); }
+.g-uninf .box { stroke: var(--uninf); fill: var(--uninf-bg); }
+.g-inf   .box { stroke: var(--inf);   fill: var(--inf-bg); }
+.g-local .box { stroke: var(--local); fill: var(--local-bg); stroke-dasharray: 6 4; }
+.cls:hover .box, .cls:focus-visible .box { stroke-width: 2.6; }
+.cls.sel .box { stroke-width: 3.2; filter: drop-shadow(0 0 6px var(--accent)); }
+.cls.dim, .edge.dim { opacity: .22; }
+.edge path.line { fill: none; stroke: var(--edge); stroke-width: 1.5; transition: stroke .2s; }
+.edge.dashed path.line { stroke-dasharray: 6 4; }
+.edge path.hit { fill: none; stroke: transparent; stroke-width: 12; }
+.edge.on path.line { stroke: var(--accent); stroke-width: 2.4; }
+.edge text { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.edge.on text { fill: var(--accent); font-weight: 600; }
+.mk-open { fill: none; stroke: var(--edge); stroke-width: 1.5; }
+.mk-tri { fill: var(--surface); stroke: var(--edge); stroke-width: 1.5; }
+.edge.on .mk-open, .edge.on .mk-tri { stroke: var(--accent); }
+
+@media (max-width: 980px) {
+  main { grid-template-columns: 1fr; padding: 8px 16px 24px; }
+  header { padding: 16px 16px 8px; }
+  #panel { position: static; max-height: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Search Framework: Interactive UML</h1>
+    <p>Intelligent Search Algorithms · Latakia University · Click any class to learn what it does.</p>
+  </div>
+  <div class="actions">
+    <button class="primary" id="tourBtn">Start guided tour</button>
+    <button id="themeBtn" aria-label="Toggle dark mode">Dark / Light</button>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="diagramCard">
+    <svg id="diagram" viewBox="0 0 1100 690" role="img" aria-label="UML class diagram of the search framework"></svg>
+    <div class="legend">
+      <span><i class="sw" style="border-color:var(--iface);background:var(--iface-bg)"></i>Interface</span>
+      <span><i class="sw" style="border-color:var(--abs);background:var(--abs-bg)"></i>Abstract class</span>
+      <span><i class="sw" style="border-color:var(--cls);background:var(--cls-bg)"></i>Class</span>
+      <span><i class="sw" style="border-color:var(--uninf);background:var(--uninf-bg)"></i>Uninformed search</span>
+      <span><i class="sw" style="border-color:var(--inf);background:var(--inf-bg)"></i>Informed search</span>
+      <span><i class="sw" style="border-color:var(--local);background:var(--local-bg);border-style:dashed"></i>Planned</span>
+      <span><svg width="34" height="10"><line x1="0" y1="5" x2="34" y2="5" stroke="var(--edge)" stroke-width="1.5"/></svg>has / holds</span>
+      <span><svg width="34" height="10"><line x1="0" y1="5" x2="34" y2="5" stroke="var(--edge)" stroke-width="1.5" stroke-dasharray="6 4"/></svg>uses</span>
+      <span><svg width="34" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="var(--edge)" stroke-width="1.5"/><path d="M24,1 L33,6 L24,11 z" fill="var(--surface)" stroke="var(--edge)" stroke-width="1.5"/></svg>extends</span>
+    </div>
+  </section>
+
+  <aside class="card" id="panel" aria-live="polite"></aside>
+</main>
+
+<script>
+/* ================= DATA ================= */
+const CLASSES = {
+  IAction: { kind:'interface', x:30, y:30, w:300,
+    methods:['+ apply(State): Collection<State>', '+ getName(): String'] },
+  Problem: { kind:'abstract', x:385, y:30, w:345,
+    methods:['~+ getInitialState(): State', '~+ isGoal(State): boolean', '~+ getActions(): List<IAction>',
+             '~+ getActionCost(State, IAction, State): double', '+ getHeuristicFunction(): HeuristicFunction',
+             '+ solve(SearchAlgorithm): Node'] },
+  HeuristicFunction: { kind:'interface', x:790, y:30, w:280, methods:['+ getH(State): double'] },
+  State: { kind:'interface', x:30, y:250, w:300,
+    methods:['+ isGoal(): boolean', '+ toString(): String', '+ equals(Object): boolean', '+ hashCode(): int'] },
+  Node: { kind:'class', x:385, y:250, w:345,
+    fields:['- state: State', '- parent: Node', '- action: IAction', '- pathCost: double  // g(n)',
+            '- totalCost: double // f(n)', '- depth: int', '- visitingOrder: int'],
+    methods:['+ getState(), getParent(), ...  // getters', '+ isRootNode(): boolean',
+             '+ getPathFromRoot(): List<Node>', '+ compareTo(Node): int', '+ equals(Object): boolean'] },
+  SearchAlgorithm: { kind:'abstract', x:790, y:250, w:280,
+    fields:['# useGraphSearch: boolean', '+ developedNodes: int', '+ nodesActuallyExpanded: int'],
+    methods:['~+ search(Problem): Node'] },
+};
+
+const ALGS = [
+  { id:'BFS', name:'BFS', full:'Breadth-First Search', group:'uninf', sub:'Queue (FIFO)',
+    frontier:'Queue (FIFO), a LinkedList', picks:'The oldest node, so the shallowest level first',
+    complete:'Yes', optimal:'Yes, if all moves cost the same', usesH:'No', memory:'High: O(b^d)',
+    lead:'BFS explores the tree level by level. It finishes all nodes at depth 1, then depth 2, and so on.',
+    analogy:'Like ripples in water: the circle grows evenly in all directions.',
+    code:'// The ONLY special thing: a FIFO queue\nprivate Queue<Node> frontier = new LinkedList<>();\n\nNode currentNode = frontier.poll();   // take the OLDEST node' },
+  { id:'DFS', name:'DFS', full:'Depth-First Search', group:'uninf', sub:'Stack (LIFO)',
+    frontier:'Stack (LIFO)', picks:'The newest node, so the deepest path first',
+    complete:'No: it can go down forever or loop (tree search)', optimal:'No', usesH:'No', memory:'Low: O(b·m)',
+    lead:'DFS goes deep down one path until it hits a dead end. Then it goes back and tries the next path.',
+    analogy:'Like walking in a maze and always taking the first corridor until you hit a wall, then stepping back.',
+    code:'// The ONLY special thing: a LIFO stack\nprivate Stack<Node> frontier = new Stack<>();\n\nNode currentNode = frontier.pop();    // take the NEWEST node' },
+  { id:'LimitedDFS', name:'Limited DFS', full:'Depth-Limited Search', group:'uninf', sub:'Stack + depth limit',
+    frontier:'Stack (LIFO) + a depth limit l', picks:'The newest node, but never goes deeper than l',
+    complete:'Only if the goal is at depth ≤ l', optimal:'No', usesH:'No', memory:'Low: O(b·l)',
+    lead:'Depth-limited DFS is DFS with a safety rule. It stops going deeper when it reaches the depth limit.',
+    analogy:'Like exploring a cave with a rope of fixed length. You cannot go further than the rope.',
+    code:'LimitedDFS algo = new LimitedDFS(5);   // depth limit = 5\n\nif (currentNode.getDepth() >= depthLimit) {\n    continue;   // at the limit: do not expand\n}' },
+  { id:'UCS', name:'UCS', full:'Uniform Cost Search', group:'uninf', sub:'Priority by g(n)',
+    frontier:'PriorityQueue sorted by g(n)', picks:'The node with the cheapest path so far',
+    complete:'Yes, if every move costs more than 0', optimal:'Yes', usesH:'No', memory:'High',
+    lead:'UCS always expands the node with the lowest path cost g(n). It is the same idea as Dijkstra’s algorithm.',
+    analogy:'Like a taxi driver who always continues the cheapest trip found so far.',
+    code:'private Queue<Node> frontier = new PriorityQueue<>();\n\n// totalCost = pathCost = g(n)\nNode child = new Node(s, currentNode, action, pathCost);' },
+  { id:'Greedy', name:'Greedy', full:'Greedy Best-First Search', group:'inf', sub:'Priority by h(n)',
+    frontier:'PriorityQueue sorted by h(n)', picks:'The node that LOOKS closest to the goal',
+    complete:'No: it can loop (tree search)', optimal:'No', usesH:'Yes, only h(n)', memory:'High in the worst case',
+    lead:'Greedy only looks at the heuristic h(n). It ignores how much it has already paid.',
+    analogy:'Like walking straight toward the exit you can see, even if there is a long wall in the way.',
+    code:'// f(n) = h(n)  (ignore the cost so far)\ndouble h = p.getHeuristicFunction().getH(s);\nNode child = new Node(s, currentNode, action, pathCost, h);' },
+  { id:'AStar', name:'A*', full:'A* Search', group:'inf', sub:'Priority by g(n) + h(n)',
+    frontier:'PriorityQueue sorted by f(n) = g(n) + h(n)', picks:'The node with the best total estimate',
+    complete:'Yes', optimal:'Yes, if h is admissible (and consistent for graph search)', usesH:'Yes, g(n) + h(n)', memory:'High',
+    lead:'A* combines UCS and Greedy. It looks at the cost already paid AND the guess of the cost that is left.',
+    analogy:'Like a GPS: “I drove 20 km, and about 15 km are left, so this route is about 35 km.”',
+    code:'// f(n) = g(n) + h(n)\ndouble h = p.getHeuristicFunction().getH(s);\ndouble f = pathCost + h;\nNode child = new Node(s, currentNode, action, pathCost, f);' },
+  { id:'Hill', name:'Hill Climbing', full:'Hill Climbing', group:'local', sub:'planned for 2026',
+    frontier:'No frontier: only the current state', picks:'The best neighbour of the current state',
+    complete:'No', optimal:'No: it can get stuck on a local peak', usesH:'Yes, to compare neighbours', memory:'Very low: O(1)',
+    lead:'Hill climbing is a local search. It keeps only one state and always moves to a better neighbour. It stops when no neighbour is better.',
+    analogy:'Like climbing a mountain in fog: you always step uphill, but you may stop on a small hill, not the highest peak.',
+    code:'// Idea (not in the 2025 code yet)\nState current = p.getInitialState();\nwhile (true) {\n    State best = bestNeighbour(current);\n    if (h(best) >= h(current)) return current;  // no better neighbour\n    current = best;\n}',
+    note:'This class was in the old diagram, but it is not in the 2025 code yet. It is a good candidate for 2026.' },
+];
+ALGS.forEach((a, i) => { a.x = 38 + i * 148; a.y = 610; a.w = 136; a.h = 58; });
+
+const EDGES = [
+  { from:'Problem', to:'IAction', d:'M385,80 H331', label:[358,72,'has'], tip:'A Problem has a list of actions (getActions)' },
+  { from:'Problem', to:'HeuristicFunction', d:'M730,68 H789', label:[760,60,'uses'], tip:'A Problem can give a heuristic (getHeuristicFunction)' },
+  { from:'Problem', to:'State', dashed:true, d:'M385,170 H360 V275 H331', tip:'A Problem gives the initial State and checks goal States' },
+  { from:'Problem', to:'SearchAlgorithm', dashed:true, d:'M730,170 H760 V305 H789', label:[766,236,'solve()','start'], tip:'problem.solve(algorithm) calls algorithm.search(problem)' },
+  { from:'SearchAlgorithm', to:'Node', dashed:true, d:'M790,345 H731', label:[760,337,'returns'], tip:'search() builds Nodes and returns the goal Node' },
+  { from:'Node', to:'State', d:'M385,320 H331', label:[358,312,'holds'], tip:'Each Node holds one State' },
+  { from:'Node', to:'IAction', d:'M385,470 H14 V78 H29', label:[200,462,'made by action'], tip:'A Node remembers the action that created it' },
+  { from:'Node', to:'Node', d:'M730,450 H760 V490 H731', label:[766,474,'parent','start'], tip:'Each Node points to its parent Node' },
+  { from:'IAction', to:'State', dashed:true, d:'M150,124 V249', label:[158,190,'apply(State)','start'], tip:'apply() takes a State and returns new States' },
+  { from:'HeuristicFunction', to:'State', dashed:true, d:'M840,106 V222 H260 V249', label:[560,214,'getH(State)'], tip:'getH() estimates the distance from a State to the goal' },
+];
+
+const C = {
+  IAction: {
+    lead:'An action is a move. It takes a state and returns the new state(s) you can reach.',
+    analogy:'Like a button on a game controller. Press “Up” and the player moves up, unless there is a wall.',
+    members:[
+      ['apply(State s)', 'Tries the move on state s and returns the new states. If the move is not allowed, it returns an empty collection.'],
+      ['getName()', 'A readable name, like “Moving up”. It is useful when you print the solution.'],
+    ],
+    tip:'<b>Why a Collection and not one State?</b> Some actions can lead to many states, for example “move to a neighbour city”. If the move is not allowed, the collection is simply empty.',
+    maze:'Four classes: <code>MoveUp</code>, <code>MoveDown</code>, <code>MoveLeft</code>, <code>MoveRight</code>.',
+    code:'public class MoveUp implements IAction {\n    public Collection<State> apply(State s) {\n        Collection<State> next = new ArrayList<>();\n        MazeState cur = (MazeState) s;\n        int row = cur.getStateRow() - 1;      // one row up\n        int col = cur.getStateCol();\n        if (Maze.getInstance().isEmpty(row, col)) {\n            next.add(new MazeState(row, col));\n        }\n        return next;                          // empty = wall\n    }\n    public String getName() { return "Moving up"; }\n}' },
+  State: {
+    lead:'A state is a snapshot of the world at one moment.',
+    analogy:'Like a photo of the game board. It shows where everything is right now.',
+    members:[
+      ['isGoal()', 'Returns true if this state is the goal.'],
+      ['toString()', 'How to print the state, so we can see it on the screen.'],
+      ['equals(Object o)', 'Two states are equal if they describe the same situation. The algorithms need this to find repeated states.'],
+      ['hashCode()', 'Must agree with equals(). It is needed for HashSet and HashMap.'],
+    ],
+    tip:'<b>Always override equals() AND hashCode() together.</b> If you forget, graph search cannot see that a state was already visited, and it may loop forever.',
+    maze:'<code>MazeState</code> stores only the player position: <code>row</code> and <code>col</code>. <code>equals()</code> and <code>hashCode()</code> both use these two values, so they always agree.',
+    code:'public class MazeState implements State {\n    private final int stateRow, stateCol;\n\n    public boolean isGoal() {\n        Maze m = Maze.getInstance();\n        return stateRow == m.getMazeDoorRow()\n            && stateCol == m.getMazeDoorCol();\n    }\n\n    public boolean equals(Object o) {\n        if (!(o instanceof MazeState)) return false;\n        MazeState s = (MazeState) o;\n        return s.stateRow == stateRow && s.stateCol == stateCol;\n    }\n\n    // equal states MUST give the same hash code\n    public int hashCode() {\n        return 92821 * stateRow + stateCol;   // big prime = fewer collisions\n        // or simply: return Objects.hash(stateRow, stateCol);\n    }\n}' },
+  HeuristicFunction: {
+    lead:'A heuristic is a smart guess: “How far is this state from the goal?”',
+    analogy:'Like looking at a map and saying “the exit is about 5 steps away”, without walking there.',
+    members:[
+      ['getH(State s)', 'Returns h(n): the estimated cost from state s to the goal.'],
+    ],
+    tip:'<b>1 · Admissible:</b> it never over-estimates. It never says the goal is further than it really is.' +
+        '<div class="formula">h(n) ≤ h*(n)</div>' +
+        '<span class="fnote">h*(n) = the real cheapest cost from n to the goal.</span>' +
+        '<br><br><b>2 · Consistent (monotone):</b> the guess never drops by more than the step you take. Moving one step can lower h by at most the cost of that step.' +
+        '<div class="formula">h(n) ≤ c(n, a, n′) + h(n′)</div>' +
+        '<span class="fnote">n′ = a child of n · c(n, a, n′) = the cost of the step · h(goal) = 0.</span>' +
+        '<br><br><b>How they connect:</b> every consistent heuristic is also admissible, but not every admissible one is consistent.' +
+        '<ul class="tight"><li>A* <b>tree search</b> is optimal if h is <b>admissible</b>.</li>' +
+        '<li>A* <b>graph search</b> is optimal if h is <b>consistent</b>. With a consistent h, the first time A* expands a state, it has already found the cheapest path to it.</li></ul>',
+    maze:'<code>ManhattanDistanceHuristic</code>: |row − doorRow| + |col − doorCol|. It counts the steps you would need if there were no walls. ' +
+         'It is <b>admissible</b> because walls can only make the path longer. It is also <b>consistent</b>: each move costs 1 and changes the Manhattan distance by exactly 1, so h(n) ≤ 1 + h(n′) is always true.',
+    code:'public class ManhattanDistanceHuristic implements HeuristicFunction {\n    public double getH(State s) {\n        MazeState cur = (MazeState) s;\n        Maze m = Maze.getInstance();\n        return Math.abs(m.getMazeDoorRow() - cur.getStateRow())\n             + Math.abs(m.getMazeDoorCol() - cur.getStateCol());\n    }\n}',
+    used:'Only Greedy (uses h) and A* (uses g + h). BFS, DFS and UCS do not use it.' },
+  Problem: {
+    lead:'The Problem class describes the whole puzzle: where we start, what the goal is, which moves exist, and how much each move costs.',
+    analogy:'Like the rules sheet of a game.',
+    members:[
+      ['getInitialState()', 'The state where the search starts.'],
+      ['isGoal(State s)', 'Returns true if s is a goal state.'],
+      ['getActions()', 'The list of all moves (IAction) in this problem.'],
+      ['getActionCost(s, a, s2)', 'The cost of going from s to s2 with action a. In the maze it is always 1.'],
+      ['getHeuristicFunction()', 'Optional. By default it throws an error. Override it if you want to use Greedy or A*.'],
+      ['solve(SearchAlgorithm sa)', 'Runs the algorithm on this problem. It simply calls sa.search(this).'],
+    ],
+    tip:'<b>Abstract class:</b> you cannot create a Problem directly. For each new puzzle you write a class that <i>extends</i> Problem.',
+    maze:'<code>MazeProblem extends Problem</code>. It reads the maze, creates the start <code>MazeState</code>, the 4 moves, and the Manhattan heuristic.',
+    code:'Problem problem = new MazeProblem();\nSearchAlgorithm algo = new AStar(true);   // true = graph search\n\nNode goal = problem.solve(algo);\n\nif (goal != null) {\n    for (Node n : goal.getPathFromRoot()) {\n        System.out.println(n.getState());\n    }\n}' },
+  Node: {
+    lead:'A Node is one box in the search tree. It wraps a state and remembers how we got there.',
+    analogy:'Like a breadcrumb on a path. It knows where you are, which step you took, and which breadcrumb came before it.',
+    members:[
+      ['state', 'The State inside this node.'],
+      ['parent', 'The node before this one. It is null for the start (root) node.'],
+      ['action', 'The action that created this node.'],
+      ['pathCost  →  g(n)', 'The real cost from the start to this node.'],
+      ['totalCost  →  f(n)', 'The value the PriorityQueue uses to sort. UCS: g · Greedy: h · A*: g + h.'],
+      ['depth', 'How many steps from the root.'],
+      ['visitingOrder', 'When the algorithm picked this node (1, 2, 3…). It is very useful for tracing on paper.'],
+      ['getPathFromRoot()', 'Follows the parent links back to the start and returns the full path.'],
+      ['compareTo(Node)', 'Compares totalCost, so the PriorityQueue always gives the smallest f(n) first.'],
+    ],
+    tip:'<b>State ≠ Node.</b> The same state can appear in many nodes if we reach it by different paths. Each node has its own parent and cost.',
+    maze:'A node can hold <code>MazeState(2,3)</code>, with parent = the node at (3,3), action = MoveUp and pathCost = 4.',
+    code:'public List<Node> getPathFromRoot() {\n    List<Node> path = new ArrayList<>();\n    Node current = this;\n    while (!current.isRootNode()) {\n        path.add(0, current);          // add at the front\n        current = current.getParent();\n    }\n    path.add(0, current);              // the root\n    return path;\n}' },
+  SearchAlgorithm: {
+    lead:'The parent of all search strategies. Every algorithm must implement search(Problem). It returns the goal Node, or null if there is no solution.',
+    analogy:'Different ways to find your lost keys: room by room (BFS), one room very deep first (DFS), or the place that looks most likely first (Greedy, A*).',
+    members:[
+      ['useGraphSearch', 'false = tree search: it may visit the same state again. true = graph search: it remembers explored states and never repeats them.'],
+      ['developedNodes', 'How many child states were <b>generated</b> (created) in total. After apply(), it grows by the number of new states.'],
+      ['nodesActuallyExpanded', 'How many nodes were <b>expanded</b>: taken from the frontier, and their children generated. It grows by 1 for each expanded node.'],
+      ['search(Problem p)', 'Abstract. Each algorithm writes its own version.'],
+    ],
+    tip:'<b>Generated vs expanded: what is the difference?</b><br>' +
+        '<b>Expanded</b> = we <i>open</i> a node: take it out of the frontier and look at its children. ' +
+        '<b>Generated (developed)</b> = we <i>create</i> a child node. It goes into the frontier but may never be opened.' +
+        '<br><br><b>Example:</b> the start node has 3 children.<br>' +
+        'After expanding the start node: <code>nodesActuallyExpanded = 1</code>, <code>developedNodes = 3</code>.' +
+        '<br><br>So <b>developedNodes ≥ nodesActuallyExpanded</b> most of the time. ' +
+        'The goal node is <b>not</b> counted as expanded, because we return it before we expand it. ' +
+        'In graph search, a state that was already explored is skipped, so it is not counted as expanded either.' +
+        '<br><br><b>Why both?</b> They measure two different costs: expanded ≈ <b>time</b> (work done), generated ≈ <b>memory</b> (nodes created).',
+    code:'frontier = { startNode }\nwhile (frontier is not empty) {\n    node = frontier.pick();      // <- the ONLY big difference!\n    if (p.isGoal(node.state)) return node;   // goal: not expanded\n\n    nodesActuallyExpanded++;     // we open this node\n    for (IAction a : p.getActions()) {\n        Collection<State> next = a.apply(node.state);\n        developedNodes += next.size();       // children created\n        for (State s : next)\n            frontier.add(new Node(s, node, a, cost));\n    }\n}\nreturn null;                     // no solution' },
+};
+
+const TOUR = [
+  { id:'State', title:'1 · Describe the world', text:'First, decide what one situation looks like. This is the <b>State</b>. In the maze, it is just the player’s row and column.' },
+  { id:'IAction', title:'2 · Define the moves', text:'Next, list the moves that change one state into another. Each move is an <b>IAction</b>.' },
+  { id:'HeuristicFunction', title:'3 · (Optional) Add a smart guess', text:'For smart algorithms (Greedy, A*), give a guess of the distance to the goal. This is the <b>HeuristicFunction</b>.' },
+  { id:'Problem', title:'4 · Put it together', text:'The <b>Problem</b> joins everything: start state, goal test, moves, costs and heuristic.' },
+  { id:'SearchAlgorithm', title:'5 · Choose a strategy', text:'Pick a <b>SearchAlgorithm</b> (BFS, DFS, UCS, Greedy, A*…) and call <code>problem.solve(algo)</code>.' },
+  { id:'Node', title:'6 · Read the answer', text:'The algorithm builds a tree of <b>Nodes</b>. It returns the goal Node. Call <code>getPathFromRoot()</code> to see every step of the solution.' },
+];
+
+/* ================= HELPERS ================= */
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('diagram');
+const panel = document.getElementById('panel');
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const KW = 'public|private|protected|class|interface|extends|implements|return|new|if|else|for|while|true|false|null|final|static|void|int|double|boolean|continue|instanceof|this';
+function highlight(code) {
+  const re = new RegExp('(//.*$)|("(?:[^"\\\\]|\\\\.)*")|\\b(' + KW + ')\\b|\\b([A-Z][A-Za-z0-9_]*)\\b|\\b(\\d+(?:\\.\\d+)?)\\b', 'gm');
+  let out = '', last = 0, m;
+  while ((m = re.exec(code))) {
+    out += esc(code.slice(last, m.index));
+    const cls = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : m[4] ? 'ty' : 'num';
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(code.slice(last));
+}
+
+/* ================= DRAW ================= */
+const defs = el('defs', {}, svg);
+const mOpen = el('marker', { id:'arrow', viewBox:'0 0 12 12', refX:11, refY:6, markerWidth:12, markerHeight:12, orient:'auto', markerUnits:'userSpaceOnUse' }, defs);
+el('path', { d:'M1,1 L11,6 L1,11', class:'mk-open' }, mOpen);
+const mOpenOn = el('marker', { id:'arrowOn', viewBox:'0 0 12 12', refX:11, refY:6, markerWidth:12, markerHeight:12, orient:'auto', markerUnits:'userSpaceOnUse' }, defs);
+el('path', { d:'M1,1 L11,6 L1,11', class:'mk-open', style:'stroke:var(--accent)' }, mOpenOn);
+const mTri = el('marker', { id:'tri', viewBox:'0 0 16 16', refX:15, refY:8, markerWidth:16, markerHeight:16, orient:'auto', markerUnits:'userSpaceOnUse' }, defs);
+el('path', { d:'M1,1 L15,8 L1,15 z', class:'mk-tri' }, mTri);
+const mTriOn = el('marker', { id:'triOn', viewBox:'0 0 16 16', refX:15, refY:8, markerWidth:16, markerHeight:16, orient:'auto', markerUnits:'userSpaceOnUse' }, defs);
+el('path', { d:'M1,1 L15,8 L1,15 z', class:'mk-tri', style:'stroke:var(--accent)' }, mTriOn);
+
+const edgeLayer = el('g', {}, svg);
+const boxLayer = el('g', {}, svg);
+const edgeEls = [];
+
+function addEdge(e, extraClass) {
+  const g = el('g', { class:'edge' + (e.dashed ? ' dashed' : '') + (extraClass ? ' ' + extraClass : '') }, edgeLayer);
+  const marker = e.tri ? 'tri' : 'arrow';
+  el('path', { d:e.d, class:'hit' }, g);
+  const line = el('path', { d:e.d, class:'line', 'marker-end':`url(#${marker})` }, g);
+  if (e.tip) el('title', {}, g).textContent = e.tip;
+  if (e.label) {
+    const t = el('text', { x:e.label[0], y:e.label[1], 'text-anchor':e.label[3] || 'middle' }, g);
+    t.textContent = e.label[2];
+  }
+  edgeEls.push({ g, line, marker, ...e });
+}
+EDGES.forEach(e => addEdge(e));
+
+// inheritance: each algorithm -> bus -> SearchAlgorithm
+const busY = 585, trunkX = 930;
+ALGS.forEach(a => addEdge({ from:a.id, to:'SearchAlgorithm', d:`M${a.x + a.w/2},${a.y} V${busY}` }));
+addEdge({ from:'*', to:'SearchAlgorithm', d:`M${ALGS[0].x + ALGS[0].w/2},${busY} H${ALGS[ALGS.length-1].x + ALGS[ALGS.length-1].w/2}`, inh:true });
+addEdge({ from:'*', to:'SearchAlgorithm', d:`M${trunkX},${busY} V393`, tri:true, inh:true, tip:'All algorithms extend SearchAlgorithm' });
+edgeEls.forEach(e => { if (e.from !== '*' && ALGS.some(a => a.id === e.from)) e.inh = true; });
+// the stems have no arrow head
+edgeEls.filter(e => e.inh && !e.tri).forEach(e => { e.line.removeAttribute('marker-end'); e.marker = null; });
+
+function boxHeight(c) {
+  return 46 + (c.fields ? c.fields.length * 18 + 12 : 0) + c.methods.length * 18 + 12;
+}
+function memberText(parent, x, y, raw) {
+  const isAbs = raw.startsWith('~');
+  const s = isAbs ? raw.slice(1) : raw;
+  const t = el('text', { x, y, class:'mem mono' + (isAbs ? ' abs-m' : '') }, parent);
+  const i = s.indexOf('//');
+  const main = el('tspan', {}, t); main.textContent = i >= 0 ? s.slice(0, i) : s;
+  if (i >= 0) { const c = el('tspan', { class:'c' }, t); c.textContent = s.slice(i); }
+}
+const boxEls = {};
+function drawClass(id, c) {
+  const h = c.h = boxHeight(c);
+  const g = el('g', { class:`cls k-${c.kind}`, 'data-id':id, tabindex:0, role:'button', 'aria-label':`${id} (${c.kind})` }, boxLayer);
+  el('rect', { x:c.x, y:c.y, width:c.w, height:h, rx:9, class:'box' }, g);
+  el('path', { d:`M${c.x+1},${c.y+46} V${c.y+9} a8,8 0 0 1 8,-8 H${c.x+c.w-9} a8,8 0 0 1 8,8 V${c.y+46} Z`, class:'head' }, g);
+  const cx = c.x + c.w / 2;
+  const stereo = c.kind === 'interface' ? '«interface»' : c.kind === 'abstract' ? '«abstract»' : null;
+  if (stereo) el('text', { x:cx, y:c.y + 17, 'text-anchor':'middle', class:'stereo' }, g).textContent = stereo;
+  el('text', { x:cx, y:c.y + (stereo ? 36 : 29), 'text-anchor':'middle', class:'name', 'font-style':c.kind === 'abstract' ? 'italic' : 'normal' }, g).textContent = id;
+  let y = c.y + 46;
+  const section = items => {
+    el('line', { x1:c.x, y1:y, x2:c.x + c.w, y2:y, class:'div' }, g);
+    y += 6;
+    items.forEach(m => { memberText(g, c.x + 12, y + 13, m); y += 18; });
+    y += 6;
+  };
+  if (c.fields) section(c.fields);
+  section(c.methods);
+  boxEls[id] = g;
+}
+function drawAlg(a) {
+  const g = el('g', { class:`cls g-${a.group}`, 'data-id':a.id, tabindex:0, role:'button', 'aria-label':a.full }, boxLayer);
+  el('rect', { x:a.x, y:a.y, width:a.w, height:a.h, rx:9, class:'box' }, g);
+  el('text', { x:a.x + a.w/2, y:a.y + 25, 'text-anchor':'middle', class:'name' }, g).textContent = a.name;
+  el('text', { x:a.x + a.w/2, y:a.y + 44, 'text-anchor':'middle', class:'sub' }, g).textContent = a.sub;
+  boxEls[a.id] = g;
+}
+Object.entries(CLASSES).forEach(([id, c]) => drawClass(id, c));
+ALGS.forEach(drawAlg);
+
+/* ================= INTERACTION ================= */
+const isAlg = id => ALGS.some(a => a.id === id);
+let tourStep = -1;
+
+function neighbours(id) {
+  const n = new Set([id]);
+  EDGES.forEach(e => { if (e.from === id) n.add(e.to); if (e.to === id) n.add(e.from); });
+  if (isAlg(id)) n.add('SearchAlgorithm');
+  if (id === 'SearchAlgorithm') ALGS.forEach(a => n.add(a.id));
+  return n;
+}
+function edgeOn(e, id) {
+  if (e.inh) return id === 'SearchAlgorithm' || (isAlg(id) && (e.from === id || e.from === '*'));
+  return e.from === id || e.to === id;
+}
+function highlightSel(id) {
+  const n = id ? neighbours(id) : null;
+  Object.entries(boxEls).forEach(([k, g]) => {
+    g.classList.toggle('sel', k === id);
+    g.classList.toggle('dim', !!n && !n.has(k));
+  });
+  edgeEls.forEach(e => {
+    const on = !!id && edgeOn(e, id);
+    e.g.classList.toggle('on', on);
+    e.g.classList.toggle('dim', !!id && !on);
+    if (e.marker) e.line.setAttribute('marker-end', `url(#${e.marker}${on ? 'On' : ''})`);
+  });
+}
+
+function linksHTML(id) {
+  const n = [...neighbours(id)].filter(k => k !== id);
+  if (!n.length) return '';
+  return `<h3>Connected to</h3><div class="links">${n.map(k => `<button data-go="${k}">${isAlg(k) ? ALGS.find(a => a.id === k).name : k}</button>`).join('')}</div>`;
+}
+function classHTML(id) {
+  const c = CLASSES[id], d = C[id];
+  const kindLabel = { interface:'Interface', abstract:'Abstract class', class:'Class' }[c.kind];
+  let h = `<span class="badge b-${c.kind}">${kindLabel}</span><h2>${id}</h2><p class="lead">${d.lead}</p>`;
+  h += `<div class="analogy"><b>Think of it like…</b>${d.analogy}</div>`;
+  h += `<h3>Its parts</h3><dl class="members">${d.members.map(([n, t]) => `<dt><code>${esc(n)}</code></dt><dd>${t}</dd>`).join('')}</dl>`;
+  if (d.tip) h += `<div class="tip">${d.tip}</div>`;
+  if (d.used) h += `<h3>Who uses it?</h3><p>${d.used}</p>`;
+  if (id === 'SearchAlgorithm') {
+    h += `<h3>The same loop for every algorithm</h3><pre><code>${highlight(d.code)}</code></pre>`;
+  } else {
+    if (d.maze) h += `<h3>In the Maze example</h3><p>${d.maze}</p>`;
+    h += `<pre><code>${highlight(d.code)}</code></pre>`;
+  }
+  return h + linksHTML(id);
+}
+function algHTML(id) {
+  const a = ALGS.find(x => x.id === id);
+  const grp = { uninf:'Uninformed search', inf:'Informed search', local:'Local search · planned' }[a.group];
+  let h = `<span class="badge b-${a.group}">${grp}</span><h2>${a.full}</h2><p class="lead">${a.lead}</p>`;
+  h += `<div class="analogy"><b>Think of it like…</b>${a.analogy}</div>`;
+  if (a.note) h += `<div class="tip"><b>Note:</b> ${a.note}</div>`;
+  h += `<h3>Quick facts</h3><table class="facts">
+    <tr><td>Frontier</td><td>${a.frontier}</td></tr>
+    <tr><td>Picks next</td><td>${a.picks}</td></tr>
+    <tr><td>Complete?</td><td class="${a.complete.startsWith('Yes') ? 'yes' : 'no'}">${a.complete}</td></tr>
+    <tr><td>Optimal?</td><td class="${a.optimal.startsWith('Yes') ? 'yes' : 'no'}">${a.optimal}</td></tr>
+    <tr><td>Uses heuristic?</td><td>${a.usesH}</td></tr>
+    <tr><td>Memory</td><td>${a.memory}</td></tr></table>`;
+  h += `<h3>Key code</h3><pre><code>${highlight(a.code)}</code></pre>`;
+  if (a.group !== 'local') h += `<p style="color:var(--muted);font-size:13px">It extends <code>SearchAlgorithm</code>. Use <code>new ${a.id}(true)</code> for graph search.</p>`;
+  return h + linksHTML(id);
+}
+function welcomeHTML() {
+  return `<span class="badge b-class">Start here</span><h2>How the framework works</h2>
+  <p class="lead">This diagram shows the Java classes we use to solve <b>any</b> search problem: mazes, the 8-puzzle, maps and more.</p>
+  <div class="analogy"><b>The big idea</b>You describe the puzzle once (State, IAction, Problem). Then you can try <i>any</i> algorithm on it without changing the puzzle code.</div>
+  <h3>How to use this page</h3>
+  <ul class="howto">
+    <li><b>Click</b> a box to see what it does, with examples and code.</li>
+    <li><b>Hover</b> over an arrow to read what it means.</li>
+    <li>Press <b>Start guided tour</b> to follow the 6 steps of solving a problem.</li>
+  </ul>
+  <h3>Read the arrows</h3>
+  <ul class="howto">
+    <li>Solid line: “has / holds” (a field).</li>
+    <li>Dashed line: “uses” (a parameter or return value).</li>
+    <li>Hollow triangle: “extends” (inheritance).</li>
+  </ul>`;
+}
+function tourHTML() {
+  const s = TOUR[tourStep];
+  return `<div class="tourbox"><div class="step">Guided tour · step ${tourStep + 1} of ${TOUR.length}</div>
+    <h4>${s.title}</h4><p>${s.text}</p>
+    <div class="nav"><button id="tPrev" ${tourStep === 0 ? 'disabled' : ''}>Back</button>
+    <button class="primary" id="tNext">${tourStep === TOUR.length - 1 ? 'Finish' : 'Next'}</button>
+    <button id="tExit">Exit tour</button></div></div>`;
+}
+
+function show(id, fromTour) {
+  if (!fromTour) tourStep = -1;
+  highlightSel(id);
+  let h = tourStep >= 0 ? tourHTML() : '';
+  h += !id ? welcomeHTML() : CLASSES[id] ? classHTML(id) : algHTML(id);
+  panel.innerHTML = h;
+  panel.scrollTop = 0;
+  if (window.matchMedia('(max-width: 980px)').matches && id) panel.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function goTour(i) {
+  tourStep = i;
+  if (i < 0 || i >= TOUR.length) { tourStep = -1; show(null); return; }
+  show(TOUR[i].id, true);
+}
+
+boxLayer.addEventListener('click', ev => {
+  const g = ev.target.closest('.cls'); if (g) show(g.dataset.id);
+});
+boxLayer.addEventListener('keydown', ev => {
+  const g = ev.target.closest('.cls');
+  if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); show(g.dataset.id); }
+});
+svg.addEventListener('click', ev => { if (ev.target === svg) show(null); });
+panel.addEventListener('click', ev => {
+  const t = ev.target.closest('button'); if (!t) return;
+  if (t.dataset.go) show(t.dataset.go);
+  else if (t.id === 'tNext') goTour(tourStep + 1);
+  else if (t.id === 'tPrev') goTour(tourStep - 1);
+  else if (t.id === 'tExit') goTour(-1);
+});
+document.getElementById('tourBtn').addEventListener('click', () => goTour(0));
+
+const themeBtn = document.getElementById('themeBtn');
+themeBtn.addEventListener('click', () => {
+  const root = document.documentElement;
+  const cur = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  root.dataset.theme = cur === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('uml-theme', root.dataset.theme); } catch (e) {}
+});
+try { const t = localStorage.getItem('uml-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+show(null);
+</script>
+</body>
+</html>
