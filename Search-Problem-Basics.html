@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Problem Basics</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --wall:#3d4556; --mud:#a0662a; --mud-bg:#f3e3cf;
+  --start:#1971c2; --start-bg:#dbeafb; --goal:#2b8a3e; --goal-bg:#dcf3e2;
+  --ok:#2b8a3e; --bad:#e03131; --warn:#d9480f; --warn-bg:#fff0e6;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --num:#c2410c; --str:#2b8a3e;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --wall:#4a5366; --mud:#e0a96d; --mud-bg:#3b2b1a;
+    --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --wall:#4a5366; --mud:#e0a96d; --mud-bg:#3b2b1a;
+  --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 24px 32px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 22px; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 14px; }
+.steps button { border-radius: 99px; padding: 5px 12px 5px 6px; display: inline-flex; align-items: center; gap: 7px; }
+.steps button .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--accent-bg); color: var(--accent);
+}
+.steps button.on .n { background: var(--surface); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+#boardCard { padding: 14px; }
+#board { width: 100%; height: auto; display: block; touch-action: manipulation; user-select: none; }
+.readout { min-height: 24px; font-size: 14px; color: var(--muted); text-align: center; margin-top: 4px; }
+.readout b { color: var(--ink); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin-top: 10px; }
+.bar .lbl { font-size: 13px; color: var(--muted); }
+#brushes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
+.pad { display: grid; grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(2, 38px); gap: 4px; }
+.pad button { padding: 0; font-size: 18px; }
+.pad .u { grid-column: 2; grid-row: 1; } .pad .l { grid-column: 1; grid-row: 2; }
+.pad .d { grid-column: 2; grid-row: 2; } .pad .r { grid-column: 3; grid-row: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 1px solid var(--line); }
+.hidden { display: none !important; }
+
+#panel { padding: 20px 24px; }
+#panel h2 { margin: 0 0 8px; font-size: 24px; }
+#panel h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.def { font-size: 16px; margin: 0 0 6px; }
+.formula { font-family: ui-monospace, Consolas, monospace; font-weight: 600; font-size: 15px; background: var(--accent-bg);
+  color: var(--accent); border-radius: 8px; padding: 6px 12px; display: inline-block; margin: 4px 0; }
+.maze { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin-top: 12px; }
+.note b { color: var(--warn); }
+.try { margin-top: 12px; font-size: 14px; color: var(--muted); }
+.try b { color: var(--ink); }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 6px 0 0; }
+.kw { color: var(--kw); } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); } .str { color: var(--str); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+.steplist { max-height: 170px; overflow: auto; font-family: ui-monospace, Consolas, monospace; font-size: 13px;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+.big { font-size: 20px; font-weight: 700; }
+.navrow { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); }
+.tablewrap { overflow-x: auto; }
+
+/* board */
+.cell { stroke: var(--line); stroke-width: 1; }
+.free { fill: var(--surface); }
+.wall { fill: var(--wall); }
+.mud  { fill: var(--mud-bg); }
+.cell.startc { fill: var(--start-bg); }
+.cell.goalc  { fill: var(--goal-bg); }
+.click { cursor: pointer; }
+.axis { font-size: 12px; fill: var(--muted); }
+.mark { font-weight: 800; font-size: 15px; pointer-events: none; }
+.mark.s { fill: var(--start); } .mark.g { fill: var(--goal); }
+.mudtxt { fill: var(--mud); font-size: 15px; font-weight: 700; pointer-events: none; }
+.ov { pointer-events: none; }
+.sel { fill: none; stroke: var(--accent); stroke-width: 4; }
+.hov { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 3; }
+.edge { stroke: var(--accent); stroke-width: 2.5; opacity: .55; }
+.dot  { fill: var(--accent); }
+.unreach { fill: var(--muted); opacity: .18; }
+.edge.off { stroke: var(--muted); stroke-dasharray: 4 4; }
+.dot.off { fill: var(--surface); stroke: var(--muted); stroke-width: 2.5; }
+.arrow-ok { stroke: var(--ok); stroke-width: 4; fill: none; }
+.arrow-bad { stroke: var(--bad); stroke-width: 3; fill: none; stroke-dasharray: 3 3; }
+.x { stroke: var(--bad); stroke-width: 4; stroke-linecap: round; }
+.succ { fill: var(--ok); opacity: .16; }
+.costlbl { font-size: 12px; font-weight: 700; fill: var(--ok); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+.walk { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
+.best1 { fill: none; stroke: var(--warn); stroke-width: 4; stroke-dasharray: 8 6; stroke-linecap: round; stroke-linejoin: round; }
+.best2 { fill: none; stroke: var(--goal); stroke-width: 4; stroke-dasharray: 2 7; stroke-linecap: round; stroke-linejoin: round; }
+.plus { font-size: 11px; font-weight: 700; fill: var(--muted); }
+.player { fill: var(--accent); stroke: var(--surface); stroke-width: 3; }
+.pulse { fill: none; stroke-width: 4; animation: pulse 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulse { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding: 14px 16px 28px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Search Problem Basics</h1>
+      <p>Intelligent Search Algorithms · Latakia University · Session 1</p>
+    </div>
+    <button id="themeBtn">Dark / Light</button>
+  </header>
+
+  <nav class="steps" id="steps"></nav>
+
+  <div class="grid">
+    <section class="card" id="boardCard">
+      <svg id="board" viewBox="0 0 464 394" aria-label="Maze board"></svg>
+      <div class="readout" id="readout">Move the mouse over a cell.</div>
+
+      <div class="bar hidden" id="walkBar">
+        <div class="pad">
+          <button class="u" data-dir="0" aria-label="Up">↑</button>
+          <button class="l" data-dir="2" aria-label="Left">←</button>
+          <button class="d" data-dir="1" aria-label="Down">↓</button>
+          <button class="r" data-dir="3" aria-label="Right">→</button>
+        </div>
+        <button id="undoBtn">Undo</button>
+        <button id="restartBtn">Restart</button>
+      </div>
+
+      <div class="bar" id="editBar">
+        <button id="editBtn">Edit maze</button>
+        <span id="brushes" class="hidden">
+          <span class="lbl">Paint:</span>
+          <button data-brush="#">Wall</button>
+          <button data-brush="~">Mud</button>
+          <button data-brush=".">Empty</button>
+          <button data-brush="S">Start</button>
+          <button data-brush="G">Goal</button>
+          <button id="resetMaze">Reset maze</button>
+        </span>
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--start-bg)"></i>S = start</span>
+        <span><i style="background:var(--goal-bg)"></i>G = goal</span>
+        <span><i style="background:var(--surface)"></i>empty (cost 1)</span>
+        <span><i style="background:var(--mud-bg)"></i>mud (cost 3)</span>
+        <span><i style="background:var(--wall)"></i>wall</span>
+      </div>
+    </section>
+
+    <aside class="card" id="panel" aria-live="polite"></aside>
+  </div>
+</div>
+
+<script>
+/* ============ maze ============ */
+const ROWS = 5, COLS = 6;
+const DEFAULT = [
+  'S.....',
+  '.####.',
+  '..~~#.',
+  '###~#.',
+  'G..~..',
+];
+let grid, start, goal;
+function loadDefault() {
+  grid = DEFAULT.map(row => row.split(''));
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (grid[r][c] === 'S') { start = { r, c }; grid[r][c] = '.'; }
+    if (grid[r][c] === 'G') { goal = { r, c }; grid[r][c] = '.'; }
+  }
+}
+loadDefault();
+
+const DIRS = [
+  { name:'Up',    dr:-1, dc:0, sym:'↑' },
+  { name:'Down',  dr:1,  dc:0, sym:'↓' },
+  { name:'Left',  dr:0,  dc:-1, sym:'←' },
+  { name:'Right', dr:0,  dc:1, sym:'→' },
+];
+const same = (a, b) => a && b && a.r === b.r && a.c === b.c;
+const key = s => s.r + ',' + s.c;
+const fmt = s => `(${s.r}, ${s.c})`;
+const inside = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
+const free = (r, c) => inside(r, c) && grid[r][c] !== '#';
+const stepCost = s => grid[s.r][s.c] === '~' ? 3 : 1;
+function result(s, d) { const r = s.r + d.dr, c = s.c + d.dc; return free(r, c) ? { r, c } : null; }
+function whyBlocked(s, d) { return inside(s.r + d.dr, s.c + d.dc) ? 'wall' : 'outside the maze'; }
+function successors(s) { return DIRS.map(d => ({ d, s2: result(s, d) })).filter(x => x.s2); }
+
+function reachable() {
+  const seen = new Set([key(start)]), q = [start];
+  while (q.length) { const s = q.shift(); for (const { s2 } of successors(s)) if (!seen.has(key(s2))) { seen.add(key(s2)); q.push(s2); } }
+  return seen;
+}
+function backtrack(parent, s) { const p = []; while (s) { p.unshift(s); s = parent[key(s)]; } return p; }
+function fewestStepsPath() {
+  const parent = { [key(start)]: null }, q = [start];
+  while (q.length) {
+    const s = q.shift();
+    if (same(s, goal)) return backtrack(parent, s);
+    for (const { s2 } of successors(s)) if (!(key(s2) in parent)) { parent[key(s2)] = s; q.push(s2); }
+  }
+  return null;
+}
+function cheapestPath() {
+  const dist = { [key(start)]: 0 }, parent = { [key(start)]: null }, done = new Set();
+  const open = [start];
+  while (open.length) {
+    open.sort((a, b) => dist[key(a)] - dist[key(b)]);
+    const s = open.shift();
+    if (done.has(key(s))) continue;
+    done.add(key(s));
+    if (same(s, goal)) return backtrack(parent, s);
+    for (const { s2 } of successors(s)) {
+      const g = dist[key(s)] + stepCost(s2);
+      if (!(key(s2) in dist) || g < dist[key(s2)]) { dist[key(s2)] = g; parent[key(s2)] = s; open.push(s2); }
+    }
+  }
+  return null;
+}
+const pathCost = p => p.slice(1).reduce((sum, s) => sum + stepCost(s), 0);
+
+/* ============ app state ============ */
+let tab = 0, sel = { ...start }, hover = null, walk = [{ ...start }], show = { fewest:false, cheapest:false };
+let editing = false, brush = '#';
+
+/* ============ tabs ============ */
+const KW = 'public|private|protected|class|interface|extends|implements|return|new|if|else|for|while|true|false|null|final|static|void|int|double|boolean';
+function hl(code) {
+  const re = new RegExp('(//.*$)|("(?:[^"\\\\]|\\\\.)*")|\\b(' + KW + ')\\b|\\b([A-Z][A-Za-z0-9_]*)\\b|\\b(\\d+(?:\\.\\d+)?)\\b', 'gm');
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let out = '', last = 0, m;
+  while ((m = re.exec(code))) {
+    out += esc(code.slice(last, m.index));
+    out += `<span class="${m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : m[4] ? 'ty' : 'num'}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(code.slice(last));
+}
+const code = c => `<h3>In our Java code</h3><pre><code>${hl(c)}</code></pre>`;
+
+const TABS = [
+  { id:'state', name:'State', walk:false, html() {
+    const k = grid[sel.r][sel.c] === '~' ? ' (a mud cell)' : '';
+    return `<h2>State</h2>
+      <p class="def">A <b>state</b> is one situation of the problem. It holds all the information we need, and nothing more.</p>
+      <h3>In our maze</h3>
+      <div class="maze">A state is just the player position: <b>(row, col)</b>.<br>The selected state is <b>${fmt(sel)}</b>${k}.</div>
+      <div class="note"><b>Walls are not states.</b> The player can never stand on a wall.</div>
+      <p class="try"><b>Try it:</b> click any cell, or use the arrow keys.</p>
+      ${code(`public class MazeState implements State {\n    private final int row;\n    private final int col;\n    // ${fmt(sel)} is one state\n}`)}`;
+  }},
+  { id:'space', name:'State space', walk:false, html() {
+    const R = reachable();
+    let all = 0, edges = 0;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (free(r, c)) { all++; edges += successors({ r, c }).length; }
+    const lost = all - R.size;
+    return `<h2>State space</h2>
+      <p class="def">The <b>state space</b> is the set of <b>all possible states</b> of the problem.</p>
+      <p>We can draw it as a <b>graph</b>: each state is a dot, and each move is a line between two dots.</p>
+      <p>The <b>reachable state space</b> is the part we can reach from the initial state by using the actions. A search algorithm can only explore this part.</p>
+      <h3>In our maze</h3>
+      <div class="maze">State space: <b>${all}</b> states and <b>${edges / 2}</b> connections.<br>
+        Reachable from S: <b>${R.size}</b> states${lost ? ` (blue).<br><b>${lost}</b> state(s) are in the state space, but can <b>not</b> be reached from S (gray).` : ': all of them.'}</div>
+      ${lost ? '' : '<p class="try"><b>Try it:</b> press <b>Edit maze</b> and paint walls to cut off some cells. They stay in the state space, but S can not reach them.</p>'}
+      <div class="note"><b>Example: the 8-puzzle.</b> There are 9! = <b>362,880</b> possible boards, but from one start board you can reach only <b>181,440</b> (exactly half).<br><br>
+        <b>Big idea:</b> the computer does <b>not</b> build this whole graph first. The search algorithm finds the reachable part step by step, from the start. For chess, there are too many states to ever store.</div>
+      ${code(`// There is no "StateSpace" class!\n// The algorithm discovers it step by step,\n// using getInitialState() and apply().`)}`;
+  }},
+  { id:'initial', name:'Initial state', walk:false, html() {
+    return `<h2>Initial state</h2>
+      <p class="def">The <b>initial state</b> is the state where the search starts.</p>
+      <h3>In our maze</h3>
+      <div class="maze">S is at <b>${fmt(start)}</b>.</div>
+      <p class="try"><b>Try it:</b> press <b>Edit maze</b>, choose <b>Start</b>, and click another cell. The code below changes too.</p>
+      ${code(`public State getInitialState() {\n    return new MazeState(${start.r}, ${start.c});\n}`)}`;
+  }},
+  { id:'actions', name:'Actions', walk:false, html() {
+    const rows = DIRS.map(d => {
+      const ok = result(sel, d);
+      return `<tr><td>${d.sym} ${d.name}</td><td class="${ok ? 'yes' : 'no'}">${ok ? 'allowed' : 'blocked: ' + whyBlocked(sel, d)}</td></tr>`;
+    }).join('');
+    const allowed = DIRS.filter(d => result(sel, d)).map(d => d.name).join(', ') || 'none';
+    return `<h2>Actions</h2>
+      <p class="def"><b>Actions</b> are the moves the agent can do.</p>
+      <span class="formula">ACTIONS(s) = the moves allowed in state s</span>
+      <h3>In our maze</h3>
+      <div class="maze">There are 4 actions: Up, Down, Left, Right.<br>In state <b>${fmt(sel)}</b>: ACTIONS = { <b>${allowed}</b> }</div>
+      <table><tr><th>Action</th><th>In ${fmt(sel)}</th></tr>${rows}</table>
+      <p class="try"><b>Try it:</b> click different cells. A corner cell has fewer actions.</p>
+      ${code(`public List<IAction> getActions() {\n    return Arrays.asList(new MoveUp(), new MoveDown(),\n                         new MoveLeft(), new MoveRight());\n}\n// apply() returns an empty list when the move is blocked`)}`;
+  }},
+  { id:'transition', name:'Transition model', walk:false, html() {
+    const rows = DIRS.map(d => {
+      const s2 = result(sel, d);
+      return s2 ? `<tr><td>${d.name}</td><td><b>${fmt(s2)}</b></td><td>${stepCost(s2)}</td></tr>`
+                : `<tr><td>${d.name}</td><td class="no">no result</td><td>–</td></tr>`;
+    }).join('');
+    const succ = successors(sel).map(x => `(${x.d.name}, ${fmt(x.s2)})`).join(', ') || 'none';
+    return `<h2>Transition model</h2>
+      <p class="def">The <b>transition model</b> tells us what happens when we do an action in a state.</p>
+      <span class="formula">RESULT(s, a) = s′</span>
+      <p>The <b>successor function</b> gives <b>all</b> next states of s at once, each with its action.</p>
+      <h3>In our maze, s = ${fmt(sel)}</h3>
+      <table><tr><th>Action a</th><th>RESULT(s, a)</th><th>Step cost</th></tr>${rows}</table>
+      <div class="maze" style="margin-top:10px">SUCCESSORS${fmt(sel)} = { ${succ} }</div>
+      ${code(`// RESULT(s, a): one action on one state\nCollection<State> next = new MoveUp().apply(s);\n\n// successor function: try every action\nfor (IAction a : problem.getActions()) {\n    for (State s2 : a.apply(s)) {\n        // s2 is a successor of s\n    }\n}`)}`;
+  }},
+  { id:'goal', name:'Goal test', walk:false, html() {
+    const g = same(sel, goal);
+    return `<h2>Goal test</h2>
+      <p class="def">The <b>goal test</b> checks if a state is a goal. It answers only <b>true</b> or <b>false</b>.</p>
+      <p>Some problems have one goal state. Others have many (for example, “any exit of the maze”).</p>
+      <h3>In our maze</h3>
+      <div class="maze">G is at <b>${fmt(goal)}</b>.<br>isGoal${fmt(sel)} = <b class="${g ? 'yes' : 'no'}">${g}</b></div>
+      <p class="try"><b>Try it:</b> click G, then click other cells.</p>
+      ${code(`public boolean isGoal(State s) {\n    MazeState m = (MazeState) s;\n    return m.getRow() == ${goal.r} && m.getCol() == ${goal.c};\n}`)}`;
+  }},
+  { id:'cost', name:'Path cost', walk:true, html() {
+    const g = pathCost(walk);
+    const lines = walk.slice(1).map((s, i) => {
+      const p = walk[i], d = DIRS.find(d => p.r + d.dr === s.r && p.c + d.dc === s.c);
+      return `${fmt(p)} ${d.sym} ${fmt(s)}  +${stepCost(s)}`;
+    });
+    return `<h2>Path cost</h2>
+      <p class="def">The <b>step cost</b> is the price of one move. The <b>path cost</b> is the sum of all step costs from the start.</p>
+      <span class="formula">g(n) = c₁ + c₂ + … + cₖ</span>
+      <h3>In our maze</h3>
+      <div class="maze">Moving into an empty cell costs <b>1</b>. Moving into mud (~) costs <b>3</b>.</div>
+      <h3>Your path</h3>
+      <div><span class="big">g = ${g}</span> &nbsp;<span style="color:var(--muted)">after ${walk.length - 1} step(s)</span>
+        ${same(walk[walk.length - 1], goal) ? ' &nbsp;<b class="yes">You reached G!</b>' : ''}</div>
+      <div class="steplist">${lines.length ? lines.join('<br>') : 'No steps yet. Start walking!'}</div>
+      <p class="try"><b>Try it:</b> walk with the <b>arrow keys</b>, the buttons, or click a cell next to you.</p>
+      ${code(`public double getActionCost(State s, IAction a, State next) {\n    return isMud(next) ? 3 : 1;\n}\n\n// g(n) is saved in each Node\ndouble g = node.getPathCost();`)}`;
+  }},
+  { id:'solution', name:'Solution', walk:true, html() {
+    const f = fewestStepsPath(), c = cheapestPath();
+    const atGoal = same(walk[walk.length - 1], goal);
+    let mine = '';
+    if (atGoal) {
+      const g = pathCost(walk), best = c ? pathCost(c) : g;
+      mine = g === best ? `<b class="yes">Your path is optimal! Cost ${g}.</b>` : `Your path cost is <b>${g}</b>. The best is <b>${best}</b>. Can you find it?`;
+    } else mine = 'Walk from S to G. Then compare your path with the best one.';
+    const diff = f && c && pathCost(f) !== pathCost(c);
+    return `<h2>Solution</h2>
+      <p class="def">A <b>solution</b> is a list of actions that takes us from the initial state to a goal state.</p>
+      <p>An <b>optimal solution</b> is the solution with the <b>lowest path cost</b>.</p>
+      <h3>Your solution</h3>
+      <div class="maze">${mine}</div>
+      <h3>Compare</h3>
+      ${!f ? '<p class="no">There is no path from S to G. There is no solution!</p>' : `
+      <table>
+        <tr><th></th><th>Steps</th><th>Cost</th><th></th></tr>
+        <tr><td style="color:var(--warn)"><b>– – Fewest steps</b></td><td>${f.length - 1}</td><td>${pathCost(f)}</td>
+            <td><button data-show="fewest" class="${show.fewest ? 'on' : ''}">${show.fewest ? 'Hide' : 'Show'}</button></td></tr>
+        <tr><td style="color:var(--goal)"><b>· · Lowest cost</b></td><td>${c.length - 1}</td><td>${pathCost(c)}</td>
+            <td><button data-show="cheapest" class="${show.cheapest ? 'on' : ''}">${show.cheapest ? 'Hide' : 'Show'}</button></td></tr>
+      </table>
+      ${diff ? '<div class="note"><b>Look!</b> The path with the fewest steps is <b>not</b> the cheapest one. Later we will see which algorithms find each path.</div>' : ''}`}
+      ${code(`Node goal = problem.solve(algorithm);\n\n// the solution: from the start to the goal\nfor (Node n : goal.getPathFromRoot()) {\n    System.out.println(n.getState());\n}`)}`;
+  }},
+  { id:'summary', name:'Summary', walk:false, html() {
+    const row = (a, b, c, d, e) => `<tr><td><b>${a}</b></td><td>${b}</td><td>${c}</td><td>${d}</td><td><code>${e}</code></td></tr>`;
+    return `<h2>Summary</h2>
+      <p class="def">Every search problem has the same <b>5 parts</b>. Only the details change.</p>
+      <div class="tablewrap"><table>
+        <tr><th>Part</th><th>Maze</th><th>8-puzzle</th><th>Travel between cities</th><th>Our code</th></tr>
+        ${row('State', 'player (row, col)', 'place of each tile', 'the city you are in', 'State')}
+        ${row('Initial state', 'S', 'the mixed board', 'start city', 'getInitialState()')}
+        ${row('Actions', 'Up, Down, Left, Right', 'move the blank tile', 'drive to a neighbour city', 'getActions()')}
+        ${row('Transition model', 'the new cell', 'the board after the move', 'the neighbour city', 'IAction.apply()')}
+        ${row('Goal test', 'position = G', 'tiles in order 1…8', 'city = destination', 'isGoal()')}
+        ${row('Path cost', '1 per move (mud 3)', '1 per move', 'road length in km', 'getActionCost()')}
+      </table></div>
+      <div class="note"><b>Remember:</b> the <b>state space</b> is all possible states. The initial state + actions + transition model give the <b>reachable</b> part, which is what search explores. A <b>solution</b> is a path to a goal. The <b>optimal</b> solution has the lowest path cost.</div>`;
+  }},
+];
+
+/* ============ drawing ============ */
+const M = 34, CS = 70;
+const X = c => M + c * CS, Y = r => M + r * CS, CX = c => X(c) + CS / 2, CY = r => Y(r) + CS / 2;
+const svg = document.getElementById('board');
+
+function arrow(x1, y1, x2, y2, cls) {
+  const a = Math.atan2(y2 - y1, x2 - x1), h = 10;
+  const p1 = [x2 - h * Math.cos(a - .5), y2 - h * Math.sin(a - .5)], p2 = [x2 - h * Math.cos(a + .5), y2 - h * Math.sin(a + .5)];
+  return `<path class="${cls}" d="M${x1},${y1} L${x2},${y2} M${p1} L${x2},${y2} L${p2}"/>`;
+}
+function polyline(p, cls) { return `<polyline class="${cls}" points="${p.map(s => CX(s.c) + ',' + CY(s.r)).join(' ')}"/>`; }
+
+function draw() {
+  const t = TABS[tab].id;
+  let s = '';
+  for (let c = 0; c < COLS; c++) s += `<text class="axis" x="${CX(c)}" y="${M - 12}" text-anchor="middle">${c}</text>`;
+  for (let r = 0; r < ROWS; r++) s += `<text class="axis" x="${M - 14}" y="${CY(r) + 4}" text-anchor="middle">${r}</text>`;
+  s += `<text class="axis" x="${M - 14}" y="${M - 12}" text-anchor="middle" style="font-size:10px">r\\c</text>`;
+
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const v = grid[r][c];
+    let cls = v === '#' ? 'wall' : v === '~' ? 'mud' : 'free';
+    if (same({ r, c }, start)) cls += ' startc';
+    if (same({ r, c }, goal)) cls += ' goalc';
+    s += `<rect class="cell click ${cls}" data-r="${r}" data-c="${c}" x="${X(c)}" y="${Y(r)}" width="${CS}" height="${CS}"/>`;
+    if (v === '~') s += `<text class="mudtxt" x="${CX(c)}" y="${CY(r) + 20}" text-anchor="middle">~ ~</text>`;
+  }
+  s += `<rect x="${M}" y="${M}" width="${COLS * CS}" height="${ROWS * CS}" fill="none" stroke="var(--ink)" stroke-width="2" rx="2" class="ov"/>`;
+  s += `<text class="mark s" x="${X(start.c) + 7}" y="${Y(start.r) + 18}">S</text>`;
+  s += `<text class="mark g" x="${X(goal.c) + 7}" y="${Y(goal.r) + 18}">G</text>`;
+
+  let o = '';
+  if (t === 'space') {
+    const R = reachable();
+    let dots = '';
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (!free(r, c)) continue;
+      const ok = R.has(key({ r, c })); // neighbours of a reachable cell are reachable too
+      if (!ok) o += `<rect class="unreach" x="${X(c) + 2}" y="${Y(r) + 2}" width="${CS - 4}" height="${CS - 4}"/>`;
+      const ecls = ok ? 'edge' : 'edge off';
+      if (free(r, c + 1)) o += `<line class="${ecls}" x1="${CX(c)}" y1="${CY(r)}" x2="${CX(c + 1)}" y2="${CY(r)}"/>`;
+      if (free(r + 1, c)) o += `<line class="${ecls}" x1="${CX(c)}" y1="${CY(r)}" x2="${CX(c)}" y2="${CY(r + 1)}"/>`;
+      dots += `<circle class="dot${ok ? '' : ' off'}" cx="${CX(c)}" cy="${CY(r)}" r="7"/>`;
+    }
+    o += dots;
+  }
+  if (t === 'initial') o += `<circle class="pulse" style="stroke:var(--start)" cx="${CX(start.c)}" cy="${CY(start.r)}" r="30"/>`;
+  if (t === 'goal') o += `<circle class="pulse" style="stroke:var(--goal)" cx="${CX(goal.c)}" cy="${CY(goal.r)}" r="30"/>`;
+  if (t === 'actions') {
+    DIRS.forEach(d => {
+      const x1 = CX(sel.c) + d.dc * 14, y1 = CY(sel.r) + d.dr * 14;
+      if (result(sel, d)) o += arrow(x1, y1, CX(sel.c) + d.dc * 62, CY(sel.r) + d.dr * 62, 'arrow-ok');
+      else {
+        const ex = CX(sel.c) + d.dc * 30, ey = CY(sel.r) + d.dr * 30;
+        o += `<line class="arrow-bad" x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}"/>`;
+        o += `<path class="x" d="M${ex - 7},${ey - 7} L${ex + 7},${ey + 7} M${ex + 7},${ey - 7} L${ex - 7},${ey + 7}"/>`;
+      }
+    });
+  }
+  if (t === 'transition') {
+    successors(sel).forEach(({ d, s2 }) => {
+      o += `<rect class="succ" x="${X(s2.c) + 3}" y="${Y(s2.r) + 3}" width="${CS - 6}" height="${CS - 6}" rx="6"/>`;
+      o += arrow(CX(sel.c) + d.dc * 14, CY(sel.r) + d.dr * 14, CX(s2.c) - d.dc * 14, CY(s2.r) - d.dr * 14, 'arrow-ok');
+      o += `<text class="costlbl" x="${CX(s2.c)}" y="${CY(s2.r) - 16}" text-anchor="middle">${d.name} · ${stepCost(s2)}</text>`;
+    });
+  }
+  if (TABS[tab].walk) {
+    if (t === 'solution') {
+      const f = fewestStepsPath(), c = cheapestPath();
+      if (show.fewest && f) o += polyline(f, 'best1');
+      if (show.cheapest && c) o += polyline(c, 'best2');
+    }
+    if (walk.length > 1) o += polyline(walk, 'walk');
+    if (t === 'cost') walk.slice(1).forEach(p => { o += `<text class="plus" x="${X(p.c) + CS - 6}" y="${Y(p.r) + CS - 6}" text-anchor="end">+${stepCost(p)}</text>`; });
+    const p = walk[walk.length - 1];
+    o += `<circle class="player" cx="${CX(p.c)}" cy="${CY(p.r)}" r="15"/>`;
+  } else if (['state', 'actions', 'transition', 'goal'].includes(t)) {
+    o += `<rect class="sel" x="${X(sel.c) + 3}" y="${Y(sel.r) + 3}" width="${CS - 6}" height="${CS - 6}" rx="6"/>`;
+    o += `<circle class="player" cx="${CX(sel.c)}" cy="${CY(sel.r)}" r="13"/>`;
+  }
+  if (hover && !editing) o += `<rect class="hov" x="${X(hover.c) + 1}" y="${Y(hover.r) + 1}" width="${CS - 2}" height="${CS - 2}"/>`;
+  svg.innerHTML = s + `<g class="ov">${o}</g>`;
+}
+
+function readout() {
+  const el = document.getElementById('readout');
+  if (editing) { el.innerHTML = `Edit mode: click cells to paint <b>${{ '#':'walls', '~':'mud', '.':'empty cells', S:'the start', G:'the goal' }[brush]}</b>.`; return; }
+  if (!hover) { el.innerHTML = TABS[tab].walk ? 'Walk with the arrow keys or the buttons.' : 'Move the mouse over a cell.'; return; }
+  const v = grid[hover.r][hover.c];
+  const kind = v === '#' ? 'wall, not a state' : (same(hover, start) ? 'start, ' : '') + (same(hover, goal) ? 'goal, ' : '') + (v === '~' ? 'mud, cost 3' : 'empty, cost 1');
+  el.innerHTML = `Cell <b>${fmt(hover)}</b>: ${kind}`;
+}
+
+/* ============ render ============ */
+const panel = document.getElementById('panel');
+function render() {
+  document.querySelectorAll('#steps button').forEach((b, i) => b.classList.toggle('on', i === tab));
+  document.getElementById('walkBar').classList.toggle('hidden', !TABS[tab].walk || editing);
+  panel.innerHTML = TABS[tab].html() + `<div class="navrow">
+    <button id="prevBtn" ${tab === 0 ? 'disabled' : ''}>← ${tab > 0 ? TABS[tab - 1].name : 'Back'}</button>
+    <button id="nextBtn" ${tab === TABS.length - 1 ? 'disabled' : ''}>${tab < TABS.length - 1 ? TABS[tab + 1].name : 'Next'} →</button></div>`;
+  draw(); readout();
+}
+function setTab(i) { tab = Math.max(0, Math.min(TABS.length - 1, i)); render(); }
+
+document.getElementById('steps').innerHTML = TABS.map((t, i) => `<button data-tab="${i}"><span class="n">${i + 1}</span>${t.name}</button>`).join('');
+document.getElementById('steps').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTab(+b.dataset.tab); });
+panel.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'prevBtn') setTab(tab - 1);
+  else if (b.id === 'nextBtn') setTab(tab + 1);
+  else if (b.dataset.show) { show[b.dataset.show] = !show[b.dataset.show]; render(); }
+});
+
+/* ============ moving ============ */
+function move(di) {
+  const d = DIRS[di];
+  if (TABS[tab].walk) {
+    const cur = walk[walk.length - 1];
+    if (same(cur, goal)) return;
+    const n = result(cur, d); if (n) { walk.push(n); render(); }
+  } else {
+    const n = result(sel, d); if (n) { sel = n; render(); }
+  }
+}
+function cellFrom(e) { const t = e.target.closest('[data-r]'); return t ? { r: +t.dataset.r, c: +t.dataset.c } : null; }
+
+svg.addEventListener('click', e => {
+  const p = cellFrom(e); if (!p) return;
+  if (editing) { paint(p); return; }
+  if (TABS[tab].walk) {
+    const cur = walk[walk.length - 1];
+    const di = DIRS.findIndex(d => cur.r + d.dr === p.r && cur.c + d.dc === p.c);
+    if (di >= 0) move(di);
+  } else if (free(p.r, p.c)) { sel = p; render(); }
+});
+svg.addEventListener('mousemove', e => { const p = cellFrom(e); if (!same(p, hover)) { hover = p; draw(); readout(); } });
+svg.addEventListener('mouseleave', () => { hover = null; draw(); readout(); });
+document.addEventListener('keydown', e => {
+  const map = { ArrowUp:0, ArrowDown:1, ArrowLeft:2, ArrowRight:3 };
+  if (e.key in map && !editing && TABS[tab].id !== 'summary') { e.preventDefault(); move(map[e.key]); }
+});
+document.querySelectorAll('.pad button').forEach(b => b.addEventListener('click', () => move(+b.dataset.dir)));
+document.getElementById('undoBtn').addEventListener('click', () => { if (walk.length > 1) { walk.pop(); render(); } });
+document.getElementById('restartBtn').addEventListener('click', () => { walk = [{ ...start }]; render(); });
+
+/* ============ editing ============ */
+function resetPlay() { sel = { ...start }; walk = [{ ...start }]; }
+function paint(p) {
+  if (brush === 'S' || brush === 'G') {
+    if (grid[p.r][p.c] === '#') grid[p.r][p.c] = '.';
+    if (brush === 'S' && !same(p, goal)) start = p;
+    if (brush === 'G' && !same(p, start)) goal = p;
+  } else {
+    if (brush === '#' && (same(p, start) || same(p, goal))) return; // S and G can not be walls
+    grid[p.r][p.c] = brush;
+  }
+  resetPlay(); render();
+}
+const editBtn = document.getElementById('editBtn');
+editBtn.addEventListener('click', () => {
+  editing = !editing;
+  editBtn.classList.toggle('on', editing);
+  editBtn.textContent = editing ? 'Done editing' : 'Edit maze';
+  document.getElementById('brushes').classList.toggle('hidden', !editing);
+  render();
+});
+document.querySelectorAll('[data-brush]').forEach(b => b.addEventListener('click', () => {
+  brush = b.dataset.brush;
+  document.querySelectorAll('[data-brush]').forEach(x => x.classList.toggle('on', x === b));
+  readout();
+}));
+document.querySelector('[data-brush="#"]').classList.add('on');
+document.getElementById('resetMaze').addEventListener('click', () => { loadDefault(); resetPlay(); show = { fewest:false, cheapest:false }; render(); });
+
+/* ============ theme ============ */
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const r = document.documentElement;
+  const cur = r.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  r.dataset.theme = cur === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('course-theme', r.dataset.theme); } catch (e) {}
+});
+try { const t = localStorage.getItem('course-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+render();
+</script>
+</body>
+</html>
