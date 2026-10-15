@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Maze Problem</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --wall:#3d4556; --free:#ffffff; --trail:#fff3bf; --trail-ink:#946200;
+  --start:#1971c2; --start-bg:#dbeafb; --goal:#2b8a3e; --goal-bg:#dcf3e2;
+  --ok:#2b8a3e; --bad:#e03131; --warn:#d9480f; --warn-bg:#fff0e6;
+  --code-bg:#f2f4f8;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --wall:#4a5366; --free:#202634; --trail:#3a3215; --trail-ink:#ffd43b;
+    --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+    --code-bg:#12161e;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --wall:#4a5366; --free:#202634; --trail:#3a3215; --trail-ink:#ffd43b;
+  --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+  --code-bg:#12161e;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-size: 13px; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 18px 16px 40px; }
+header h1 { margin: 0; font-size: 24px; }
+header p { margin: 2px 0 0; color: var(--muted); }
+h2 { font-size: 19px; margin: 0 0 8px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; margin-top: 16px; }
+.task { border-left: 5px solid var(--accent); }
+.task p { margin: 6px 0; }
+.task ul { margin: 6px 0; padding-left: 22px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+
+.play { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .play { grid-template-columns: minmax(0, 1fr); } }
+
+#board { display: grid; gap: 3px; width: 100%; max-width: 460px; margin: 0 auto; }
+.cell {
+  aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; position: relative;
+  background: var(--free); border: 1px solid var(--line); font-weight: 700; font-size: clamp(11px, 2.6vw, 16px);
+}
+.cell.wall { background: var(--wall); border-color: var(--wall); }
+.cell.start { background: var(--start-bg); color: var(--start); }
+.cell.goal { background: var(--goal-bg); color: var(--goal); }
+.cell.trail { background: var(--trail); color: var(--trail-ink); }
+.cell.next { outline: 2px dashed var(--accent); outline-offset: -4px; cursor: pointer; }
+.cell .rc { position: absolute; bottom: 1px; right: 4px; font-size: 9px; font-weight: 500; color: var(--muted); }
+.cell.wall .rc { display: none; }
+.player {
+  width: 68%; height: 68%; border-radius: 50%; background: var(--accent); color: var(--surface);
+  display: grid; place-items: center; font-size: clamp(11px, 2.6vw, 16px); z-index: 1;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted); margin-top: 12px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 1px solid var(--line); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+
+.status { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
+.status dt { color: var(--muted); }
+.status dd { margin: 0; font-weight: 600; font-family: ui-monospace, Consolas, monospace; }
+.yes { color: var(--ok); } .no { color: var(--bad); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 8px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+tr.act { cursor: pointer; }
+tr.act:hover td { background: var(--accent-bg); }
+tr.blocked td { color: var(--muted); }
+.msg { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; background: var(--accent-bg); border-left: 4px solid var(--accent); min-height: 44px; }
+.msg.win { background: var(--goal-bg); border-left-color: var(--goal); }
+.msg.bad { background: var(--warn-bg); border-left-color: var(--warn); }
+.hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 14px; line-height: 1.4; margin: 8px 0 0; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+details { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+details summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>The Maze Problem</h1>
+  <p>Session 2 &middot; Describing a problem: states, actions, goal and cost</p>
+</header>
+
+<section class="card task">
+  <h2>The question</h2>
+  <p>A player stands on the <b>start</b> cell <b>S</b> of a grid maze. Help the player reach the <b>goal</b> cell <b>G</b>.</p>
+  <ul>
+    <li>In one move, the player goes one cell <b>up</b>, <b>down</b>, <b>left</b> or <b>right</b>.</li>
+    <li>The player can not walk into a <b>wall</b> and can not leave the maze.</li>
+    <li>Every move costs <b>1</b>.</li>
+  </ul>
+  <p>Your job in this session: write the <b>state</b>, the <b>actions</b> and the <b>problem</b> in Java.
+     The search algorithm comes in the next sessions.</p>
+</section>
+
+<section class="card">
+  <h2>Try it yourself</h2>
+  <div class="play">
+    <div>
+      <div id="board" aria-label="Maze board"></div>
+      <div class="legend">
+        <span><i style="background:var(--start-bg)"></i>S start</span>
+        <span><i style="background:var(--goal-bg)"></i>G goal</span>
+        <span><i style="background:var(--wall)"></i># wall</span>
+        <span><i style="background:var(--trail)"></i>your path</span>
+        <span><i style="background:var(--accent)"></i>player</span>
+      </div>
+      <div class="bar">
+        <button data-move="0">&uarr; Up</button>
+        <button data-move="1">&darr; Down</button>
+        <button data-move="2">&larr; Left</button>
+        <button data-move="3">&rarr; Right</button>
+        <button id="undo">Undo</button>
+        <button id="reset">Reset</button>
+      </div>
+      <p class="hint" style="text-align:center">You can also use the arrow keys, or click a dashed cell.</p>
+    </div>
+    <div>
+      <dl class="status">
+        <dt>State</dt><dd id="sState"></dd>
+        <dt>isGoal()</dt><dd id="sGoal"></dd>
+        <dt>Moves</dt><dd id="sMoves"></dd>
+        <dt>Path cost</dt><dd id="sCost"></dd>
+      </dl>
+      <table>
+        <thead><tr><th>Action</th><th>Change</th><th>apply(state) gives</th></tr></thead>
+        <tbody id="actions"></tbody>
+      </table>
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>In search words</h2>
+  <table>
+    <tr><th>Part</th><th>For the maze</th><th>In our code</th></tr>
+    <tr><td>State</td><td>Where the player is now: <code>(row, col)</code>. The walls never change, so they are <b>not</b> part of the state.</td><td><code>MazeState</code></td></tr>
+    <tr><td>Initial state</td><td>The player on <b>S</b>: <code id="startRc"></code></td><td><code>getInitialState()</code></td></tr>
+    <tr><td>Actions</td><td>Move up, down, left, right. A move into a wall or outside gives <b>no</b> state.</td><td><code>MazeAction</code> (4 objects)</td></tr>
+    <tr><td>Goal test</td><td>Is the player on <b>G</b>? <code id="goalRc"></code></td><td><code>isGoal()</code></td></tr>
+    <tr><td>Cost</td><td>Every move costs 1. So path cost = number of moves.</td><td><code>getActionCost()</code></td></tr>
+  </table>
+</section>
+
+<section class="card">
+  <div class="two">
+    <div>
+      <h2>The maze as text</h2>
+      <p>In Java we write the maze as text lines. Each character is one cell.</p>
+      <pre id="mazeText"></pre>
+      <p class="hint"><code>#</code> wall &nbsp; <code>.</code> free &nbsp; <code>S</code> start &nbsp; <code>G</code> goal</p>
+    </div>
+    <div>
+      <h2>Rows and columns</h2>
+      <p>Row numbers go <b>down</b>, column numbers go <b>right</b>, and both start at <b>0</b>.</p>
+      <p>So <b>up</b> means <code>row - 1</code> and <b>right</b> means <code>col + 1</code>.</p>
+      <pre>Move up    (-1,  0)
+Move down  (+1,  0)
+Move left  ( 0, -1)
+Move right ( 0, +1)</pre>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Check yourself</h2>
+  <details><summary>1. How many different states does this maze have?</summary><p id="ans1"></p></details>
+  <details><summary>2. From the start, which actions are allowed?</summary><p>Only <b>Move down</b> and <b>Move right</b>. Up and left go outside the maze.</p></details>
+  <details><summary>3. Why are the walls not part of the state?</summary><p>Because they never change. A state keeps only what can change: the player position.</p></details>
+  <details><summary>4. What is the smallest number of moves to reach G?</summary><p id="ans4"></p></details>
+  <details><summary>5. What would change if some cells were "mud" and cost 3?</summary><p>Only the cost. The path with the fewest moves may not be the cheapest any more. We will need an algorithm that looks at the cost (Uniform Cost Search).</p></details>
+</section>
+
+</div>
+
+<script>
+// the same maze as in MazeDemo.java
+const LINES = [
+  "S.#....",
+  ".##.##.",
+  "....#..",
+  ".##....",
+  "...#.#G"
+];
+// same order as in MazeProblem.java
+const ACTIONS = [
+  { name: "Move up",    dr: -1, dc:  0 },
+  { name: "Move down",  dr:  1, dc:  0 },
+  { name: "Move left",  dr:  0, dc: -1 },
+  { name: "Move right", dr:  0, dc:  1 }
+];
+
+const ROWS = LINES.length, COLS = LINES[0].length;
+let start, goal;
+LINES.forEach((line, r) => [...line].forEach((ch, c) => {
+  if (ch === "S") start = [r, c];
+  if (ch === "G") goal = [r, c];
+}));
+
+const inside = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
+const isFree = (r, c) => inside(r, c) && LINES[r][c] !== "#";
+const isGoal = (r, c) => r === goal[0] && c === goal[1];
+const rc = (p) => "(" + p[0] + ", " + p[1] + ")";
+
+let path = [start.slice()]; // all states from the start to now
+const cur = () => path[path.length - 1];
+
+// what apply() gives for one action from the current state
+function applyAction(a) {
+  const [r, c] = cur();
+  const nr = r + a.dr, nc = c + a.dc;
+  if (!inside(nr, nc)) return { ok: false, why: "outside the maze" };
+  if (!isFree(nr, nc)) return { ok: false, why: "wall" };
+  return { ok: true, to: [nr, nc] };
+}
+
+const board = document.getElementById("board");
+board.style.gridTemplateColumns = "repeat(" + COLS + ", minmax(0, 1fr))";
+
+function draw() {
+  const [pr, pc] = cur();
+  const nextCells = ACTIONS.map(applyAction).filter(x => x.ok).map(x => x.to.join(","));
+  const onPath = new Set(path.map(p => p.join(",")));
+
+  board.innerHTML = "";
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      const key = r + "," + c;
+      if (!isFree(r, c)) cell.classList.add("wall");
+      else if (r === start[0] && c === start[1]) { cell.classList.add("start"); cell.textContent = "S"; }
+      else if (isGoal(r, c)) { cell.classList.add("goal"); cell.textContent = "G"; }
+      else if (onPath.has(key)) cell.classList.add("trail");
+      if (nextCells.includes(key)) {
+        cell.classList.add("next");
+        cell.addEventListener("click", () => moveTo([r, c]));
+      }
+      if (r === pr && c === pc) {
+        cell.textContent = "";
+        const p = document.createElement("div");
+        p.className = "player"; p.textContent = "P";
+        cell.appendChild(p);
+      }
+      const label = document.createElement("span");
+      label.className = "rc"; label.textContent = r + "," + c;
+      cell.appendChild(label);
+      board.appendChild(cell);
+    }
+  }
+
+  const moves = path.length - 1;
+  document.getElementById("sState").textContent = rc(cur());
+  const g = isGoal(pr, pc);
+  document.getElementById("sGoal").innerHTML = g ? '<span class="yes">true</span>' : '<span class="no">false</span>';
+  document.getElementById("sMoves").textContent = moves;
+  document.getElementById("sCost").textContent = moves + " × 1 = " + moves;
+
+  const tbody = document.getElementById("actions");
+  tbody.innerHTML = "";
+  ACTIONS.forEach((a, i) => {
+    const res = applyAction(a);
+    const tr = document.createElement("tr");
+    tr.className = res.ok ? "act" : "blocked";
+    const change = "(" + (a.dr > 0 ? "+" : "") + a.dr + ", " + (a.dc > 0 ? "+" : "") + a.dc + ")";
+    tr.innerHTML = "<td>" + a.name + "</td><td><code>" + change + "</code></td><td>" +
+      (res.ok ? "<b>" + rc(res.to) + "</b>" : "nothing (" + res.why + ")") + "</td>";
+    if (res.ok) tr.addEventListener("click", () => doAction(i));
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("undo").disabled = path.length === 1;
+}
+
+function say(text, kind) {
+  const m = document.getElementById("msg");
+  m.className = "msg" + (kind ? " " + kind : "");
+  m.innerHTML = text;
+}
+
+function doAction(i) {
+  const a = ACTIONS[i];
+  const res = applyAction(a);
+  if (!res.ok) { say("<b>" + a.name + "</b> is not allowed here: " + res.why + ". apply() gives an empty list.", "bad"); return; }
+  path.push(res.to);
+  draw();
+  afterMove(a.name);
+}
+
+function moveTo(to) {
+  const i = ACTIONS.findIndex(a => { const r = applyAction(a); return r.ok && r.to[0] === to[0] && r.to[1] === to[1]; });
+  if (i >= 0) doAction(i);
+}
+
+function afterMove(name) {
+  const [r, c] = cur();
+  if (isGoal(r, c)) {
+    const moves = path.length - 1;
+    const best = shortest();
+    say("Goal reached in <b>" + moves + "</b> moves! " +
+        (moves === best ? "That is the shortest path." : "Can you do it in fewer moves?"), "win");
+  } else {
+    say("<b>" + name + "</b> &rarr; new state " + rc(cur()) + ". isGoal() is false, keep going.");
+  }
+}
+
+// a small BFS, only to check the answers on this page
+function shortest() {
+  const dist = { [start.join(",")]: 0 };
+  const queue = [start];
+  while (queue.length) {
+    const [r, c] = queue.shift();
+    if (isGoal(r, c)) return dist[r + "," + c];
+    for (const a of ACTIONS) {
+      const nr = r + a.dr, nc = c + a.dc, k = nr + "," + nc;
+      if (isFree(nr, nc) && !(k in dist)) { dist[k] = dist[r + "," + c] + 1; queue.push([nr, nc]); }
+    }
+  }
+  return -1;
+}
+
+document.querySelectorAll("[data-move]").forEach(b => b.addEventListener("click", () => doAction(+b.dataset.move)));
+document.getElementById("undo").addEventListener("click", () => {
+  if (path.length > 1) { path.pop(); draw(); say("Undo: back to " + rc(cur()) + "."); }
+});
+document.getElementById("reset").addEventListener("click", () => {
+  path = [start.slice()]; draw(); say("Back to the start. Use the buttons, the arrow keys, or click a dashed cell.");
+});
+document.addEventListener("keydown", (e) => {
+  const keys = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3 };
+  if (e.key in keys) { e.preventDefault(); doAction(keys[e.key]); }
+});
+
+// static texts
+document.getElementById("mazeText").textContent = LINES.join("\n");
+document.getElementById("startRc").textContent = rc(start);
+document.getElementById("goalRc").textContent = rc(goal);
+let free = 0;
+for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (isFree(r, c)) free++;
+document.getElementById("ans1").innerHTML = "<b>" + free + "</b> states: one for each free cell (S and G are free cells too). The maze has " +
+  (ROWS * COLS) + " cells, and " + (ROWS * COLS - free) + " of them are walls.";
+document.getElementById("ans4").innerHTML = "<b>" + shortest() + "</b> moves. Next session, BFS will find this path for us.";
+
+draw();
+say("Use the buttons, the arrow keys, or click a dashed cell to move the player.");
+</script>
+</body>
+</html>

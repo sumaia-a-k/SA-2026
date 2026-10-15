@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Word Ladder Problem</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --start:#1971c2; --start-bg:#dbeafb; --goal:#2b8a3e; --goal-bg:#dcf3e2;
+  --ok:#2b8a3e; --bad:#e03131; --warn:#d9480f; --warn-bg:#fff0e6;
+  --change:#c2410c; --change-bg:#ffe8cc;
+  --code-bg:#f2f4f8;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+    --change:#ffa94d; --change-bg:#3b2a17;
+    --code-bg:#12161e;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+  --change:#ffa94d; --change-bg:#3b2a17;
+  --code-bg:#12161e;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-size: 13px; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 18px 16px 40px; }
+header h1 { margin: 0; font-size: 24px; }
+header p { margin: 2px 0 0; color: var(--muted); }
+h2 { font-size: 19px; margin: 0 0 8px; }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 6px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; margin-top: 16px; }
+.task { border-left: 5px solid var(--accent); }
+.task p { margin: 6px 0; }
+.task ul { margin: 6px 0; padding-left: 22px; }
+button, input {
+  font: inherit; font-size: 14px; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+input { width: 80px; text-transform: lowercase; font-family: ui-monospace, Consolas, monospace; }
+
+.example { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 4px; }
+.example .arrow { color: var(--muted); }
+
+.word { display: inline-flex; gap: 3px; }
+.tile {
+  width: 34px; height: 38px; border-radius: 7px; display: grid; place-items: center;
+  font: 700 18px ui-monospace, Consolas, monospace; text-transform: uppercase;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.tile.ch { background: var(--change-bg); color: var(--change); border-color: var(--change); }
+.word.big .tile { width: 48px; height: 54px; font-size: 26px; }
+.word.start .tile { background: var(--start-bg); color: var(--start); border-color: var(--start); }
+.word.goal .tile { background: var(--goal-bg); color: var(--goal); border-color: var(--goal); }
+
+.play { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .play { grid-template-columns: minmax(0, 1fr); } }
+.setup { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.setup label { font-size: 14px; color: var(--muted); }
+.now { display: flex; flex-wrap: wrap; gap: 18px; align-items: end; margin-top: 14px; }
+.now .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+
+.ladder { list-style: none; margin: 8px 0 0; padding: 0; }
+.ladder li { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.ladder .n { width: 26px; text-align: right; font-size: 13px; color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+
+.next { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.next button { padding: 4px; border-radius: 10px; }
+.next button .tile { width: 28px; height: 32px; font-size: 15px; }
+.next .none { color: var(--muted); font-size: 14px; }
+
+.status { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin-top: 12px; }
+.status dt { color: var(--muted); }
+.status dd { margin: 0; font-weight: 600; font-family: ui-monospace, Consolas, monospace; }
+.yes { color: var(--ok); } .no { color: var(--bad); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.msg { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; background: var(--accent-bg); border-left: 4px solid var(--accent); }
+.msg.win { background: var(--goal-bg); border-left-color: var(--goal); }
+.msg.bad { background: var(--warn-bg); border-left-color: var(--warn); }
+.hint { font-size: 13px; color: var(--muted); }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 8px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+details { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+details summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0 2px; }
+.dict { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 10px; font: 13px ui-monospace, Consolas, monospace; }
+.dict span { background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>The Word Ladder Problem</h1>
+  <p>Session 2 &middot; Describing a problem: states, actions, goal and cost</p>
+</header>
+
+<section class="card task">
+  <h2>The question</h2>
+  <p>You get a <b>start</b> word and a <b>goal</b> word with the same length. Change the start word into the goal word.</p>
+  <ul>
+    <li>In one step, change <b>exactly one letter</b>. Do not add, remove or move letters.</li>
+    <li>Every new word must be a real word from the <b>dictionary</b>.</li>
+    <li>Every step costs <b>1</b>.</li>
+  </ul>
+  <p>Example: from <b>cat</b> to <b>dog</b> (the changed letter is coloured):</p>
+  <div class="example" id="example"></div>
+  <p>Your job in this session: write the <b>state</b>, the <b>action</b> and the <b>problem</b> in Java.
+     The search algorithm comes in the next sessions.</p>
+</section>
+
+<section class="card">
+  <h2>Try it yourself</h2>
+  <div class="setup">
+    <label for="inStart">Start</label><input id="inStart" maxlength="3" value="cat" list="words">
+    <label for="inGoal">Goal</label><input id="inGoal" maxlength="3" value="dog" list="words">
+    <button id="setBtn">Start a new ladder</button>
+    <datalist id="words"></datalist>
+  </div>
+  <div class="play">
+    <div>
+      <div class="now">
+        <div><div class="lbl">Current state</div><div id="current" class="word big"></div></div>
+        <div><div class="lbl">Goal</div><div id="goal" class="word big goal"></div></div>
+      </div>
+      <dl class="status">
+        <dt>isGoal()</dt><dd id="sGoal"></dd>
+        <dt>Steps</dt><dd id="sSteps"></dd>
+        <dt>Path cost</dt><dd id="sCost"></dd>
+      </dl>
+      <h3>Your ladder</h3>
+      <ol class="ladder" id="ladder"></ol>
+      <div class="bar">
+        <button id="undo">Undo</button>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+    <div>
+      <h3>Action "Change one letter": apply(state) gives</h3>
+      <div id="count" class="hint"></div>
+      <div class="next" id="next"></div>
+      <p class="hint">Click a word to move to it. The coloured letter is the one that changed.</p>
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>In search words</h2>
+  <table>
+    <tr><th>Part</th><th>For the word ladder</th><th>In our code</th></tr>
+    <tr><td>State</td><td>The current word, for example <code>cat</code>. The goal word and the dictionary never change, so they are <b>not</b> part of the state.</td><td><code>WordLadderState</code></td></tr>
+    <tr><td>Initial state</td><td>The start word.</td><td><code>getInitialState()</code></td></tr>
+    <tr><td>Actions</td><td><b>One</b> action: change one letter. But it gives <b>many</b> next states, one for each dictionary word we can make.</td><td><code>ChangeLetterAction</code></td></tr>
+    <tr><td>Goal test</td><td>Is the current word the goal word?</td><td><code>isGoal()</code></td></tr>
+    <tr><td>Cost</td><td>Every change costs 1. So path cost = number of steps.</td><td><code>getActionCost()</code></td></tr>
+  </table>
+  <h3>How does the action find the next words?</h3>
+  <p>For each position in the word, try every letter from <code>a</code> to <code>z</code>. Keep the new word only if it is in the dictionary.
+     For a 3-letter word this is 3 &times; 25 = <b>75</b> tries, but only a few are real words.</p>
+</section>
+
+<section class="card">
+  <h2>Check yourself</h2>
+  <details><summary>1. Is the maze action and this action the same kind?</summary><p>No. In the maze, one action gives <b>0 or 1</b> state. Here, one action can give <b>many</b> states. This is why <code>apply()</code> returns a <code>Collection</code>.</p></details>
+  <details><summary>2. Can we go from "cat" to "sky"?</summary><p>No. No ladder in our dictionary reaches "sky". A search can end with <b>no solution</b>, and that is a correct answer.</p></details>
+  <details><summary>3. Can we go from "cat" to "dogs"?</summary><p>No. One step never changes the length of the word. Our Java code stops with an error if the two words have different lengths.</p></details>
+  <details><summary>4. The example above uses 4 steps. Is there a shorter ladder from "cat" to "dog"?</summary><p id="ans4"></p></details>
+  <details><summary>5. Is the goal word part of the state?</summary><p>No. It is the same for every state. In our code it is kept once (static) and shared by all states.</p></details>
+</section>
+
+<section class="card">
+  <h2>The dictionary</h2>
+  <p class="hint" id="dictInfo"></p>
+  <div class="dict" id="dict"></div>
+</section>
+
+</div>
+
+<script>
+// the same words as WordDictionary.threeLetterWords() in Java
+const WORDS = ["ant", "ape", "arm", "art", "ask", "ate", "bad", "bag", "bat", "bed", "bee", "beg", "bet", "big", "bin", "bit", "box", "boy", "bud", "bug", "bun", "bus", "but", "buy", "cab", "can", "cap", "car", "cat", "cog", "cot", "cow", "cub", "cup", "cut", "dad", "day", "den", "dig", "dim", "dip", "dog", "dot", "dry", "dug", "ear", "eat", "egg", "elf", "end", "eye", "fan", "far", "fat", "fed", "fig", "fin", "fit", "fix", "fly", "fog", "fox", "fun", "fur", "gap", "gas", "gem", "get", "got", "gum", "had", "ham", "has", "hat", "hen", "hid", "him", "hip", "hit", "hop", "hot", "how", "hug", "hum", "hut", "ice", "ink", "jam", "jar", "jet", "jog", "joy", "jug", "key", "kid", "kit", "lab", "lap", "leg", "let", "lid", "lip", "lit", "log", "lot", "low", "mad", "man", "map", "mat", "men", "mix", "mom", "mop", "mud", "mug", "nap", "net", "new", "nod", "not", "now", "nut", "oak", "odd", "oil", "old", "owl", "pan", "pat", "pea", "peg", "pen", "pet", "pie", "pig", "pin", "pit", "pop", "pot", "pup", "put", "ram", "ran", "rat", "red", "rib", "rid", "rod", "row", "rub", "rug", "run", "sad", "sat", "saw", "sea", "see", "set", "sit", "six", "sky", "sun", "tag", "tan", "tap", "ten", "tie", "tin", "tip", "toe", "top", "toy", "tub", "tug", "two", "van", "vet", "wax", "web", "wet", "wig", "win", "yam", "yes", "yet", "zip", "zoo"];
+const DICT = new Set(WORDS);
+
+const $ = (id) => document.getElementById(id);
+
+// the same order as ChangeLetterAction.apply(): each position, then 'a' to 'z'
+function nextWords(word) {
+  const out = [];
+  for (let i = 0; i < word.length; i++) {
+    for (let k = 0; k < 26; k++) {
+      const letter = String.fromCharCode(97 + k);
+      if (letter === word[i]) continue;
+      const w = word.slice(0, i) + letter + word.slice(i + 1);
+      if (DICT.has(w)) out.push(w);
+    }
+  }
+  return out;
+}
+
+// draws a word as letter tiles; the letter that differs from "prev" is coloured
+function tiles(word, prev, extraClass) {
+  const box = document.createElement("span");
+  box.className = "word" + (extraClass ? " " + extraClass : "");
+  [...word].forEach((ch, i) => {
+    const t = document.createElement("span");
+    t.className = "tile" + (prev && prev[i] !== ch ? " ch" : "");
+    t.textContent = ch;
+    box.appendChild(t);
+  });
+  return box;
+}
+
+// a small BFS, only to check the answers on this page
+function shortestLadder(from, to) {
+  const parent = { [from]: null };
+  const queue = [from];
+  while (queue.length) {
+    const w = queue.shift();
+    if (w === to) {
+      const ladder = [];
+      for (let x = w; x !== null; x = parent[x]) ladder.unshift(x);
+      return ladder;
+    }
+    for (const n of nextWords(w)) if (!(n in parent)) { parent[n] = w; queue.push(n); }
+  }
+  return null;
+}
+
+let startWord = "cat", goalWord = "dog";
+let ladder = [startWord];
+const cur = () => ladder[ladder.length - 1];
+
+function say(text, kind) {
+  const m = $("msg");
+  m.className = "msg" + (kind ? " " + kind : "");
+  m.innerHTML = text;
+}
+
+function draw() {
+  const word = cur();
+  const prev = ladder.length > 1 ? ladder[ladder.length - 2] : null;
+  $("current").replaceChildren(...tiles(word, prev).childNodes);
+  $("goal").replaceChildren(...tiles(goalWord).childNodes);
+
+  const steps = ladder.length - 1;
+  $("sGoal").innerHTML = word === goalWord ? '<span class="yes">true</span>' : '<span class="no">false</span>';
+  $("sSteps").textContent = steps;
+  $("sCost").textContent = steps + " × 1 = " + steps;
+
+  const ol = $("ladder");
+  ol.innerHTML = "";
+  ladder.forEach((w, i) => {
+    const li = document.createElement("li");
+    const n = document.createElement("span");
+    n.className = "n"; n.textContent = i;
+    li.append(n, tiles(w, i > 0 ? ladder[i - 1] : null, i === 0 ? "start" : (w === goalWord ? "goal" : "")));
+    ol.appendChild(li);
+  });
+
+  const next = nextWords(word);
+  $("count").textContent = next.length + " next state" + (next.length === 1 ? "" : "s") + " from \"" + word + "\"";
+  const box = $("next");
+  box.innerHTML = "";
+  if (next.length === 0) {
+    box.innerHTML = '<span class="none">Nothing: no dictionary word is one letter away. apply() gives an empty list.</span>';
+  }
+  next.forEach(w => {
+    const b = document.createElement("button");
+    b.appendChild(tiles(w, word));
+    b.title = "Move to " + w;
+    b.addEventListener("click", () => step(w));
+    box.appendChild(b);
+  });
+
+  $("undo").disabled = ladder.length === 1;
+}
+
+function step(w) {
+  ladder.push(w);
+  draw();
+  if (w === goalWord) {
+    const best = shortestLadder(startWord, goalWord);
+    const steps = ladder.length - 1;
+    say("Goal reached in <b>" + steps + "</b> steps! " +
+        (best && steps === best.length - 1 ? "That is the shortest ladder." : "Can you find a shorter ladder?"), "win");
+  } else if (ladder.slice(0, -1).includes(w)) {
+    say("You were already on <b>" + w + "</b>. Going back to an old state does not help. Later, graph search will remember visited states.", "bad");
+  } else {
+    say("New state: <b>" + w + "</b>. isGoal() is false, keep going.");
+  }
+}
+
+function setWords() {
+  const s = $("inStart").value.trim().toLowerCase();
+  const g = $("inGoal").value.trim().toLowerCase();
+  if (!/^[a-z]+$/.test(s) || !/^[a-z]+$/.test(g)) { say("Please use letters only.", "bad"); return; }
+  if (s.length !== g.length) { say("The start and goal words must have the same length.", "bad"); return; }
+  if (!DICT.has(s) || !DICT.has(g)) { say("Please choose two words from the dictionary below.", "bad"); return; }
+  startWord = s; goalWord = g; ladder = [s];
+  draw();
+  say(s === g ? "The start is already the goal: 0 steps." : "New ladder: from <b>" + s + "</b> to <b>" + g + "</b>. Click the next words.");
+}
+
+$("setBtn").addEventListener("click", setWords);
+["inStart", "inGoal"].forEach(id => $(id).addEventListener("keydown", e => { if (e.key === "Enter") setWords(); }));
+$("undo").addEventListener("click", () => { if (ladder.length > 1) { ladder.pop(); draw(); say("Undo: back to <b>" + cur() + "</b>."); } });
+$("reset").addEventListener("click", () => { ladder = [startWord]; draw(); say("Back to the start word."); });
+
+// static parts
+const EXAMPLE = ["cat", "hat", "hot", "dot", "dog"];
+const ex = $("example");
+EXAMPLE.forEach((w, i) => {
+  if (i > 0) { const a = document.createElement("span"); a.className = "arrow"; a.textContent = "→"; ex.appendChild(a); }
+  ex.appendChild(tiles(w, i > 0 ? EXAMPLE[i - 1] : null, i === 0 ? "start" : (i === EXAMPLE.length - 1 ? "goal" : "")));
+});
+const best = shortestLadder("cat", "dog");
+$("ans4").innerHTML = "Yes: <b>" + best.join(" → ") + "</b> (" + (best.length - 1) + " steps). Next session, BFS will find the shortest ladder for us.";
+$("dictInfo").textContent = WORDS.length + " words, the same as WordDictionary.threeLetterWords() in Java.";
+$("dict").innerHTML = WORDS.map(w => "<span>" + w + "</span>").join("");
+$("words").innerHTML = WORDS.map(w => '<option value="' + w + '">').join("");
+
+draw();
+say("Click one of the next words to make your ladder.");
+</script>
+</body>
+</html>
