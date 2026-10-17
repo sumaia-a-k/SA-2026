@@ -18,38 +18,40 @@ You need a **JDK** (version 8 or newer, we suggest 21).
 ### What are `run.bat` and `run.sh`?
 
 They are two small scripts that build and run the project for you, so you do not need to type long `javac` commands.
-They do the same job. Only the terminal is different:
+They do the same job. **Choose the script by your terminal, not by your computer:**
 
-| Script | Use it in |
-|---|---|
-| `run.bat` | Windows: Command Prompt or PowerShell |
-| `run.sh` | Git Bash, macOS or Linux |
+| Your terminal | Script to use | Command |
+|---|---|---|
+| Windows **Command Prompt** (cmd) | `run.bat` | `run.bat` |
+| Windows **PowerShell** (also the default VS Code terminal on Windows) | `run.bat` | `.\run.bat` |
+| **Git Bash** (on Windows) | `run.sh` | `./run.sh` |
+| **Linux** or **macOS** terminal | `run.sh` | `./run.sh` |
 
-Each script does three steps:
+> Git Bash runs on Windows, but it is a Linux-style terminal. So in Git Bash use `run.sh`, not `run.bat`.
 
-1. Finds all `.java` files in `src` and writes their list to `out/sources.txt`.
-2. Compiles them with `javac` into the `out` folder (the `.class` files go there).
-3. Runs the main class `sa2026.Main`.
+**Not sure which terminal you have?** Look at the prompt:
+
+| The prompt looks like | Your terminal | Use |
+|---|---|---|
+| `PS D:\uni\SA-2026>` | PowerShell | `.\run.bat` |
+| `D:\uni\SA-2026>` | Command Prompt | `run.bat` |
+| `user@PC MINGW64 /d/uni/SA-2026 $` | Git Bash | `./run.sh` |
+| `user@pc:~/SA-2026$` | Linux / macOS | `./run.sh` |
+
+Both scripts do the same steps:
+
+1. Find all `.java` files in `src` and write their list to `out/sources.txt`.
+2. Compile them with `javac` into the `out` folder (the `.class` files go there).
+3. Run the main class `sa2026.Main`.
 
 If the code has an error, the script stops at step 2 and prints `Build failed`.
+`run.bat` also checks first that `javac` is installed. It works even if your folder path has spaces.
 
 ### How to run them
 
-Open a terminal **inside the `SA-2026` folder** (the folder with `run.bat` in it), then:
+Open a terminal **inside the `SA-2026` folder** (the folder with `run.bat` and `run.sh` in it), then type the command from the table above.
 
-**Windows:**
-
-```
-.\run.bat
-```
-
-**Git Bash, macOS or Linux:**
-
-```
-./run.sh
-```
-
-On macOS or Linux, if you get `Permission denied`, use `bash run.sh`, or run `chmod +x run.sh` once.
+On Git Bash, macOS or Linux, if you get `Permission denied`, use `bash run.sh`, or run `chmod +x run.sh` once.
 
 ### Run another main class (for example a demo)
 
