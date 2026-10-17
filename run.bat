@@ -1,30 +1,31 @@
 @echo off
+REM Builds and runs the project on Windows.
+REM Usage: run.bat   (in PowerShell: .\run.bat)
+REM Works even if the project folder path has spaces.
+
 setlocal EnableExtensions EnableDelayedExpansion
 
-REM Move to the project folder
+REM Go to the project folder (the folder of this file)
 cd /d "%~dp0"
 
-REM Check Java compiler
+REM 1. Check that the Java compiler (javac) is installed
 where javac >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: javac not found.
+    echo ERROR: javac not found. Install a JDK and add it to PATH.
     exit /b 1
 )
 
-REM Create output folder
+REM 2. Make a fresh list of all .java files in src
+REM    Each path is put in quotes and uses "/" instead of "\",
+REM    so javac can read paths that have spaces.
 if not exist "out" mkdir "out"
-
-REM Create a fresh list of Java files
-if exist "out\sources.txt" del "out\sources.txt"
-
-REM Use forward slashes to handle spaces in paths
 (for /r "src" %%F in (*.java) do (
     set "file=%%~fF"
     set "file=!file:\=/!"
     echo "!file!"
 )) > "out\sources.txt"
 
-REM Compile all Java files
+REM 3. Compile all files into the out folder
 javac -encoding UTF-8 -d "out" @"out/sources.txt"
 if errorlevel 1 (
     echo.
@@ -32,7 +33,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Run the main class
+REM 4. Run the main class
 java -cp "out" sa2026.Main %*
 
 endlocal
