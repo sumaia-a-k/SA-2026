@@ -17,8 +17,8 @@ class SearchAlgorithm(ABC):
     def __init__(self, use_graph_search: bool = False):
         self.use_graph_search = use_graph_search
 
-        # number of child nodes created (generated)
-        self.developed_nodes = 0
+        # number of nodes created (generated): the start node + every child node
+        self.generated_nodes = 0
 
         # number of nodes taken from the frontier and expanded
         self.nodes_actually_expanded = 0
@@ -34,7 +34,7 @@ class SearchAlgorithm(ABC):
     # The "_" at the start of the name means: use it only in this class and its children
     # (like "protected" in Java). Python does not stop you, it is only a rule between programmers.
     def _reset_counters(self):
-        self.developed_nodes = 0
+        self.generated_nodes = 0
         self.nodes_actually_expanded = 0
 
     # prints every step from the start to the goal
@@ -46,5 +46,5 @@ class SearchAlgorithm(ABC):
             print(node)
         print(f"Solution cost: {solution.path_cost}")
         print(f"Solution steps: {solution.depth}")
-        print(f"Developed nodes: {self.developed_nodes}")
+        print(f"Generated nodes: {self.generated_nodes}")
         print(f"Expanded nodes: {self.nodes_actually_expanded}")
