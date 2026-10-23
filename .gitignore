@@ -71,6 +71,17 @@ htmlcov/
 .env
 .env.*
 
+# ===== C++ =====
+# The run scripts build into cpp/out/ (already ignored by "out/" above).
+# These are for other ways of building (by hand, CLion, Visual Studio).
+*.o
+*.obj
+*.exe
+*.pdb
+*.ilk
+cmake-build-*/
+.vs/
+
 # ===== Editors and OS =====
 .vscode/
 *.swp

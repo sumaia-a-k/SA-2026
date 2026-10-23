@@ -16,9 +16,14 @@ The code is added step by step, one session at a time.
 The same code is also written in **Python**, in the [`python`](python) folder.
 If you prefer Python, read [python/README.md](python/README.md). It shows what you need and how to run each program (with the matching Java command).
 
+## C++ version
+
+The same code is also written in **C++**, in the [`cpp`](cpp) folder.
+If you prefer C++, read [cpp/README.md](cpp/README.md). It shows what you need and how to run each program (with the matching Java command).
+
 ## How to run
 
-This part is for the **Java** code. For Python, see [python/README.md](python/README.md).
+This part is for the **Java** code. For Python, see [python/README.md](python/README.md). For C++, see [cpp/README.md](cpp/README.md).
 
 You need a **JDK** (version 8 or newer, we suggest 21).
 
