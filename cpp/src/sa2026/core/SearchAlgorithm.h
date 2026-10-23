@@ -21,7 +21,7 @@ public:
     virtual NodePtr search(const Problem& p) = 0;
 
     bool isGraphSearch() const;
-    int getDevelopedNodes() const;
+    int getGeneratedNodes() const;
     int getNodesActuallyExpanded() const;
 
     // prints every step from the start to the goal
@@ -41,8 +41,8 @@ protected:
     // true  = graph search (we remember explored states and do not visit them again)
     const bool useGraphSearch;
 
-    // number of child nodes created (generated)
-    int developedNodes = 0;
+    // number of nodes created (generated): the start node + every child node
+    int generatedNodes = 0;
 
     // number of nodes taken from the frontier and expanded
     int nodesActuallyExpanded = 0;

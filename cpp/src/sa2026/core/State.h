@@ -4,6 +4,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace sa2026::core {
@@ -47,6 +48,23 @@ public:
  * "const" means: the state can not be changed through this pointer.
  */
 using StatePtr = std::shared_ptr<const State>;
+
+/*
+ * A hash set of states needs two helpers: one gives the hash of a state,
+ * and one says if two states are equal. They call our hashCode() and equals().
+ * (Java's HashSet calls hashCode() and equals() by itself. In C++ we must tell the set.)
+ * operator() lets us use the object like a function: StateHash{}(state)
+ */
+struct StateHash {
+    std::size_t operator()(const StatePtr& s) const { return s->hashCode(); }
+};
+
+struct StateEqual {
+    bool operator()(const StatePtr& a, const StatePtr& b) const { return a->equals(*b); }
+};
+
+// a hash set of states, like HashSet<State> in Java. count() and insert() are fast.
+using StateSet = std::unordered_set<StatePtr, StateHash, StateEqual>;
 
 // lets us write  std::cout << state  (it prints "null" if the pointer is empty, like Java)
 std::ostream& operator<<(std::ostream& out, const StatePtr& state);
