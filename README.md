@@ -11,7 +11,14 @@ The code is added step by step, one session at a time.
 - Informed search: Greedy Best-First Search and A*.
 - How to design and use heuristic functions.
 
+## Python version
+
+The same code is also written in **Python**, in the [`python`](python) folder.
+If you prefer Python, read [python/README.md](python/README.md). It shows what you need and how to run each program (with the matching Java command).
+
 ## How to run
+
+This part is for the **Java** code. For Python, see [python/README.md](python/README.md).
 
 You need a **JDK** (version 8 or newer, we suggest 21).
 
