@@ -1,5 +1,7 @@
 package sa2026;
 
+import java.util.Locale;
+
 import sa2026.algorithms.BFS;
 import sa2026.algorithms.BFSOptimized;
 import sa2026.core.Node;
@@ -41,7 +43,17 @@ public class Main {
     private static void compare(String name, SearchAlgorithm algorithm, Problem problem) {
         Node goal = problem.solve(algorithm);
         int steps = (goal == null) ? -1 : goal.getDepth();
-        System.out.printf("%-24s %5d %9d %10d%n", name, steps,
+        // The format "%-24s %5d %9d %10d%n" means:
+        //   %-24s -> a text, 24 characters wide, on the left (the "-" means left)
+        //   %5d   -> a whole number, 5 characters wide, on the right
+        //   %9d   -> a whole number, 9 characters wide, on the right
+        //   %10d  -> a whole number, 10 characters wide, on the right
+        //   %n    -> a new line
+        // Example: "BFS, graph search", 10, 23, 50 prints
+        //   BFS, graph search           10        23         50
+        // The fixed widths keep the columns straight under the table header.
+        // Locale.ROOT keeps the digits 0-9, even on a PC with Arabic settings.
+        System.out.printf(Locale.ROOT, "%-24s %5d %9d %10d%n", name, steps,
                 algorithm.getNodesActuallyExpanded(), algorithm.getGeneratedNodes());
     }
 }
