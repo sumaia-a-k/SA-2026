@@ -214,7 +214,7 @@ const CLASSES = {
     methods:['+ getState(), getParent(), ...  // getters', '+ isRootNode(): boolean',
              '+ getPathFromRoot(): List<Node>', '+ compareTo(Node): int', '+ equals(Object): boolean'] },
   SearchAlgorithm: { kind:'abstract', x:790, y:250, w:280,
-    fields:['# useGraphSearch: boolean', '+ developedNodes: int', '+ nodesActuallyExpanded: int'],
+    fields:['# useGraphSearch: boolean', '+ generatedNodes: int', '+ nodesActuallyExpanded: int'],
     methods:['~+ search(Problem): Node'] },
 };
 
@@ -356,20 +356,20 @@ const C = {
     analogy:'Different ways to find your lost keys: room by room (BFS), one room very deep first (DFS), or the place that looks most likely first (Greedy, A*).',
     members:[
       ['useGraphSearch', 'false = tree search: it may visit the same state again. true = graph search: it remembers explored states and never repeats them.'],
-      ['developedNodes', 'How many child states were <b>generated</b> (created) in total. After apply(), it grows by the number of new states.'],
+      ['generatedNodes', 'How many nodes were <b>generated</b> (created) in total: the start node + every child node. After apply(), it grows by the number of new states.'],
       ['nodesActuallyExpanded', 'How many nodes were <b>expanded</b>: taken from the frontier, and their children generated. It grows by 1 for each expanded node.'],
       ['search(Problem p)', 'Abstract. Each algorithm writes its own version.'],
     ],
     tip:'<b>Generated vs expanded: what is the difference?</b><br>' +
         '<b>Expanded</b> = we <i>open</i> a node: take it out of the frontier and look at its children. ' +
-        '<b>Generated (developed)</b> = we <i>create</i> a child node. It goes into the frontier but may never be opened.' +
+        '<b>Generated</b> = we <i>create</i> a node (the start node or a child). It goes into the frontier but may never be opened.' +
         '<br><br><b>Example:</b> the start node has 3 children.<br>' +
-        'After expanding the start node: <code>nodesActuallyExpanded = 1</code>, <code>developedNodes = 3</code>.' +
-        '<br><br>So <b>developedNodes ≥ nodesActuallyExpanded</b> most of the time. ' +
+        'After expanding the start node: <code>nodesActuallyExpanded = 1</code>, <code>generatedNodes = 4</code> (the start node + 3 children).' +
+        '<br><br>So <b>generatedNodes ≥ nodesActuallyExpanded</b> most of the time. ' +
         'The goal node is <b>not</b> counted as expanded, because we return it before we expand it. ' +
         'In graph search, a state that was already explored is skipped, so it is not counted as expanded either.' +
         '<br><br><b>Why both?</b> They measure two different costs: expanded ≈ <b>time</b> (work done), generated ≈ <b>memory</b> (nodes created).',
-    code:'frontier = { startNode }\nwhile (frontier is not empty) {\n    node = frontier.pick();      // <- the ONLY big difference!\n    if (p.isGoal(node.state)) return node;   // goal: not expanded\n\n    nodesActuallyExpanded++;     // we open this node\n    for (IAction a : p.getActions()) {\n        Collection<State> next = a.apply(node.state);\n        developedNodes += next.size();       // children created\n        for (State s : next)\n            frontier.add(new Node(s, node, a, cost));\n    }\n}\nreturn null;                     // no solution' },
+    code:'frontier = { startNode }\ngeneratedNodes = 1;              // the start node\nwhile (frontier is not empty) {\n    node = frontier.pick();      // <- the ONLY big difference!\n    if (p.isGoal(node.state)) return node;   // goal: not expanded\n\n    nodesActuallyExpanded++;     // we open this node\n    for (IAction a : p.getActions()) {\n        Collection<State> next = a.apply(node.state);\n        generatedNodes += next.size();       // children created\n        for (State s : next)\n            frontier.add(new Node(s, node, a, cost));\n    }\n}\nreturn null;                     // no solution' },
 };
 
 const TOUR = [

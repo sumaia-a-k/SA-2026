@@ -89,6 +89,20 @@ Go into the `SA-2026` folder and run the script first.
 
 You can also open the `SA-2026` folder in **VS Code** (with the *Extension Pack for Java*) and click **Run** above `main`.
 
+## Student tasks
+
+The folders called `incomplete_code` have the tasks for you. Their code is not finished:
+search for `TODO` in the files and follow the steps. The same tasks are in the Python and C++ versions.
+
+| Folder | Your task | How to check it |
+|---|---|---|
+| `src/sa2026/problems/incomplete_code/` | Finish the maze and the word ladder problems. | Run their demos, for example `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` |
+| `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `BFS` and `BFSOptimized`. Everything else is ready. | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` |
+
+`BFSDemo` runs your BFS and the finished BFS on the same problems.
+For each check it prints `OK`, or `NOT YET` with what is still different (for example `generated nodes = 49, it should be 50`).
+If it does not stop, your search never ends: stop it with `Ctrl+C` and look at your loop.
+
 ## Course sessions
 
 Each session will have its own folder with code and notes. The list will grow during the semester.

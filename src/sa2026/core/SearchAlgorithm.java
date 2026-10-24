@@ -10,8 +10,8 @@ public abstract class SearchAlgorithm {
     // true  = graph search (we remember explored states and do not visit them again)
     protected final boolean useGraphSearch;
 
-    // number of child nodes created (generated)
-    protected int developedNodes = 0;
+    // number of nodes created (generated): the start node + every child node
+    protected int generatedNodes = 0;
 
     // number of nodes taken from the frontier and expanded
     protected int nodesActuallyExpanded = 0;
@@ -35,7 +35,7 @@ public abstract class SearchAlgorithm {
 
     // sets the counters back to 0
     protected void resetCounters() {
-        developedNodes = 0;
+        generatedNodes = 0;
         nodesActuallyExpanded = 0;
     }
 
@@ -43,8 +43,8 @@ public abstract class SearchAlgorithm {
         return useGraphSearch;
     }
 
-    public int getDevelopedNodes() {
-        return developedNodes;
+    public int getGeneratedNodes() {
+        return generatedNodes;
     }
 
     public int getNodesActuallyExpanded() {
@@ -62,7 +62,7 @@ public abstract class SearchAlgorithm {
         }
         System.out.println("Solution cost: " + solution.getPathCost());
         System.out.println("Solution steps: " + solution.getDepth());
-        System.out.println("Developed nodes: " + developedNodes);
+        System.out.println("Generated nodes: " + generatedNodes);
         System.out.println("Expanded nodes: " + nodesActuallyExpanded);
     }
 }

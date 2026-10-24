@@ -9,7 +9,7 @@ SearchAlgorithm::SearchAlgorithm() : SearchAlgorithm(false) {}
 SearchAlgorithm::SearchAlgorithm(bool useGraphSearch) : useGraphSearch(useGraphSearch) {}
 
 void SearchAlgorithm::resetCounters() {
-    developedNodes = 0;
+    generatedNodes = 0;
     nodesActuallyExpanded = 0;
 }
 
@@ -17,8 +17,8 @@ bool SearchAlgorithm::isGraphSearch() const {
     return useGraphSearch;
 }
 
-int SearchAlgorithm::getDevelopedNodes() const {
-    return developedNodes;
+int SearchAlgorithm::getGeneratedNodes() const {
+    return generatedNodes;
 }
 
 int SearchAlgorithm::getNodesActuallyExpanded() const {
@@ -35,7 +35,7 @@ void SearchAlgorithm::printSolution(const NodePtr& solution) const {
     }
     std::cout << "Solution cost: " << formatCost(solution->getPathCost()) << std::endl;
     std::cout << "Solution steps: " << solution->getDepth() << std::endl;
-    std::cout << "Developed nodes: " << developedNodes << std::endl;
+    std::cout << "Generated nodes: " << generatedNodes << std::endl;
     std::cout << "Expanded nodes: " << nodesActuallyExpanded << std::endl;
 }
 
