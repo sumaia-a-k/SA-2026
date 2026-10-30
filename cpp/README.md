@@ -50,6 +50,7 @@ So the script builds and runs **one program each time**. You give the program na
 | Maze demo (student version) | `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` | `.\run.bat sa2026.problems.incomplete_code.maze.MazeDemo` |
 | Word ladder demo (student version) | `java -cp out sa2026.problems.incomplete_code.wordladder.WordLadderDemo` | `.\run.bat sa2026.problems.incomplete_code.wordladder.WordLadderDemo` |
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.BFSDemo` |
+| Check your DFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.DFSDemo` |
 
 In Git Bash, Linux or macOS, write `./run.sh` instead of `.\run.bat`.
 
@@ -117,9 +118,15 @@ cpp/
     ├── algorithms/
     │   ├── BFS.h, BFS.cpp              BFS.java
     │   ├── BFSOptimized.h, .cpp        BFSOptimized.java
+    │   ├── DFS.h, DFS.cpp              DFS.java
+    │   ├── DFSCycleCheck.h, .cpp       DFSCycleCheck.java
+    │   ├── DepthLimitedDFS.h, .cpp     DepthLimitedDFS.java
+    │   ├── IterativeDeepening.h, .cpp  IterativeDeepening.java
     │   └── incomplete_code/            the student versions: write the body of search()
     │       ├── BFS, BFSOptimized (.h + .cpp)
-    │       └── BFSDemo.cpp             checks your BFS with the finished one (BFSDemo.java)
+    │       ├── BFSDemo.cpp             checks your BFS with the finished one (BFSDemo.java)
+    │       ├── DFS, DFSCycleCheck, DepthLimitedDFS, IterativeDeepening (.h + .cpp)
+    │       └── DFSDemo.cpp             checks your DFS versions with the finished ones (DFSDemo.java)
     └── problems/
         ├── maze/                       Maze, MazeState, MazeAction, MazeProblem (.h + .cpp), MazeDemo.cpp
         ├── wordladder/                 WordDictionary, WordLadderState, ChangeLetterAction, ... , WordLadderDemo.cpp
@@ -152,6 +159,7 @@ C++ has no single naming style, so we kept the Java names.
 | `HashSet<String>` | `std::unordered_set<std::string>` | |
 | `HashSet<State>` | `core::StateSet` | a hash set of states, see `core/State.h` |
 | `Queue<Node>` / `LinkedList` | `std::queue<NodePtr>` | `push()` adds at the end, `front()` reads the first, `pop()` removes it |
+| `Deque<Node>` / `ArrayDeque` used as a stack | `std::stack<NodePtr>` | `push()` puts on the top, `top()` reads the top, `pop()` removes it |
 | `System.out.printf(...)` | `std::printf(...)` | the same `%d`, `%s` codes |
 | `(MazeState) s` | `dynamic_cast<const MazeState&>(*s)` | |
 | `o instanceof MazeState` | `dynamic_cast<const MazeState*>(&o) != nullptr` | |
@@ -199,6 +207,7 @@ Most of them also have a short comment in the code.
 | Range `for` loop | `for (const ActionPtr& action : problem.getActions())` | Like `for (IAction action : ...)` in Java. |
 | `throw std::invalid_argument(...)` | `Maze.cpp`, `WordLadderProblem.cpp` | Throws an error, like `throw new IllegalArgumentException(...)` in Java. |
 | `std::queue` | `algorithms/BFS.cpp` | A FIFO queue. Taking a node out needs two steps: `front()` reads it, `pop()` removes it. |
+| `std::stack` | `algorithms/DFS.cpp` | A LIFO stack. Taking a node out needs two steps: `top()` reads it, `pop()` removes it. |
 | `StateHash`, `StateEqual`, `operator()` | `core/State.h` | A hash set must know how to hash and compare our states. These two small structs call `hashCode()` and `equals()`. `operator()` lets us use an object like a function. |
 | `namespace finished = sa2026::algorithms;` | `algorithms/incomplete_code/BFSDemo.cpp` | A short name for a long namespace. |
 | `std::boolalpha`, `std::flush` | the demos | `boolalpha` prints `true` / `false` instead of `1` / `0`. `flush` shows the text now, not later. |

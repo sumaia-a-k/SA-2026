@@ -98,8 +98,9 @@ search for `TODO` in the files and follow the steps. The same tasks are in the P
 |---|---|---|
 | `src/sa2026/problems/incomplete_code/` | Finish the maze and the word ladder problems. | Run their demos, for example `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` |
 | `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `BFS` and `BFSOptimized`. Everything else is ready. | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` |
+| `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `DFS`, `DFSCycleCheck`, `DepthLimitedDFS` and `IterativeDeepening` (and `isOnPath()`). | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` |
 
-`BFSDemo` runs your BFS and the finished BFS on the same problems.
+`BFSDemo` runs your BFS and the finished BFS on the same problems. `DFSDemo` does the same for the DFS versions.
 For each check it prints `OK`, or `NOT YET` with what is still different (for example `generated nodes = 49, it should be 50`).
 If it does not stop, your search never ends: stop it with `Ctrl+C` and look at your loop.
 
