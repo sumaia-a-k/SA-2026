@@ -7,6 +7,8 @@ import sa2026.algorithms.BFSOptimized;
 import sa2026.core.Node;
 import sa2026.core.Problem;
 import sa2026.core.SearchAlgorithm;
+import sa2026.problems.wordladder.WordDictionary;
+import sa2026.problems.wordladder.WordLadderProblem;
 import sa2026.problems.maze.Maze;
 import sa2026.problems.maze.MazeProblem;
 
@@ -25,6 +27,8 @@ public class Main {
                 "...#.#G");
         Problem problem = new MazeProblem(maze);
 
+        
+        // Problem problem = new WordLadderProblem("cat", "dog", WordDictionary.threeLetterWords());
         // 1. solve the maze with BFS (graph search) and print every step
         System.out.println("=== BFS, graph search ===");
         SearchAlgorithm algorithm = new BFS(true);
