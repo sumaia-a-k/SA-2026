@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BFS Step by Step</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --wall:#3d4556;
+  --q:#3b5bdb; --q-bg:#e8edfd;           /* in the queue */
+  --ex:#7b8494; --ex-bg:#e3e7ee;         /* expanded */
+  --cur:#d9480f; --cur-bg:#fff0e6;       /* current node */
+  --goal:#2b8a3e; --goal-bg:#dcf3e2;     /* goal and final path */
+  --ok:#2b8a3e; --bad:#e03131; --warn:#d9480f; --warn-bg:#fff0e6;
+  --l0:#1971c2; --l1:#0c8599; --l2:#e8590c; --l3:#9c36b5;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --num:#c2410c; --str:#2b8a3e;
+  --new-bg:#fff3bf;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --wall:#4a5366;
+    --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+    --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+    --l0:#74c0fc; --l1:#66d9e8; --l2:#ffa94d; --l3:#e599f7;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+    --new-bg:#4a3f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --wall:#4a5366;
+  --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+  --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+  --l0:#74c0fc; --l1:#66d9e8; --l2:#ffa94d; --l3:#e599f7;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+  --new-bg:#4a3f10;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 24px 32px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 22px; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 14px; }
+.steps button { border-radius: 99px; padding: 5px 12px 5px 6px; display: inline-flex; align-items: center; gap: 7px; }
+.steps button .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--accent-bg); color: var(--accent);
+}
+.steps button.on .n { background: var(--surface); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.stack > * + * { margin-top: 18px; }
+h2 { margin: 0 0 8px; font-size: 24px; }
+h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+h3:first-child { margin-top: 0; }
+h3 .side { text-transform: none; letter-spacing: 0; font-weight: 400; }
+p { margin: 6px 0; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note b:first-child { color: var(--warn); }
+.okbox { background: var(--goal-bg); border-left: 4px solid var(--goal); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; background: var(--accent-bg); color: var(--accent); vertical-align: 2px; }
+.tag.ex { background: var(--warn-bg); color: var(--warn); }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.kw { color: var(--kw); font-weight: 600; } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); } .str { color: var(--str); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+.navrow { display: flex; justify-content: space-between; margin-top: 18px; }
+
+/* pseudo code */
+.pseudo { padding: 8px 0; }
+.pseudo .ln { display: block; padding: 1px 14px 1px 10px; border-left: 4px solid transparent; white-space: pre; }
+.pseudo .ln.hl { background: var(--new-bg); border-left-color: var(--warn); }
+.pseudo .ln.off { opacity: .4; }
+.pseudo .ln.new { box-shadow: inset 3px 0 0 var(--goal); }
+.pseudo .star { color: var(--goal); font-weight: 700; }
+.diff .add { display: block; background: var(--goal-bg); margin: 0 -14px; padding: 0 14px; }
+
+/* run tab */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; margin-bottom: 18px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font-size: 13px; color: var(--muted); }
+#speed { width: 90px; vertical-align: middle; }
+svg { display: block; width: 100%; height: auto; user-select: none; }
+#board { max-height: 420px; }
+.hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 2px solid; }
+.msg { font-size: 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-height: 72px; }
+.msg .stepno { font-size: 12px; color: var(--muted); display: block; }
+.qstrip { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 34px; }
+.qstrip .end { font-size: 12px; color: var(--muted); }
+.chip { display: inline-flex; align-items: baseline; gap: 1px; padding: 3px 8px; border-radius: 7px; font: 13px ui-monospace, Consolas, monospace;
+  border: 1.5px solid var(--line); background: var(--surface); }
+.chip sub { font-size: 10px; color: var(--muted); }
+.chip.q { background: var(--q-bg); border-color: var(--q); }
+.chip.new { background: var(--new-bg); border-color: var(--warn); }
+.chip.ex { background: var(--ex-bg); border-color: var(--ex); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.stat { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+#log { margin: 4px 0 0; padding-left: 0; list-style: none; font-size: 13px; color: var(--muted); max-height: 170px; overflow: auto; }
+#log li { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+#log li b { color: var(--ink); }
+
+/* drawing */
+.e { stroke: var(--line); stroke-width: 3; }
+.e-cur { stroke: var(--cur); stroke-width: 4; }
+.e-path { stroke: var(--goal); stroke-width: 6; }
+.nd { stroke-width: 3; }
+.st-new { fill: var(--surface); stroke: var(--line); }
+.st-q { fill: var(--q-bg); stroke: var(--q); }
+.st-ex { fill: var(--ex-bg); stroke: var(--ex); }
+.st-cur { fill: var(--cur-bg); stroke: var(--cur); stroke-width: 4; }
+.st-path { fill: var(--goal-bg); stroke: var(--goal); stroke-width: 4; }
+.st-just { fill: var(--new-bg); stroke: var(--warn); }
+.st-skip { fill: var(--surface); stroke: var(--bad); stroke-dasharray: 3 3; }
+.newring { fill: none; stroke: var(--warn); stroke-width: 2; stroke-dasharray: 3 2; }
+.goalring { fill: none; stroke: var(--goal); stroke-width: 2; }
+.nlbl { font-weight: 700; font-size: 16px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.tlbl { font-weight: 700; font-size: 11px; }
+.dlbl { font-size: 11px; fill: var(--muted); }
+.badge { fill: var(--q); }
+.badgetxt { fill: var(--surface); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.wall { fill: var(--wall); }
+.cellbox { stroke: var(--line); stroke-width: 1; }
+.corner { font-size: 11px; font-weight: 800; fill: var(--muted); }
+.walk { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.walk.cur { stroke: var(--cur); opacity: .7; }
+.walk.path { stroke: var(--goal); }
+.clickable { cursor: pointer; }
+
+/* idea tab */
+.qplay { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.person { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--q-bg); border: 2px solid var(--q); font-weight: 700; }
+.person.first { border-color: var(--warn); background: var(--new-bg); }
+
+.slider { display: flex; gap: 10px; align-items: center; margin: 4px 0; }
+.slider input { flex: 1; max-width: 260px; }
+.slider b { min-width: 28px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding: 14px 16px 28px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { padding: 14px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Breadth-First Search (BFS)</h1>
+      <p>Intelligent Search Algorithms · Latakia University · Our first search algorithm</p>
+    </div>
+    <button id="themeBtn">Dark / Light</button>
+  </header>
+
+  <nav class="steps" id="tabs"></nav>
+
+  <!-- ================= 1. The idea ================= -->
+  <section data-tab="0">
+    <div class="grid">
+      <div class="card">
+        <h2>The idea</h2>
+        <p class="lead">You lost your keys at home. You do not run to the far rooms first.
+          You look <b>near you</b> first, then a bit further, then further again.</p>
+        <p>BFS searches the same way. It looks at all the places <b>1 step</b> away,
+          then all the places <b>2 steps</b> away, then <b>3 steps</b> away, and so on.
+          Like a stone in water: the circles grow one by one.</p>
+        <div class="box"><b>BFS in one sentence:</b> always expand the <b>shallowest</b> node first (the node with the smallest depth).</div>
+
+        <h3>How does BFS remember the order?</h3>
+        <p>With a <b>queue</b>, like the line at a bakery: the first person in the line is served first.
+          This is called <b>FIFO</b>: First In, First Out.</p>
+        <ul>
+          <li>New nodes go to the <b>back</b> of the queue.</li>
+          <li>BFS always takes the node at the <b>front</b> of the queue.</li>
+        </ul>
+        <p>So old (shallow) nodes are always served before new (deep) nodes.</p>
+
+        <h3>Try the queue</h3>
+        <div class="qplay">
+          <span class="lbl">front →</span>
+          <span id="qp" class="qstrip"></span>
+          <span class="lbl">← back</span>
+        </div>
+        <div class="qplay">
+          <button id="qpAdd">Add to the back</button>
+          <button id="qpTake">Take from the front</button>
+        </div>
+        <p id="qpMsg" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h3>The levels of a small graph</h3>
+        <svg id="levelsSvg" viewBox="0 0 400 300" aria-label="Graph colored by level"></svg>
+        <div class="legend" id="levelsLegend"></div>
+        <p>Start at <b>S</b>. BFS finishes <b>all</b> the nodes of one level before it goes to the next level.</p>
+        <p class="muted">Question: in which order does BFS take the nodes? Go to step 2 and press <b>Step</b> to check.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. Watch it run ================= -->
+  <section data-tab="1" class="hidden">
+    <div class="card toolbar">
+      <div class="grp"><span class="lbl">Example</span>
+        <button data-ex="graph" class="on">Small graph</button>
+        <button data-ex="maze">Maze</button>
+      </div>
+      <div class="grp" id="modeBtns"><span class="lbl">Version</span>
+        <button data-mode="tree">Tree search</button>
+        <button data-mode="graph" class="on">Graph search</button>
+        <button data-mode="opt">Graph + check when adding</button>
+        <button data-mode="early">+ early goal test</button>
+      </div>
+      <div class="grp">
+        <button id="bReset" title="Start again">⏮ Reset</button>
+        <button id="bBack" title="Left arrow">◀ Back</button>
+        <button id="bStep" class="on" title="Right arrow">Step ▶</button>
+        <button id="bPlay">Play</button>
+        <button id="bEnd">Finish ⏭</button>
+        <label class="lbl">Speed <input type="range" id="speed" min="1" max="30" value="3"></label>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <svg id="board" aria-label="Search board"></svg>
+        <div class="hint" id="hint"></div>
+        <div id="treeWrap">
+          <h3>Search tree <span class="side muted">(every box is a node; the same state can appear more than once)</span></h3>
+          <svg id="tree" aria-label="Search tree"></svg>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--surface);border-color:var(--line)"></i>not seen yet</span>
+          <span><i style="background:var(--q-bg);border-color:var(--q)"></i>in the queue</span>
+          <span><i style="background:var(--new-bg);border-color:var(--warn)"></i>just added</span>
+          <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>current node</span>
+          <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>expanded</span>
+          <span><i style="background:var(--goal-bg);border-color:var(--goal)"></i>solution path</span>
+          <span><i style="background:var(--surface);border-color:var(--bad);border-style:dashed"></i>skipped</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="msg" id="msg"></div>
+        <h3>Queue (frontier) <span class="side muted">· small number = depth</span></h3>
+        <div class="qstrip" id="queue"></div>
+        <h3 id="seenTitle">Explored</h3>
+        <div class="qstrip" id="seen"></div>
+        <div class="stats" id="stats"></div>
+        <h3>Pseudo code <span class="side muted" id="codeNote"></span></h3>
+        <pre class="pseudo" id="code"></pre>
+        <h3>History</h3>
+        <ol id="log"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. Pseudo code ================= -->
+  <section data-tab="2" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Standard pseudo code</h2>
+        <p>This is the same code as our <code>BFS.java</code>. One function works for tree search and for graph search.</p>
+        <pre class="pseudo" id="stdCode"></pre>
+        <h3>Line by line</h3>
+        <table>
+          <tr><td><b>frontier</b></td><td>The queue of nodes we found but did not expand yet.</td></tr>
+          <tr><td><b>removeFirst()</b></td><td>Take the <b>oldest</b> node. This one line is what makes it BFS.</td></tr>
+          <tr><td><b>explored</b></td><td>Graph search only. The states we already expanded. A <b>set</b>, so checking is fast.</td></tr>
+          <tr><td><b>continue</b></td><td>The same state can be in the queue twice. If it was expanded before, we skip it.</td></tr>
+          <tr><td><b>isGoal</b></td><td>We test the node when we <b>take it out</b> of the queue (not when we create it).</td></tr>
+          <tr><td><b>addLast(child)</b></td><td>Children go to the <b>back</b> of the queue, so they wait until the current level is done.</td></tr>
+        </table>
+        <div class="box"><b>Tree or graph search?</b> The only difference is the <code>explored</code> set.
+          Tree search remembers nothing, so it can go around a cycle again and again (S → A → S → A ...).
+          It still finds the goal, but it does much more work.</div>
+      </div>
+
+      <div class="card">
+        <h2>Trace by hand</h2>
+        <p>The small graph from step 1, <b>graph search</b>, goal = <b>G</b>. The small number is the depth.</p>
+        <div class="tablewrap"><table id="traceGraph"></table></div>
+        <p class="muted" style="margin-top:12px">Your turn: write the same table for <b>tree search</b>, then check.</p>
+        <button id="showTreeTrace">Show the tree search trace</button>
+        <div class="tablewrap hidden" id="treeTraceWrap"><table id="traceTree"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4. Make it better ================= -->
+  <section data-tab="3" class="hidden">
+    <div class="grid">
+      <div class="stack">
+        <div class="card">
+          <h2>1 · Check when adding <span class="tag">graph search</span></h2>
+          <p>In the standard code, <b>D</b> goes into the queue <b>two times</b>: once from A and once from B.
+            We skip the second D later, but it waits in the queue and uses memory.</p>
+          <p><b>The fix:</b> remember a state at the moment we <b>add</b> it to the queue, not when we expand it.
+            Now the set has every state we <b>generated</b> (in the queue or expanded), so we call it <code>reached</code>.</p>
+          <pre class="pseudo" id="optCode"></pre>
+          <p>The lines with <span class="star">★</span> are new. The answer is the <b>same</b>. Each state goes into the queue only once.</p>
+          <table>
+            <tr><td><code>explored</code></td><td>the state was <b>expanded</b> (standard BFS)</td></tr>
+            <tr><td><code>reached</code></td><td>the state was <b>generated</b>: it is in the queue or it was expanded</td></tr>
+          </table>
+          <div class="box"><b>Why not "visited"?</b> Many books and websites use this name, but for two different things:
+            some mean "added to the queue", others mean "expanded". So we use <code>reached</code>, the name in the AIMA book.</div>
+          <div class="box"><b>Where did <code>explored</code> go?</b> We do not need it:
+            <ul style="margin:4px 0 0; padding-left:20px">
+              <li>Every expanded state is already in <code>reached</code>.</li>
+              <li>No state goes into the queue twice, so there is nothing to skip.</li>
+              <li>In BFS the first path to a state is the shortest one, so we never change it.</li>
+            </ul>
+            In UCS and A* a cheaper path can come later, so there we need it again.</div>
+          <p class="muted">Java: <code>BFSOptimized.java</code>. Try it in step 2 with "Graph + check when adding".</p>
+        </div>
+
+        <div class="card" id="earlyCard">
+          <h2>2 · Early goal test <span class="tag ex">exercise</span></h2>
+          <p>Now we test the goal when we <b>create</b> a child, not when we take it out of the queue.</p>
+          <p><b>Why is it still correct?</b> BFS creates the nodes level by level.
+            So the first goal we create is also on the smallest depth.</p>
+          <p><b>What do we save?</b> With the normal test, before the goal (depth <i>d</i>) comes to the front of the queue,
+            we already created many nodes of depth <i>d</i>+1. With the early test we stop before that:
+            about <b>b<sup>d</sup></b> nodes instead of <b>b<sup>d+1</sup></b>. That is one full level less.</p>
+          <pre class="pseudo" id="earlyCode"></pre>
+          <div class="note"><b>Be careful:</b> do not forget the start node: test it before the loop.
+            And this trick is good for BFS only. In UCS and A* the first goal we create can be an expensive one.</div>
+          <p><b>Exercise:</b> copy <code>BFSOptimized.java</code> to <code>BFSEarlyGoal.java</code> and add this change.</p>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>3 · Use the right data structure</h2>
+          <table>
+            <tr><th>Job</th><th>Good</th><th>Slow</th></tr>
+            <tr><td>Queue</td><td><code>LinkedList</code> or <code>ArrayDeque</code>: <code>add</code> and <code>poll</code> are O(1)</td><td>An <code>ArrayList</code> with <code>remove(0)</code>: O(n)</td></tr>
+            <tr><td>Explored / reached</td><td><code>HashSet</code>: <code>contains</code> is O(1)</td><td><code>ArrayList</code>: <code>contains</code> checks every item, O(n)</td></tr>
+            <tr><td>"Is it in the queue?"</td><td>Use the <code>reached</code> set (idea 1)</td><td><code>frontier.contains(...)</code> on a LinkedList: O(n)</td></tr>
+          </table>
+          <div class="note"><b>Remember:</b> a <code>HashSet</code> works only if the State class has
+            <code>equals()</code> and <code>hashCode()</code>. Without them, two equal states look different.</div>
+        </div>
+
+        <div class="card">
+          <h2>The numbers</h2>
+          <p>The maze from <code>MazeDemo</code> (goal at depth 10). These are the same numbers that <code>Main.java</code> prints.</p>
+          <div class="tablewrap"><table id="cmpTable"></table></div>
+          <p class="muted">Expanded = nodes we took out and opened. Generated = nodes we created (the start node too).
+            Max queue = the biggest size of the queue (memory).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 5. Is BFS good? ================= -->
+  <section data-tab="4" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Is BFS good?</h2>
+        <p><b>b</b> = branching factor (the number of children of a node), <b>d</b> = depth of the nearest goal.</p>
+        <table>
+          <tr><th>Question</th><th>Answer</th><th>Why</th></tr>
+          <tr><td>Complete?<br><span class="muted">Does it always find a solution if one exists?</span></td>
+            <td class="yes">Yes</td><td>If b is finite. BFS checks all levels in order, so it must reach level d.</td></tr>
+          <tr><td>Optimal?<br><span class="muted">Is the solution the cheapest?</span></td>
+            <td class="yes">Yes, but only if all steps have the same cost</td><td>BFS finds the path with the <b>fewest steps</b>. Fewest steps = lowest cost only when every step costs the same.</td></tr>
+          <tr><td>Time</td><td><b>O(b<sup>d</sup>)</b></td><td>The number of nodes it creates. With our normal goal test it can be O(b<sup>d+1</sup>).</td></tr>
+          <tr><td>Space (memory)</td><td><b>O(b<sup>d</sup>)</b></td><td>The queue keeps a whole level of nodes. This is the real problem of BFS.</td></tr>
+        </table>
+
+        <h3>When is BFS not optimal?</h3>
+        <svg id="costSvg" viewBox="0 0 420 170" aria-label="BFS is not optimal when costs are different"></svg>
+        <p>BFS takes <b>S → G</b>: 1 step, but cost <b>10</b>.
+          The path S → A → B → G has 3 steps, but cost only <b>3</b>.</p>
+        <div class="box"><b>Remember the maze with mud (cost 3)?</b> There, the path with the fewest steps is not always the cheapest one.
+          So BFS is not optimal there. For different costs we need <b>Uniform Cost Search (UCS)</b>, our next algorithm.</div>
+      </div>
+
+      <div class="card">
+        <h2>How big does it get?</h2>
+        <p>Move the sliders. We say one node needs 1 KB of memory, and the computer makes 1 million nodes per second.</p>
+        <div class="slider"><span>b =</span><input type="range" id="bIn" min="2" max="10" value="10"><b id="bOut"></b></div>
+        <div class="slider"><span>d =</span><input type="range" id="dIn" min="1" max="16" value="8"><b id="dOut"></b></div>
+        <div class="tablewrap"><table id="growTable"></table></div>
+        <div class="note"><b>Look at memory:</b> time is a problem, but memory runs out first.
+          A normal PC has about 16 GB of memory.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6. Java code ================= -->
+  <section data-tab="5" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>BFS.java</h2>
+        <p class="muted">src/sa2026/algorithms/BFS.java</p>
+        <pre id="javaBfs"></pre>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h2>BFSOptimized.java</h2>
+          <p class="muted">Only <code>search()</code> is shown. The green lines are the changes.</p>
+          <pre class="diff" id="javaOpt"></pre>
+        </div>
+        <div class="card">
+          <h2>Mistakes to avoid</h2>
+          <ul>
+            <li>Create the queue and the set <b>inside</b> <code>search()</code>, not as fields.
+              If they are fields, a second search starts with old nodes inside.</li>
+            <li>Call <code>resetCounters()</code> at the start, or the numbers of two searches are added together.</li>
+            <li>Use a <code>HashSet</code> for explored, not an <code>ArrayList</code>.</li>
+            <li>Do not use <code>frontier.contains()</code>: it checks every node in the queue.</li>
+            <li>Write <code>equals()</code> and <code>hashCode()</code> in your State class.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h2>Run it</h2>
+          <p>Inside the <code>SA-2026</code> folder: <code>.\run.bat</code> (PowerShell) or <code>./run.sh</code> (Git Bash).
+            <code>Main</code> solves the maze and prints:</p>
+          <pre>Version                  Steps  Expanded  Generated
+BFS, tree search            10      2006       4412
+BFS, graph search           10        23         50
+BFSOptimized, graph         10        23         25</pre>
+          <p>Same answer (10 steps). Tree search does almost <b>100 times</b> more work.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 7. Student task ================= -->
+  <section data-tab="6" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Student task</h2>
+        <p>A student wrote this BFS function. Read it.</p>
+        <pre class="pseudo" id="taskCode"></pre>
+      </div>
+      <div class="card">
+        <h2>Your task</h2>
+        <ol>
+          <li>Is this code correct?</li>
+          <li>Why?</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <div class="navrow">
+    <button id="prevBtn">← Back</button>
+    <button id="nextBtn" class="on">Next →</button>
+  </div>
+</div>
+
+<script>
+/* Set to false to hide the early goal test (if you want to give it as an exercise first). */
+const SHOW_EARLY_GOAL = true;
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/* ================= the two problems ================= */
+const G_POS = { S:[200,36], A:[110,112], B:[290,112], C:[45,192], D:[200,192], E:[355,192], F:[110,266], G:[290,266] };
+const G_EDGES = [['S','A'],['S','B'],['A','C'],['A','D'],['B','D'],['B','E'],['C','F'],['D','G'],['E','G'],['F','G']];
+const G_ADJ = {};
+for (const k in G_POS) G_ADJ[k] = [];
+for (const [a, b] of G_EDGES) { G_ADJ[a].push(b); G_ADJ[b].push(a); }
+for (const k in G_ADJ) G_ADJ[k].sort(); // children in ABC order
+
+function graphProblem(goal) {
+  return { kind: 'graph', start: 'S', goal, isGoal: s => s === goal, next: s => G_ADJ[s], label: s => s };
+}
+
+const MAZE0 = ['S.#....', '.##.##.', '....#..', '.##....', '...#.#G'];
+function mazeProblem(rows) {
+  let start, goal;
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    if (ch === 'S') start = r + ',' + c;
+    if (ch === 'G') goal = r + ',' + c;
+  }));
+  const free = (r, c) => r >= 0 && r < rows.length && c >= 0 && c < rows[0].length && rows[r][c] !== '#';
+  const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // up, down, left, right (same order as MazeProblem)
+  return {
+    kind: 'maze', rows, start, goal, isGoal: s => s === goal,
+    next: s => {
+      const [r, c] = s.split(',').map(Number);
+      return DIRS.filter(([dr, dc]) => free(r + dr, c + dc)).map(([dr, dc]) => (r + dr) + ',' + (c + dc));
+    },
+    label: s => '(' + s + ')'
+  };
+}
+
+/* ================= the BFS engine (one small step at a time) ================= */
+const MODES = {
+  tree:      { graph: false, checkOnAdd: false, early: false, name: 'BFS, tree search' },
+  treeEarly: { graph: false, checkOnAdd: false, early: true,  name: 'Tree + early goal test' },
+  graph:     { graph: true,  checkOnAdd: false, early: false, name: 'BFS, graph search' },
+  opt:       { graph: true,  checkOnAdd: true,  early: false, name: 'Graph + check when adding' },
+  early:     { graph: true,  checkOnAdd: true,  early: true,  name: 'Graph + early goal test' },
+};
+const LIMIT = 30000; // tree search can go on forever when there is no path
+
+function newRun(prob, opt) {
+  const R = { prob, opt, queue: [], nodes: [], seen: new Set(), current: null, phase: 'pop',
+    expanded: 0, generated: 1, maxQ: 1, steps: 0, done: false, found: null, stopped: false,
+    line: [], msg: '', kind: 'init', newIds: new Set(), log: [] };
+  const root = makeNode(R, prob.start, null);
+  R.queue.push(root);
+  R.newIds.add(root.id);
+  if (opt.graph && opt.checkOnAdd) R.seen.add(prob.start);
+  R.line = opt.early ? ['g0', 'init', 'vis'] : opt.checkOnAdd ? ['init', 'vis'] : ['init', 'exset'];
+  R.msg = `Put the start node <b>${esc(prob.label(prob.start))}</b> in the queue.`;
+  if (opt.early && prob.isGoal(prob.start)) {
+    finish(R, root);
+    R.line = ['g0'];
+    R.msg = 'The start is already the goal!';
+  }
+  return R;
+}
+
+function makeNode(R, s, parent) {
+  const n = { id: R.nodes.length, s, parent, depth: parent ? parent.depth + 1 : 0, status: 'queue' };
+  R.nodes.push(n);
+  return n;
+}
+
+function finish(R, node) {
+  R.done = true;
+  R.found = node;
+  node.status = 'goal';
+}
+
+const nameOf = (R, n) => `<b>${esc(R.prob.label(n.s))}</b>`;
+const pathText = (R, n) => { const p = []; for (; n; n = n.parent) p.unshift(R.prob.label(n.s)); return p.join(' → '); };
+
+// does one small step. Returns false when there is nothing more to do.
+function step(R) {
+  if (R.done) return false;
+  const p = R.prob, o = R.opt;
+  R.steps++;
+  R.newIds = new Set();
+
+  if (R.phase === 'pop') {
+    if (R.queue.length === 0) {
+      R.done = true; R.kind = 'fail'; R.line = ['fail'];
+      R.msg = 'The queue is empty. There is <b>no solution</b>.';
+    } else {
+      const n = R.queue.shift();
+      R.current = n;
+      if (o.graph && !o.checkOnAdd && R.seen.has(n.s)) {
+        n.status = 'skip'; R.kind = 'skip'; R.line = ['pop', 'skip'];
+        R.msg = `Take ${nameOf(R, n)} from the front. We expanded it before, so we <b>skip</b> it.`;
+      } else {
+        n.status = 'cur'; R.kind = 'pop'; R.line = ['pop'];
+        R.msg = `Take ${nameOf(R, n)} (depth ${n.depth}) from the <b>front</b> of the queue.`;
+        R.phase = o.early ? 'expand' : 'test';
+      }
+    }
+  } else if (R.phase === 'test') {
+    const n = R.current;
+    R.kind = 'test'; R.line = ['goal'];
+    if (p.isGoal(n.s)) {
+      finish(R, n);
+      R.msg = `Is ${nameOf(R, n)} the goal? <b>Yes!</b> Path: ${esc(pathText(R, n))} (${n.depth} steps).`;
+    } else {
+      R.msg = `Is ${nameOf(R, n)} the goal? No.`;
+      R.phase = 'expand';
+    }
+  } else { // expand
+    const n = R.current;
+    if (o.graph && !o.checkOnAdd) R.seen.add(n.s);
+    R.expanded++;
+    n.status = 'ex';
+    const added = [], skipped = [];
+    for (const s of p.next(n.s)) {
+      if (o.graph && o.checkOnAdd) {
+        if (R.seen.has(s)) { skipped.push(s); continue; }
+        R.seen.add(s);
+      }
+      const child = makeNode(R, s, n);
+      R.generated++;
+      if (o.early && p.isGoal(s)) {
+        finish(R, child);
+        R.kind = 'test'; R.line = ['goal'];
+        R.msg = `Create the child ${nameOf(R, child)}. It is the goal, so we stop <b>now</b>! Path: ${esc(pathText(R, child))}.`;
+        break;
+      }
+      R.queue.push(child);
+      R.newIds.add(child.id);
+      added.push(p.label(s));
+    }
+    R.maxQ = Math.max(R.maxQ, R.queue.length);
+    if (!R.done) {
+      R.kind = 'expand';
+      R.line = o.checkOnAdd ? ['for', 'chk', 'add', 'push'] : o.graph ? ['addex', 'for', 'push'] : ['for', 'push'];
+      R.msg = `Expand ${nameOf(R, n)}: ` + (added.length
+        ? `add <b>${esc(added.join(', '))}</b> to the <b>back</b> of the queue.`
+        : 'no new children.');
+      if (skipped.length) R.msg += ` Skip ${esc(skipped.map(p.label).join(', '))} (seen before).`;
+      R.phase = 'pop';
+      if (R.generated > LIMIT) {
+        R.done = true; R.stopped = true;
+        R.msg = `Stopped after ${LIMIT.toLocaleString()} nodes. Tree search goes around in circles here.`;
+      }
+    }
+  }
+  R.log.push(R.msg);
+  return true;
+}
+
+function runToEnd(prob, opt) {
+  const R = newRun(prob, opt);
+  while (step(R));
+  return R;
+}
+
+/* ================= pseudo code ================= */
+const CODE = {
+  std: [
+    ['fn',    0, '<k>function</k> BFS(problem, graphSearch):'],
+    ['init',  1, 'frontier ← a queue with the start node'],
+    ['exset', 1, 'explored ← an empty set'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeFirst()        <c># the oldest node</c>'],
+    ['skip',  2, '<k>if</k> graphSearch <k>and</k> node.state <k>in</k> explored: <k>continue</k>'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['addex', 2, '<k>if</k> graphSearch: explored.add(node.state)'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:              <c># apply every action</c>'],
+    ['push',  3, 'frontier.addLast(child)'],
+    ['fail',  1, '<k>return</k> failure                      <c># no solution</c>'],
+  ],
+  opt: [
+    ['fn',    0, '<k>function</k> BFS(problem, graphSearch):'],
+    ['init',  1, 'frontier ← a queue with the start node'],
+    ['vis',   1, 'reached ← { start state }          <c># in the queue or expanded</c>', true],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeFirst()'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['chk',   3, '<k>if</k> graphSearch <k>and</k> child.state <k>in</k> reached: <k>continue</k>', true],
+    ['add',   3, 'reached.add(child.state)', true],
+    ['push',  3, 'frontier.addLast(child)'],
+    ['fail',  1, '<k>return</k> failure'],
+  ],
+  early: [
+    ['fn',    0, '<k>function</k> BFS(problem, graphSearch):'],
+    ['g0',    1, '<k>if</k> isGoal(start state): <k>return</k> start node', true],
+    ['init',  1, 'frontier ← a queue with the start node'],
+    ['vis',   1, 'reached ← { start state }'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeFirst()     <c># no goal test here now</c>'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['chk',   3, '<k>if</k> graphSearch <k>and</k> child.state <k>in</k> reached: <k>continue</k>'],
+    ['add',   3, 'reached.add(child.state)'],
+    ['goal',  3, '<k>if</k> isGoal(child.state): <k>return</k> child', true],
+    ['push',  3, 'frontier.addLast(child)'],
+    ['fail',  1, '<k>return</k> failure'],
+  ],
+  task: [
+    ['fn',    0, '<k>function</k> BFS(problem, graphSearch):'],
+    ['init',  1, 'frontier ← a queue with the start node'],
+    ['vis',   1, 'reached ← { start state }          <c># in the queue or expanded</c>'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeFirst()'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['bad',   2, '<k>if</k> graphSearch <k>and</k> node.state <k>in</k> reached: <k>continue</k>'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['chk',   3, '<k>if</k> graphSearch <k>and</k> child.state <k>in</k> reached: <k>continue</k>'],
+    ['add',   3, 'reached.add(child.state)'],
+    ['push',  3, 'frontier.addLast(child)'],
+    ['fail',  1, '<k>return</k> failure'],
+  ],
+};
+
+function codeHtml(lines, hl = [], off = [], stars = true) {
+  return lines.map(([k, ind, t, isNew]) => {
+    const txt = '    '.repeat(ind) + t
+      .replace(/<k>/g, '<span class="kw">').replace(/<\/k>/g, '</span>')
+      .replace(/<c>/g, '<span class="com">').replace(/<\/c>/g, '</span>');
+    const cls = ['ln', hl.includes(k) ? 'hl' : '', off.includes(k) ? 'off' : '', isNew && stars ? 'new' : ''].join(' ');
+    return `<span class="${cls}">${txt}${isNew && stars ? '  <span class="star">★</span>' : ''}</span>`;
+  }).join('');
+}
+
+/* ================= tabs ================= */
+const TABS = ['The idea', 'Watch it run', 'Pseudo code', 'Make it better', 'Is BFS good?', 'Java code', 'Student task'];
+let tab = 0;
+$('#tabs').innerHTML = TABS.map((t, i) => `<button data-i="${i}"><span class="n">${i + 1}</span>${t}</button>`).join('');
+function setTab(i) {
+  tab = Math.max(0, Math.min(TABS.length - 1, i));
+  $$('#tabs button').forEach((b, j) => b.classList.toggle('on', j === tab));
+  $$('section[data-tab]').forEach(s => s.classList.toggle('hidden', +s.dataset.tab !== tab));
+  $('#prevBtn').disabled = tab === 0;
+  $('#nextBtn').disabled = tab === TABS.length - 1;
+  if (tab !== 1) stopPlay();
+  try { localStorage.setItem('bfs-tab', tab); } catch (e) {}
+}
+$('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) setTab(+b.dataset.i); };
+$('#prevBtn').onclick = () => { setTab(tab - 1); scrollTo(0, 0); };
+$('#nextBtn').onclick = () => { setTab(tab + 1); scrollTo(0, 0); };
+
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+
+/* ================= 1. the idea ================= */
+const LEVEL_OF = (() => { const R = runToEnd(graphProblem('none'), MODES.opt); const d = {}; R.nodes.forEach(n => d[n.s] = n.depth); return d; })();
+(function drawLevels() {
+  let h = '';
+  for (const [a, b] of G_EDGES) h += `<line class="e" x1="${G_POS[a][0]}" y1="${G_POS[a][1]}" x2="${G_POS[b][0]}" y2="${G_POS[b][1]}"/>`;
+  for (const s in G_POS) {
+    const [x, y] = G_POS[s];
+    h += `<circle class="nd" cx="${x}" cy="${y}" r="20" style="fill:var(--surface);stroke:var(--l${LEVEL_OF[s]})"/>`
+      + `<text class="nlbl" x="${x}" y="${y}" style="fill:var(--l${LEVEL_OF[s]})">${s}</text>`;
+  }
+  $('#levelsSvg').innerHTML = h;
+  $('#levelsLegend').innerHTML = [0, 1, 2, 3].map(l => `<span><i style="border-color:var(--l${l});background:var(--surface)"></i>level ${l} (${l} step${l === 1 ? '' : 's'})</span>`).join('');
+})();
+
+let qp = ['A', 'B', 'C'], qpNext = 3;
+function drawQp() {
+  $('#qp').innerHTML = qp.length ? qp.map((x, i) => `<span class="person${i === 0 ? ' first' : ''}">${x}</span>`).join('') : '<span class="muted">empty</span>';
+  $('#qpTake').disabled = !qp.length;
+}
+$('#qpAdd').onclick = () => {
+  const x = String.fromCharCode(65 + (qpNext++ % 26));
+  qp.push(x); drawQp();
+  $('#qpMsg').innerHTML = `<b>${x}</b> waits at the back.`;
+};
+$('#qpTake').onclick = () => {
+  const x = qp.shift(); drawQp();
+  $('#qpMsg').innerHTML = `<b>${x}</b> came first, so <b>${x}</b> is served first.`;
+};
+drawQp();
+
+/* ================= 2. watch it run ================= */
+let ex = 'graph', mode = 'graph', goalG = 'G', mazeRows = MAZE0.slice(), run, timer = null;
+
+const problemNow = () => ex === 'graph' ? graphProblem(goalG) : mazeProblem(mazeRows);
+function restart() { stopPlay(); run = newRun(problemNow(), MODES[mode]); drawRun(); }
+
+// the state of each graph node / maze cell, built from all the tree nodes
+function stateInfo(R) {
+  const info = {};
+  const get = s => info[s] || (info[s] = { inQ: 0, ex: false, depth: Infinity, path: false, isNew: false });
+  for (const n of R.nodes) {
+    const i = get(n.s);
+    i.depth = Math.min(i.depth, n.depth);
+    if (n.status === 'ex') i.ex = true;
+    if (R.newIds.has(n.id)) i.isNew = true;
+  }
+  for (const n of R.queue) get(n.s).inQ++;
+  if (R.found) for (let n = R.found; n; n = n.parent) get(n.s).path = true;
+  return info;
+}
+function stateClass(R, s, i) {
+  if (!i) return 'st-new';
+  if (i.path) return 'st-path';
+  if (R.current && R.current.s === s && !R.done) return 'st-cur';
+  if (i.isNew) return 'st-just';
+  if (i.inQ) return 'st-q';
+  if (i.ex) return 'st-ex';
+  return 'st-new';
+}
+const badge = (x, y, k) => k > 1 ? `<circle class="badge" cx="${x}" cy="${y}" r="9"/><text class="badgetxt" x="${x}" y="${y}">×${k}</text>` : '';
+
+function drawGraphBoard(R) {
+  const svg = $('#board');
+  svg.setAttribute('viewBox', '0 0 400 300');
+  const info = stateInfo(R);
+  const ek = (a, b) => a < b ? a + b : b + a;
+  const chain = new Set();
+  const chainNode = R.found || (R.done ? null : R.current);
+  for (let n = chainNode; n && n.parent; n = n.parent) chain.add(ek(n.s, n.parent.s));
+  let h = '';
+  for (const [a, b] of G_EDGES) {
+    const cls = chain.has(ek(a, b)) ? (R.found ? 'e-path' : 'e-cur') : 'e';
+    h += `<line class="${cls}" x1="${G_POS[a][0]}" y1="${G_POS[a][1]}" x2="${G_POS[b][0]}" y2="${G_POS[b][1]}"/>`;
+  }
+  for (const s in G_POS) {
+    const [x, y] = G_POS[s], i = info[s];
+    h += `<g class="clickable" data-s="${s}">`
+      + `<circle class="nd ${stateClass(R, s, i)}" cx="${x}" cy="${y}" r="20"/>`
+      + (s === goalG ? `<circle class="goalring" cx="${x}" cy="${y}" r="26"/>` : '')
+      + `<text class="nlbl" x="${x}" y="${y}">${s}</text>`
+      + (i ? `<text class="dlbl" x="${x - 34}" y="${y - 18}">d=${i.depth}</text>` : '')
+      + (i ? badge(x + 18, y - 18, i.inQ) : '')
+      + `</g>`;
+  }
+  svg.innerHTML = h;
+}
+
+function drawMazeBoard(R) {
+  const svg = $('#board'), rows = mazeRows, S = 52, W = rows[0].length * S, H = rows.length * S;
+  svg.setAttribute('viewBox', `-2 -2 ${W + 4} ${H + 4}`);
+  const info = stateInfo(R);
+  const mid = s => { const [r, c] = s.split(',').map(Number); return [c * S + S / 2, r * S + S / 2]; };
+  let h = '';
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    const s = r + ',' + c, x = c * S, y = r * S;
+    if (ch === '#') {
+      h += `<rect class="wall cellbox clickable" data-r="${r}" data-c="${c}" x="${x}" y="${y}" width="${S}" height="${S}"/>`;
+      return;
+    }
+    const i = info[s];
+    h += `<rect class="cellbox nd ${stateClass(R, s, i)} clickable" data-r="${r}" data-c="${c}" x="${x + 2}" y="${y + 2}" width="${S - 4}" height="${S - 4}" rx="6"/>`;
+    if (ch === 'S' || ch === 'G') h += `<text class="corner" x="${x + 6}" y="${y + 15}">${ch}</text>`;
+    if (i) h += `<text class="nlbl" x="${x + S / 2}" y="${y + S / 2 + 2}">${i.depth}</text>`;
+    if (i) h += badge(x + S - 11, y + 11, i.inQ);
+  }));
+  const chainNode = R.found || (R.done ? null : R.current);
+  if (chainNode) {
+    const pts = []; for (let n = chainNode; n; n = n.parent) pts.push(mid(n.s).join(','));
+    h += `<polyline class="walk ${R.found ? 'path' : 'cur'}" points="${pts.join(' ')}" style="pointer-events:none"/>`;
+  }
+  svg.innerHTML = h;
+}
+
+function drawTree(R) {
+  const svg = $('#tree');
+  if (R.nodes.length > 160) {
+    svg.setAttribute('viewBox', '0 0 400 40');
+    svg.innerHTML = `<text class="dlbl" x="200" y="22" text-anchor="middle">The tree has ${R.nodes.length} nodes now. Too big to draw!</text>`;
+    return;
+  }
+  const levels = [];
+  for (const n of R.nodes) (levels[n.depth] = levels[n.depth] || []).push(n);
+  const maxW = Math.max(...levels.map(l => l.length));
+  const W = Math.max(400, maxW * 30 + 50), H = levels.length * 50 + 6;
+  const pos = {};
+  levels.forEach((l, d) => l.forEach((n, i) => pos[n.id] = [44 + (W - 54) * (i + 0.5) / l.length, 22 + d * 50]));
+  const onPath = new Set(); for (let n = R.found; n; n = n.parent) onPath.add(n.id);
+  let h = '';
+  levels.forEach((l, d) => h += `<text class="dlbl" x="2" y="${26 + d * 50}">d=${d}</text>`);
+  for (const n of R.nodes) if (n.parent) {
+    const [x1, y1] = pos[n.parent.id], [x2, y2] = pos[n.id];
+    h += `<line class="${onPath.has(n.id) ? 'e-path' : 'e'}" style="stroke-width:${onPath.has(n.id) ? 4 : 1.5}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  }
+  for (const n of R.nodes) {
+    const [x, y] = pos[n.id];
+    let cls = { queue: 'st-q', ex: 'st-ex', skip: 'st-skip', cur: 'st-cur', goal: 'st-path' }[n.status];
+    if (onPath.has(n.id)) cls = 'st-path';
+    else if (n === R.current && !R.done) cls = n.status === 'skip' ? 'st-skip' : 'st-cur';
+    h += `<circle class="nd ${cls}" style="stroke-width:2" cx="${x}" cy="${y}" r="12"/>`
+      + (R.newIds.has(n.id) ? `<circle class="newring" cx="${x}" cy="${y}" r="16"/>` : '')
+      + `<text class="nlbl tlbl" x="${x}" y="${y}">${esc(n.s)}</text>`;
+  }
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = h;
+}
+
+function chip(R, n, cls) {
+  return `<span class="chip ${cls}">${esc(R.prob.label(n.s))}<sub>${n.depth}</sub></span>`;
+}
+
+function drawRun() {
+  const R = run, o = R.opt;
+  if (ex === 'graph') { drawGraphBoard(R); drawTree(R); } else drawMazeBoard(R);
+  $('#treeWrap').classList.toggle('hidden', ex !== 'graph');
+  $('#hint').textContent = ex === 'graph' ? 'Click a node to make it the goal.' : 'Click a cell to add or remove a wall. The number is the depth.';
+
+  const head = R.steps === 0 ? 'Start' : `Step ${R.steps}`;
+  $('#msg').innerHTML = `<span class="stepno">${head}${R.done ? ' · finished' : ''}</span>${R.msg}`;
+
+  const MAXQ = 30;
+  $('#queue').innerHTML = R.queue.length
+    ? '<span class="end">front →</span>' + R.queue.slice(0, MAXQ).map(n => chip(R, n, R.newIds.has(n.id) ? 'new' : 'q')).join('')
+      + (R.queue.length > MAXQ ? `<span class="end">… +${R.queue.length - MAXQ} more</span>` : '<span class="end">← back</span>')
+    : '<span class="muted">empty</span>';
+
+  if (!o.graph) {
+    $('#seenTitle').textContent = 'Explored';
+    $('#seen').innerHTML = '<span class="muted">Tree search remembers nothing. The same state can come back many times.</span>';
+  } else {
+    $('#seenTitle').textContent = o.checkOnAdd ? 'Reached (in the queue or expanded)' : 'Explored (expanded)';
+    const all = [...R.seen];
+    $('#seen').innerHTML = all.length
+      ? all.slice(0, 40).map(s => `<span class="chip ex">${esc(R.prob.label(s))}</span>`).join('') + (all.length > 40 ? `<span class="end">… +${all.length - 40}</span>` : '')
+      : '<span class="muted">empty</span>';
+  }
+
+  $('#stats').innerHTML = [
+    [R.expanded, 'expanded'], [R.generated, 'generated'], [R.queue.length, 'in the queue'], [R.maxQ, 'max queue']
+  ].map(([v, t]) => `<div class="stat"><b>${v.toLocaleString()}</b><span>${t}</span></div>`).join('');
+
+  const key = mode === 'early' ? 'early' : mode === 'opt' ? 'opt' : 'std';
+  $('#code').innerHTML = codeHtml(CODE[key], R.line, mode === 'tree' ? ['exset', 'skip', 'addex'] : [], key !== 'std');
+  $('#codeNote').textContent = '· graphSearch = ' + o.graph;
+
+  const start = Math.max(0, R.log.length - 12);
+  $('#log').innerHTML = R.log.slice(start).map((m, i) => `<li><b>${start + i + 1}.</b> ${m}</li>`).reverse().join('');
+
+  $('#bBack').disabled = R.steps === 0;
+  $('#bStep').disabled = $('#bEnd').disabled = R.done;
+}
+
+function doStep() { if (!step(run)) stopPlay(); drawRun(); if (run.done) stopPlay(); }
+function doBack() {
+  if (run.steps === 0) return;
+  stopPlay();
+  const k = run.steps - 1;
+  run = newRun(problemNow(), MODES[mode]);
+  while (run.steps < k && step(run));
+  drawRun();
+}
+function stopPlay() { clearInterval(timer); timer = null; $('#bPlay').textContent = 'Play'; }
+function startPlay() {
+  if (run.done) restart();
+  clearInterval(timer);
+  timer = setInterval(doStep, 1000 / +$('#speed').value);
+  $('#bPlay').textContent = 'Pause';
+}
+
+$('#bStep').onclick = () => { stopPlay(); doStep(); };
+$('#bBack').onclick = doBack;
+$('#bReset').onclick = restart;
+$('#bPlay').onclick = () => timer ? stopPlay() : startPlay();
+$('#bEnd').onclick = () => { stopPlay(); while (step(run)); drawRun(); };
+$('#speed').oninput = () => { if (timer) startPlay(); };
+document.addEventListener('keydown', e => {
+  if (tab !== 1 || e.target.closest('input')) return;
+  if (e.key === 'ArrowRight') { stopPlay(); doStep(); }
+  if (e.key === 'ArrowLeft') doBack();
+});
+
+$$('[data-ex]').forEach(b => b.onclick = () => {
+  ex = b.dataset.ex;
+  $$('[data-ex]').forEach(x => x.classList.toggle('on', x === b));
+  restart();
+});
+$$('[data-mode]').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  $$('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+  restart();
+});
+$('#board').onclick = e => {
+  const g = e.target.closest('[data-s]');
+  if (g) { goalG = g.dataset.s === 'S' ? goalG : g.dataset.s; restart(); return; }
+  const cell = e.target.closest('[data-r]');
+  if (cell) {
+    const r = +cell.dataset.r, c = +cell.dataset.c, ch = mazeRows[r][c];
+    if (ch !== '.' && ch !== '#') return;
+    mazeRows[r] = mazeRows[r].slice(0, c) + (ch === '#' ? '.' : '#') + mazeRows[r].slice(c + 1);
+    restart();
+  }
+};
+
+/* ================= 3. pseudo code + traces ================= */
+$('#stdCode').innerHTML = codeHtml(CODE.std);
+
+function traceTable(opt) {
+  const R = newRun(graphProblem('G'), opt);
+  const rows = [];
+  const q = () => R.queue.map(n => `${n.s}<sub>${n.depth}</sub>`).join(' ') || '—';
+  const seen = () => opt.graph ? ([...R.seen].join(', ') || '—') : '—';
+  let row = null;
+  while (step(R)) {
+    if (R.kind === 'skip') rows.push({ take: R.current, res: '<span class="no">skip</span> (explored)', add: '—', q: q(), seen: seen() });
+    else if (R.kind === 'pop') row = { take: R.current };
+    else if (R.kind === 'test' && R.done) rows.push({ ...row, res: '<span class="yes">GOAL ✓</span>', add: '—', q: q(), seen: seen() });
+    else if (R.kind === 'expand') {
+      const kids = R.nodes.filter(n => n.parent === row.take).map(n => n.s).join(', ') || '—';
+      rows.push({ ...row, res: 'no', add: kids, q: q(), seen: seen() });
+    }
+  }
+  return `<tr><th>#</th><th>Take</th><th>Goal?</th><th>Add to back</th><th>Queue after (front … back)</th>${opt.graph ? '<th>Explored</th>' : ''}</tr>`
+    + rows.map((r, i) => `<tr><td>${i + 1}</td><td><b>${r.take.s}</b><sub>${r.take.depth}</sub></td><td>${r.res}</td><td>${r.add}</td><td class="mono">${r.q}</td>${opt.graph ? `<td>${r.seen}</td>` : ''}</tr>`).join('');
+}
+$('#traceGraph').innerHTML = traceTable(MODES.graph);
+$('#traceTree').innerHTML = traceTable(MODES.tree);
+$('#showTreeTrace').onclick = () => {
+  const w = $('#treeTraceWrap');
+  w.classList.toggle('hidden');
+  $('#showTreeTrace').textContent = w.classList.contains('hidden') ? 'Show the tree search trace' : 'Hide the tree search trace';
+};
+
+/* ================= 4. make it better ================= */
+$('#optCode').innerHTML = codeHtml(CODE.opt);
+$('#earlyCode').innerHTML = codeHtml(CODE.early);
+
+/* ================= 7. student task ================= */
+$('#taskCode').innerHTML = codeHtml(CODE.task);
+(function compare() {
+  const list = SHOW_EARLY_GOAL ? ['tree', 'treeEarly', 'graph', 'opt', 'early'] : ['tree', 'graph', 'opt'];
+  $('#cmpTable').innerHTML = '<tr><th>Version</th><th class="r">Steps</th><th class="r">Expanded</th><th class="r">Generated</th><th class="r">Max queue</th></tr>'
+    + list.map(m => {
+      const R = runToEnd(mazeProblem(MAZE0), MODES[m]);
+      return `<tr><td>${MODES[m].name}</td><td class="r">${R.found ? R.found.depth : '—'}</td><td class="r">${R.expanded.toLocaleString()}</td>`
+        + `<td class="r">${R.generated.toLocaleString()}</td><td class="r">${R.maxQ.toLocaleString()}</td></tr>`;
+    }).join('');
+})();
+
+/* ================= 5. is BFS good? ================= */
+(function drawCost() {
+  const P = { S: [40, 110], A: [150, 40], B: [270, 40], G: [380, 110] };
+  const edges = [['S', 'A', 1], ['A', 'B', 1], ['B', 'G', 1], ['S', 'G', 10]];
+  let h = '';
+  for (const [a, b, c] of edges) {
+    const [x1, y1] = P[a], [x2, y2] = P[b], bfs = c === 10;
+    h += `<line class="${bfs ? 'e-cur' : 'e-path'}" style="stroke-width:${bfs ? 4 : 3}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`
+      + `<text class="nlbl" style="font-size:14px;fill:${bfs ? 'var(--cur)' : 'var(--goal)'}" x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 + (bfs ? 16 : -12)}">cost ${c}</text>`;
+  }
+  for (const s in P) h += `<circle class="nd st-new" cx="${P[s][0]}" cy="${P[s][1]}" r="20"/><text class="nlbl" x="${P[s][0]}" y="${P[s][1]}">${s}</text>`;
+  h += `<text class="dlbl" x="210" y="160" text-anchor="middle" style="font-size:13px">orange = BFS answer (1 step, cost 10) · green = cheapest (3 steps, cost 3)</text>`;
+  $('#costSvg').innerHTML = h;
+})();
+
+function fmtBig(x) {
+  if (x < 1e6) return Math.round(x).toLocaleString();
+  const units = [[1e18, 'quintillion'], [1e15, 'quadrillion'], [1e12, 'trillion'], [1e9, 'billion'], [1e6, 'million']];
+  for (const [v, n] of units) if (x >= v) return (x / v).toFixed(x / v < 10 ? 1 : 0) + ' ' + n;
+}
+function fmtBytes(kb) {
+  const u = [['KB', 1], ['MB', 1e3], ['GB', 1e6], ['TB', 1e9], ['PB', 1e12], ['EB', 1e15]];
+  let best = u[0];
+  for (const x of u) if (kb >= x[1]) best = x;
+  const v = kb / best[1];
+  return (v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString()) + ' ' + best[0];
+}
+function fmtTime(s) {
+  if (s < 1) return 'less than 1 second';
+  const u = [['years', 31536000], ['days', 86400], ['hours', 3600], ['minutes', 60], ['seconds', 1]];
+  for (const [n, v] of u) if (s >= v) { const k = s / v; return (k < 10 ? k.toFixed(1) : fmtBig(k)) + ' ' + n; }
+}
+function drawGrow() {
+  const b = +$('#bIn').value, d = +$('#dIn').value;
+  $('#bOut').textContent = b; $('#dOut').textContent = d;
+  let rows = '<tr><th>Depth</th><th class="r">Nodes (about)</th><th class="r">Time</th><th class="r">Memory</th></tr>';
+  for (let k = Math.max(1, d - 4); k <= d; k++) {
+    let n = 0; for (let i = 0; i <= k; i++) n += Math.pow(b, i);
+    const bad = n * 1 > 16e6; // more than 16 GB
+    rows += `<tr><td>${k}</td><td class="r">${fmtBig(n)}</td><td class="r">${fmtTime(n / 1e6)}</td><td class="r ${bad ? 'no' : ''}">${fmtBytes(n)}</td></tr>`;
+  }
+  $('#growTable').innerHTML = rows;
+}
+$('#bIn').oninput = $('#dIn').oninput = drawGrow;
+drawGrow();
+
+/* ================= 6. java code ================= */
+function hlJava(src) {
+  const re = /(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|\b(package|import|public|private|protected|class|extends|implements|return|new|for|while|if|else|continue|static|final|void|boolean|int|double|null|true|false|super)\b|\b([A-Z][A-Za-z0-9]*)\b|\b(\d+(?:\.\d+)?)\b/gm;
+  let out = '', last = 0, m;
+  while ((m = re.exec(src))) {
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : m[4] ? 'ty' : 'num';
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(src.slice(last));
+}
+
+const JAVA_BFS = `package sa2026.algorithms;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Set;
+
+import sa2026.core.IAction;
+import sa2026.core.Node;
+import sa2026.core.Problem;
+import sa2026.core.SearchAlgorithm;
+import sa2026.core.State;
+
+/**
+ * Breadth-First Search (BFS), the standard version.
+ *
+ * BFS visits the nodes level by level: first depth 0, then depth 1, then depth 2 ...
+ * The frontier is a Queue (FIFO): the first node in is the first node out.
+ *
+ * Tree search:  we do not remember anything, so a state can come back many times.
+ * Graph search: we remember the explored states and do not expand them again.
+ *
+ * BFS is optimal only when all the actions have the same cost.
+ */
+public class BFS extends SearchAlgorithm {
+
+    // tree search
+    public BFS() {
+        super(false);
+    }
+
+    // true = graph search, false = tree search
+    public BFS(boolean useGraphSearch) {
+        super(useGraphSearch);
+    }
+
+    @Override
+    public Node search(Problem p) {
+        resetCounters();
+
+        // We create these here and not as fields,
+        // so every new search starts with an empty queue.
+        Queue<Node> frontier = new LinkedList<>();
+        Set<State> explored = new HashSet<>(); // HashSet: contains() is fast
+        int visitingOrder = 0;
+
+        Node startNode = new Node(p.getInitialState());
+        frontier.add(startNode);
+        generatedNodes++; // the start node is a generated node too
+
+        while (!frontier.isEmpty()) {
+            // take the oldest node (the first one in the queue)
+            Node currentNode = frontier.poll();
+
+            // graph search: the same state can be in the queue more than once,
+            // so skip it if we expanded it before
+            if (useGraphSearch && explored.contains(currentNode.getState())) {
+                continue;
+            }
+
+            currentNode.setVisitingOrder(++visitingOrder);
+
+            // goal test when we take the node out of the queue
+            if (p.isGoal(currentNode.getState())) {
+                return currentNode;
+            }
+
+            if (useGraphSearch) {
+                explored.add(currentNode.getState());
+            }
+
+            // expand: apply every action and add the children to the end of the queue
+            nodesActuallyExpanded++;
+            for (IAction action : p.getActions()) {
+                Collection<State> nextStates = action.apply(currentNode.getState());
+                for (State s : nextStates) {
+                    double pathCost = currentNode.getPathCost()
+                            + p.getActionCost(currentNode.getState(), action, s);
+                    Node child = new Node(s, currentNode, action, pathCost);
+                    frontier.add(child);
+                    generatedNodes++;
+                }
+            }
+        }
+
+        // the queue is empty and we did not find a goal
+        return null;
+    }
+}`;
+
+// lines that start with "+" are the changes
+const JAVA_OPT = `    @Override
+    public Node search(Problem p) {
+        resetCounters();
+
+        Queue<Node> frontier = new LinkedList<>();
++        Set<State> reached = new HashSet<>(); // every state we generated: in the queue or expanded
+        int visitingOrder = 0;
+
+        Node startNode = new Node(p.getInitialState());
+        frontier.add(startNode);
+        generatedNodes++;
++        if (useGraphSearch) {
++            reached.add(startNode.getState());
++        }
+
+        while (!frontier.isEmpty()) {
+            Node currentNode = frontier.poll();
+            currentNode.setVisitingOrder(++visitingOrder);
+
+            if (p.isGoal(currentNode.getState())) {
+                return currentNode;
+            }
+
+            nodesActuallyExpanded++;
+            for (IAction action : p.getActions()) {
+                Collection<State> nextStates = action.apply(currentNode.getState());
+                for (State s : nextStates) {
++                    // the change: we saw this state before, so do not add it again
++                    if (useGraphSearch && reached.contains(s)) {
++                        continue;
++                    }
++                    if (useGraphSearch) {
++                        reached.add(s);
++                    }
+
+                    double pathCost = currentNode.getPathCost()
+                            + p.getActionCost(currentNode.getState(), action, s);
+                    Node child = new Node(s, currentNode, action, pathCost);
+                    frontier.add(child);
+                    generatedNodes++;
+                }
+            }
+        }
+
+        return null;
+    }`;
+
+$('#javaBfs').innerHTML = hlJava(JAVA_BFS);
+$('#javaOpt').innerHTML = JAVA_OPT.split('\n').map(l => l.startsWith('+')
+  ? `<span class="add">${hlJava(l.slice(1))}</span>`
+  : hlJava(l) + '\n').join('');
+
+/* ================= start ================= */
+if (!SHOW_EARLY_GOAL) {
+  $('[data-mode="early"]').remove();
+  $('#earlyCard').remove();
+}
+let saved = 0;
+try { saved = +localStorage.getItem('bfs-tab') || 0; } catch (e) {}
+restart();
+setTab(saved);
+</script>
+</body>
+</html>
