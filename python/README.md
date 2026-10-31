@@ -43,6 +43,7 @@ After every change, just run the command again.
 | Maze demo (student version) | `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` | `python -m sa2026.problems.incomplete_code.maze.maze_demo` |
 | Word ladder demo (student version) | `java -cp out sa2026.problems.incomplete_code.wordladder.WordLadderDemo` | `python -m sa2026.problems.incomplete_code.wordladder.word_ladder_demo` |
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `python -m sa2026.algorithms.incomplete_code.bfs_demo` |
+| Check your DFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` | `python -m sa2026.algorithms.incomplete_code.dfs_demo` |
 
 The rule is simple: take the Java class name, write the file name in `snake_case`, and don't add `.py`.
 
@@ -82,9 +83,15 @@ python/
     ├── algorithms/
     │   ├── bfs.py                  BFS.java
     │   ├── bfs_optimized.py        BFSOptimized.java
+    │   ├── dfs.py                  DFS.java
+    │   ├── dfs_cycle_check.py      DFSCycleCheck.java
+    │   ├── depth_limited_dfs.py    DepthLimitedDFS.java
+    │   ├── iterative_deepening.py  IterativeDeepening.java
     │   └── incomplete_code/        the student versions: write the body of search()
     │       ├── bfs.py, bfs_optimized.py
-    │       └── bfs_demo.py         checks your BFS with the finished one (BFSDemo.java)
+    │       ├── bfs_demo.py         checks your BFS with the finished one (BFSDemo.java)
+    │       ├── dfs.py, dfs_cycle_check.py, depth_limited_dfs.py, iterative_deepening.py
+    │       └── dfs_demo.py         checks your DFS versions with the finished ones (DFSDemo.java)
     └── problems/
         ├── maze/                   maze.py, maze_state.py, maze_action.py, maze_problem.py, maze_demo.py
         ├── wordladder/             word_dictionary.py, word_ladder_state.py, change_letter_action.py, ...
