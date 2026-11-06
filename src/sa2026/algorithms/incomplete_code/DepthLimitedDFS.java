@@ -34,6 +34,9 @@ public class DepthLimitedDFS extends SearchAlgorithm {
 
     public DepthLimitedDFS(int limit) {
         super(false); // tree search with a cycle check
+        if (limit < 0) {
+            throw new IllegalArgumentException("The limit must be 0 or more, not " + limit + ".");
+        }
         this.limit = limit;
     }
 
@@ -68,7 +71,8 @@ public class DepthLimitedDFS extends SearchAlgorithm {
     }
 
     // true if the state is in this node or in one of its parents
-    private boolean isOnPath(Node node, State s) {
+    // static: it does not use any field of the object
+    private static boolean isOnPath(Node node, State s) {
         // TODO 5: the same as isOnPath() in your DFSCycleCheck.java
         return false;
     }

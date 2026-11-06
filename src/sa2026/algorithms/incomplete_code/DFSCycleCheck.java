@@ -26,6 +26,7 @@ import sa2026.core.State;
  *
  * Good:  every cycle is stopped, and we need no new memory (the parents are already there).
  * Bad:   the same state can still come again on a DIFFERENT path, so we can do more work.
+ *        And in an INFINITE state space DFS can still go down forever (use DepthLimitedDFS).
  */
 public class DFSCycleCheck extends SearchAlgorithm {
 
@@ -56,7 +57,8 @@ public class DFSCycleCheck extends SearchAlgorithm {
     }
 
     // true if the state is in this node or in one of its parents
-    private boolean isOnPath(Node node, State s) {
+    // static: it does not use any field of the object
+    private static boolean isOnPath(Node node, State s) {
         // TODO 5: start with n = node. While n is not null:
         //           - if n.getState().equals(s), return true
         //           - go up one step: n = n.getParent()
