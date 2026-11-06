@@ -21,6 +21,7 @@ class DFSCycleCheck(SearchAlgorithm):
 
     Good:  every cycle is stopped, and we need no new memory (the parents are already there).
     Bad:   the same state can still come again on a DIFFERENT path, so we can do more work.
+           And in an INFINITE state space DFS can still go down forever (use DepthLimitedDFS).
     """
 
     def __init__(self):
@@ -47,7 +48,9 @@ class DFSCycleCheck(SearchAlgorithm):
         return None
 
     # True if the state is in this node or in one of its parents
-    def _is_on_path(self, node: Node, s: State) -> bool:
+    # @staticmethod: it does not use self (like "static" in Java)
+    @staticmethod
+    def _is_on_path(node: Node, s: State) -> bool:
         # TODO 5: start with n = node. While n is not None:
         #           - if n.state == s, return True
         #           - go up one step: n = n.parent

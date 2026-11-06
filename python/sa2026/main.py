@@ -1,12 +1,16 @@
 """
 The start point of the program.
-We solve the maze with BFS, then we compare the BFS versions.
+We solve the maze with BFS, then we compare the BFS versions and the DFS versions.
 
 How to run (inside the SA-2026/python folder):
     python -m sa2026.main
 """
 from sa2026.algorithms.bfs import BFS
 from sa2026.algorithms.bfs_optimized import BFSOptimized
+from sa2026.algorithms.depth_limited_dfs import DepthLimitedDFS
+from sa2026.algorithms.dfs import DFS
+from sa2026.algorithms.dfs_cycle_check import DFSCycleCheck
+from sa2026.algorithms.iterative_deepening import IterativeDeepening
 from sa2026.core.problem import Problem
 from sa2026.core.search_algorithm import SearchAlgorithm
 from sa2026.problems.maze.maze import Maze
@@ -34,6 +38,16 @@ def main():
     compare("BFS, tree search", BFS(False), problem)
     compare("BFS, graph search", BFS(True), problem)
     compare("BFSOptimized, graph", BFSOptimized(True), problem)
+
+    # 3. the DFS versions on the same maze (-1 steps = no solution found).
+    # No DFS tree search: on this maze it goes around a cycle forever.
+    print("\n=== Compare the DFS versions ===")
+    print("Version                  Steps  Expanded  Generated")
+    compare("DFS, graph search", DFS(True), problem)
+    compare("DFS + cycle check", DFSCycleCheck(), problem)
+    compare("DLS, limit 10", DepthLimitedDFS(10), problem)
+    compare("DLS, limit 9", DepthLimitedDFS(9), problem)
+    compare("IDS", IterativeDeepening(), problem)
 
 
 # solves the problem and prints one line of numbers
