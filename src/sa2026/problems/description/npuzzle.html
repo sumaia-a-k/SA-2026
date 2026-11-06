@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The N-Puzzle Problem</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --start:#1971c2; --start-bg:#dbeafb; --goal:#2b8a3e; --goal-bg:#dcf3e2;
+  --ok:#2b8a3e; --bad:#e03131; --warn:#d9480f; --warn-bg:#fff0e6;
+  --change:#c2410c; --change-bg:#ffe8cc;
+  --tile:#eef1f7; --tile-ink:#1d2433; --empty:#d5dae5;
+  --code-bg:#f2f4f8;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+    --change:#ffa94d; --change-bg:#3b2a17;
+    --tile:#252c3a; --tile-ink:#e6e9ef; --empty:#12161e;
+    --code-bg:#12161e;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --start:#74c0fc; --start-bg:#14304a; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --warn:#ffa463; --warn-bg:#3a2414;
+  --change:#ffa94d; --change-bg:#3b2a17;
+  --tile:#252c3a; --tile-ink:#e6e9ef; --empty:#12161e;
+  --code-bg:#12161e;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-size: 13px; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 18px 16px 40px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 24px; }
+header p { margin: 2px 0 0; color: var(--muted); }
+h2 { font-size: 19px; margin: 0 0 8px; }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 6px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; margin-top: 16px; }
+.task { border-left: 5px solid var(--accent); }
+.task p { margin: 6px 0; }
+.task ul { margin: 6px 0; padding-left: 22px; }
+button {
+  font: inherit; font-size: 14px; border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+/* boards */
+.board { display: grid; gap: 4px; padding: 4px; border-radius: 12px; background: var(--line); width: max-content; }
+.cell {
+  display: grid; place-items: center; border-radius: 8px; font-weight: 700;
+  background: var(--tile); color: var(--tile-ink); border: 2px solid transparent;
+  font-variant-numeric: tabular-nums; position: relative; user-select: none;
+}
+.cell.empty { background: var(--empty); }
+.cell.ok { border-color: var(--goal); }
+.cell.can { cursor: pointer; border-color: var(--accent); }
+.cell.can:hover { background: var(--accent-bg); }
+.cell.moved { background: var(--change-bg); color: var(--change); border-color: var(--change); }
+.cell .idx { position: absolute; left: 4px; top: 1px; font-size: 10px; font-weight: 400; color: var(--muted); }
+.board.big .cell { width: 64px; height: 64px; font-size: 26px; }
+.board.big.n4 .cell { width: 54px; height: 54px; font-size: 22px; }
+.board.small { gap: 2px; padding: 2px; border-radius: 7px; }
+.board.small .cell { width: 22px; height: 22px; font-size: 12px; border-radius: 4px; border-width: 1px; }
+.board.goalb { background: var(--goal); }
+.board.startb { background: var(--start); }
+
+.example { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0 4px; }
+.example .arrow { color: var(--muted); font-size: 13px; text-align: center; }
+
+.play { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; align-items: start; margin-top: 12px; }
+@media (max-width: 760px) { .play { grid-template-columns: minmax(0, 1fr); } }
+.setup { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.setup .lbl, .lblsm { font-size: 13px; color: var(--muted); }
+.now { display: flex; flex-wrap: wrap; gap: 18px; align-items: end; }
+.now .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+
+.status { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin-top: 12px; }
+.status dt { color: var(--muted); }
+.status dd { margin: 0; font-weight: 600; font-family: ui-monospace, Consolas, monospace; }
+.yes { color: var(--ok); } .no { color: var(--bad); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.msg { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; background: var(--accent-bg); border-left: 4px solid var(--accent); }
+.msg.win { background: var(--goal-bg); border-left-color: var(--goal); }
+.msg.bad { background: var(--warn-bg); border-left-color: var(--warn); }
+.hint { font-size: 13px; color: var(--muted); }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 14px; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 14px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 8px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--accent-bg); }
+tr.off td { opacity: .5; }
+.tablewrap { overflow-x: auto; }
+
+.list { display: flex; flex-wrap: wrap; gap: 3px; font: 14px ui-monospace, Consolas, monospace; margin-top: 6px; }
+.list span { display: grid; place-items: center; min-width: 34px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--code-bg); }
+.list span.e { background: var(--change-bg); border-color: var(--change); color: var(--change); }
+.list span sub { display: block; font-size: 9px; color: var(--muted); line-height: 1; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+details { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+details summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0 2px; }
+.rule { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 8px 0; font-size: 14px; }
+.rule.active { border-color: var(--accent); background: var(--accent-bg); }
+.rule.dim { opacity: .5; }
+.rowboard { display: grid; gap: 3px; width: max-content; margin: 8px 0; font: 600 15px ui-monospace, Consolas, monospace; }
+.rowboard span { display: grid; place-items: center; width: 34px; height: 32px; border-radius: 5px; background: var(--tile); }
+.rowboard span.e { background: var(--empty); }
+.rowboard span.hl { background: var(--change-bg); color: var(--change); }
+.rowboard span.lab { width: auto; background: none; color: var(--muted); padding-left: 6px; justify-content: start; }
+.rowboard span.lab.hl { background: none; font-weight: 700; }
+.list span.jump { background: var(--change-bg); border-color: var(--change); color: var(--change); }
+.list span.mv { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+td.small { font-size: 13px; color: var(--muted); }
+.pair { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; font: 13px ui-monospace, Consolas, monospace; }
+.pair span { border: 1px solid var(--bad); color: var(--bad); border-radius: 5px; padding: 0 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>The N-Puzzle Problem</h1>
+    <p>Describing a problem: states, actions, goal and cost</p>
+  </div>
+  <button id="themeBtn">Dark / Light</button>
+</header>
+
+<section class="card task">
+  <h2>The question</h2>
+  <p>A board has <b>n × n</b> cells: <b>n² − 1</b> tiles with numbers, and <b>one empty cell</b>.
+    With n = 3 this is the <b>8-puzzle</b>, with n = 4 the <b>15-puzzle</b>.</p>
+  <ul>
+    <li>In one step, slide <b>one tile</b> that is next to the empty cell into the empty cell (up, down, left or right).</li>
+    <li>The <b>goal</b>: the numbers in order, 1, 2, 3, ... and the empty cell at the <b>end</b> (bottom right).</li>
+    <li>Every move costs <b>1</b>.</li>
+  </ul>
+  <p>Example (the "easy" test from last year's code). The coloured tile is the one that moved:</p>
+  <div class="example" id="example"></div>
+  <p>Your job: write the <b>state</b>, the <b>actions</b> and the <b>problem</b> in Java.
+     Then our search algorithms (BFS, DFS, IDS, ...) can solve it with no change.</p>
+</section>
+
+<section class="card">
+  <h2>Try it yourself</h2>
+  <div class="setup">
+    <span class="lbl">Size</span>
+    <button data-n="3" class="on">3 × 3 (8-puzzle)</button>
+    <button data-n="4">4 × 4 (15-puzzle)</button>
+  </div>
+  <div class="setup" style="margin-top:8px">
+    <span class="lbl">Start</span>
+    <span id="presets"></span>
+    <button id="shuffleBtn" title="Random moves from the goal">Shuffle (20 random moves)</button>
+    <button id="randomBtn" title="Like the 2025 code: Collections.shuffle">Random tiles (2025 way)</button>
+  </div>
+  <div class="play">
+    <div>
+      <div class="now">
+        <div><div class="lbl">Current state</div><div id="board" class="board big"></div></div>
+        <div><div class="lbl">Goal</div><div id="goalBoard" class="board small goalb"></div></div>
+      </div>
+      <p class="hint">Click a tile with a <b>blue</b> border (next to the empty cell), or use the arrow keys (they move the <b>empty</b> cell).
+        A <b>green</b> border = the tile is already in its goal place.</p>
+      <dl class="status">
+        <dt>isGoal()</dt><dd id="sGoal"></dd>
+        <dt>Steps</dt><dd id="sSteps"></dd>
+        <dt>Path cost</dt><dd id="sCost"></dd>
+        <dt>Empty cell</dt><dd id="sEmpty"></dd>
+        <dt>Can be solved?</dt><dd id="sSolv"></dd>
+        <dt>Moves to the goal</dt><dd id="sDist"></dd>
+      </dl>
+      <div class="bar">
+        <button id="undo">Undo</button>
+        <button id="reset">Reset</button>
+        <button id="hintBtn">Hint: best move</button>
+      </div>
+    </div>
+    <div>
+      <h3>The 4 actions: apply(state) gives</h3>
+      <div class="tablewrap"><table id="actions"></table></div>
+      <p class="hint">Click a row to do the action. An action that would move the empty cell outside the board gives <b>nothing</b> (an empty list).</p>
+      <h3>The state as a list <span class="hint" style="text-transform:none;letter-spacing:0">(small number = index)</span></h3>
+      <div class="list" id="list"></div>
+      <div id="msg" class="msg"></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>In search words</h2>
+  <table>
+    <tr><th>Part</th><th>For the N-puzzle</th><th>In our code</th></tr>
+    <tr><td>State</td><td>Where every tile is. We keep it as <b>one list</b> of n² numbers, row by row. <b>0 = the empty cell.</b>
+      Example: <code>[4, 1, 2, 5, 8, 3, 7, 6, 0]</code>. The size n never changes.</td><td><code>NpuzzleState</code></td></tr>
+    <tr><td>Initial state</td><td>The mixed board we get.</td><td><code>getInitialState()</code></td></tr>
+    <tr><td>Actions</td><td><b>4</b> actions: move the <b>empty</b> cell up, down, left or right. Each one gives <b>0 or 1</b> state.</td><td><code>MoveEmptyAction</code> (4 objects)</td></tr>
+    <tr><td>Goal test</td><td>Is the list <code>[1, 2, 3, ..., n²−1, 0]</code>?</td><td><code>isGoal()</code></td></tr>
+    <tr><td>Cost</td><td>Every move costs 1. So path cost = number of moves.</td><td><code>getActionCost()</code></td></tr>
+  </table>
+  <div class="box"><b>Why do we move the empty cell, and not the tiles?</b> It is the same move, seen from the other side:
+    "move the empty cell <b>up</b>" = "the tile above slides <b>down</b>".
+    But it is much simpler: there are only <b>4</b> actions (not 8 tiles × 4 directions = 32), and at most 4 of them can work.</div>
+</section>
+
+<section class="card">
+  <div class="two">
+    <div>
+      <h2>From index to (row, col)</h2>
+      <p>The board has 2 dimensions, but the list has only 1. We go row by row:</p>
+      <ul>
+        <li><code>index = row × n + col</code></li>
+        <li><code>row = index / n</code> (integer division) and <code>col = index % n</code></li>
+      </ul>
+      <p class="hint">Move the mouse over a cell:</p>
+      <div id="idxBoard" class="board big"></div>
+      <p id="idxText" class="hint" style="min-height:22px"></p>
+    </div>
+    <div>
+      <h2>How does an action make the next state?</h2>
+      <ol>
+        <li>Find the empty cell: the index of <code>0</code>, then its row and col.</li>
+        <li>Check the border: "up" needs <code>row &gt; 0</code>, "down" needs <code>row &lt; n − 1</code>,
+          "left" needs <code>col &gt; 0</code>, "right" needs <code>col &lt; n − 1</code>. If not, return an <b>empty</b> list.</li>
+        <li>Make a <b>copy</b> of the state.</li>
+        <li>In the copy, <b>swap</b> the 0 with the tile next to it.</li>
+        <li>Return a list with the new state.</li>
+      </ol>
+      <div class="note"><b>Why a copy?</b> The old state is still inside a node of the search tree (and maybe in the explored set).
+        If we change it, the path back to the start is broken, and its <code>hashCode()</code> changes inside the set.
+        <b>Never change a state after it is made.</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>How big is it?</h2>
+  <div class="tablewrap"><table id="bigTable"></table></div>
+  <p class="hint">Branching factor b: the empty cell in a corner has 2 moves, on a side 3 moves, in the middle 4 moves.</p>
+  <div class="box"><b>For our algorithms:</b> BFS can solve the 8-puzzle (181,440 states fit in memory),
+    but the 15-puzzle has about 10 trillion states. That is too much for BFS.
+    For it we will need a <b>heuristic</b> and A*. The 2025 code already had one: the number of tiles in the wrong place (Hamming distance).</div>
+</section>
+
+<section class="card">
+  <h2>Can every board be solved? No!</h2>
+  <p>Only <b>half</b> of all orders of the tiles can reach the goal. The 2025 code makes a random board with
+    <code>Collections.shuffle(tiles)</code>, so half of the time the puzzle has <b>no solution</b>, and the search
+    explores every reachable state before it can say "failure". Try "Random tiles (2025 way)" above.</p>
+  <p class="hint">Everything below uses the board from "Try it yourself". Load an example, or move with the arrows here.</p>
+  <div class="setup">
+    <span class="lbl">Examples</span>
+    <button data-ex="0">Medium (3 × 3)</button>
+    <button data-ex="1">7 and 8 swapped (3 × 3)</button>
+    <button data-ex="2">One move from the goal (4 × 4)</button>
+    <button data-ex="3">14 and 15 swapped (4 × 4)</button>
+  </div>
+
+  <div class="two" style="margin-top:6px">
+    <div>
+      <h3>Step 1 · Count the inversions</h3>
+      <p>An <b>inversion</b> is a pair of tiles in the <b>wrong order</b>: a bigger number that comes <b>before</b> a smaller one.</p>
+      <ol>
+        <li>Read the board row by row, like a sentence. Skip the empty cell.</li>
+        <li>For each tile, count the <b>smaller</b> tiles that come <b>after</b> it.</li>
+        <li>Add up all the counts.</li>
+      </ol>
+      <div id="invList" class="list"></div>
+      <div class="tablewrap"><table id="invTable"></table></div>
+    </div>
+    <div>
+      <h3>Step 2 · Use the rule for the board size</h3>
+      <div class="rule" id="ruleOdd"><b>n odd (3 × 3):</b> the board can be solved if the number of inversions is <b>even</b>.</div>
+      <div class="rule" id="ruleEven"><b>n even (4 × 4):</b> count the row of the empty cell from the <b>bottom</b>
+        (the bottom row is 1, then 2, 3, 4). The board can be solved if <b>inversions + that row</b> is <b>odd</b>.</div>
+      <div id="rowBoard" class="rowboard"></div>
+      <div id="invText" class="msg"></div>
+    </div>
+  </div>
+
+  <h3>Step 3 · Why does the rule work? Move and watch</h3>
+  <p>Some numbers never change between even and odd, whatever move you make. The goal has these numbers:
+    <b>3 × 3:</b> 0 inversions, <b>even</b>. <b>4 × 4:</b> 0 inversions + row 1 = 1, <b>odd</b>.
+    So a board with the other one (odd for 3 × 3, even for 4 × 4) can <b>never</b> reach the goal.</p>
+  <div class="setup">
+    <span class="lbl">Move the empty cell</span>
+    <button data-mv="0">↑ up</button><button data-mv="1">↓ down</button>
+    <button data-mv="2">← left</button><button data-mv="3">→ right</button>
+  </div>
+  <div id="moveEffect" class="msg"></div>
+  <div class="two">
+    <div class="box"><b>Move left or right:</b> the tile slides in the same row, so it keeps its place in the reading order.
+      The inversions do <b>not</b> change. The row of the empty cell does not change.</div>
+    <div class="box"><b>Move up or down:</b> in the reading order the tile <b>jumps over the n − 1 tiles</b> between its old and new place.
+      Each tile it jumps over adds 1 inversion or removes 1.
+      <ul style="margin:4px 0 0; padding-left:20px">
+        <li><b>3 × 3:</b> it jumps over 2 tiles, so the change is −2, 0 or +2: always <b>even</b>. Even/odd stays.</li>
+        <li><b>4 × 4:</b> it jumps over 3 tiles, so the change is −3, −1, +1 or +3: always <b>odd</b>. Even/odd flips!
+          But the row of the empty cell changes by 1, so it flips too. Two flips: the <b>sum</b> keeps its even/odd.</li>
+      </ul></div>
+  </div>
+  <div class="box"><b>A better way to make a random start:</b> start from the goal and do many random moves (like the "Shuffle" button).
+    Every move can be undone, so the board can <b>always</b> be solved.
+    In our code: the constructor of <code>NpuzzleProblem</code> checks every start board with <code>isSolvable()</code>.
+    A board with no solution gives a clear error before the search starts.
+    For tests we use three boards that can be solved: <code>easy()</code>, <code>medium()</code> and <code>hard()</code>.</div>
+</section>
+
+<section class="card">
+  <h2>Check yourself</h2>
+  <details><summary>1. From the goal state, how many next states are there?</summary><p>Only <b>2</b>. The empty cell is in a corner: only "up" and "left" work. The other 2 actions give an empty list.</p></details>
+  <details><summary>2. Is the size n part of the state?</summary><p>No. It is the same for every state. But the code can read it from the list: n = √(list size).</p></details>
+  <details><summary>3. How many moves does the "medium" test of the 2025 code need?</summary><p id="ans3"></p></details>
+  <details><summary>4. Can <code>[1, 2, 3, 4, 5, 6, 8, 7, 0]</code> be solved? (only 7 and 8 are swapped)</summary><p>No. It has <b>1</b> inversion (8 before 7), an odd number. You can not swap two tiles with legal moves.</p></details>
+  <details><summary>5. What goes wrong if <code>apply()</code> swaps the tiles in the old state, not in a copy?</summary><p>The parent node now has the new board too. The path from the start is wrong, and a state in the explored set changes its hashCode, so the set can not find it any more.</p></details>
+  <details><summary>6. What must <code>equals()</code> and <code>hashCode()</code> of the state use?</summary><p>The list of tiles. Two states are the same if their lists are the same. Without them, graph search can not find repeated states.</p></details>
+  <details><summary>7. The empty cell moves up and then down. What happens to the state?</summary><p>We are back at the same state. This is a cycle of 2 steps, so DFS tree search can go up, down, up, down ... forever. Use graph search or the cycle check.</p></details>
+</section>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// the 3 tests from the 2025 code (NpuzzleProblem.java)
+const PRESETS = {
+  3: [['Easy', [1, 2, 3, 4, 0, 5, 7, 8, 6]], ['Medium', [4, 1, 2, 5, 8, 3, 7, 6, 0]], ['Hard', [1, 8, 3, 2, 6, 4, 7, 0, 5]]],
+  4: [['Easy', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 11, 13, 14, 15, 12]],
+      ['Medium', [1, 2, 3, 4, 5, 0, 6, 8, 9, 10, 7, 11, 13, 14, 15, 12]]],
+};
+// the same order as the action names; [row change, col change] of the EMPTY cell
+const ACTIONS = [['Move empty up', -1, 0], ['Move empty down', 1, 0], ['Move empty left', 0, -1], ['Move empty right', 0, 1]];
+
+const goalOf = n => [...Array(n * n - 1).keys()].map(i => i + 1).concat(0);
+const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+const isGoal = s => same(s, goalOf(Math.sqrt(s.length)));
+
+// apply(): returns [] or [the next state]
+function apply(s, dr, dc) {
+  const n = Math.sqrt(s.length), e = s.indexOf(0);
+  const r = Math.floor(e / n) + dr, c = e % n + dc;
+  if (r < 0 || r >= n || c < 0 || c >= n) return [];
+  const t = s.slice();                      // a copy
+  const j = r * n + c;
+  [t[e], t[j]] = [t[j], t[e]];              // swap the empty cell and the tile
+  return [t];
+}
+
+function inversions(s) {
+  const a = s.filter(x => x !== 0), pairs = [];
+  for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) if (a[i] > a[j]) pairs.push([a[i], a[j]]);
+  return pairs;
+}
+function solvable(s) {
+  const n = Math.sqrt(s.length), inv = inversions(s).length;
+  if (n % 2 === 1) return inv % 2 === 0;
+  const rowFromBottom = n - Math.floor(s.indexOf(0) / n);
+  return (inv + rowFromBottom) % 2 === 1;
+}
+
+// one BFS backwards from the goal gives the distance of EVERY 3 × 3 state (181,440 states)
+let DIST3 = null;
+function dist3() {
+  if (DIST3) return DIST3;
+  const g = goalOf(3), key = s => s.join(''), d = new Map([[key(g), 0]]);
+  const queue = [g];
+  for (let h = 0; h < queue.length; h++) {
+    const s = queue[h], k = d.get(key(s));
+    for (const [, dr, dc] of ACTIONS) for (const t of apply(s, dr, dc)) {
+      const kt = key(t);
+      if (!d.has(kt)) { d.set(kt, k + 1); queue.push(t); }
+    }
+  }
+  return DIST3 = d;
+}
+const distance = s => s.length === 9 ? dist3().get(s.join('')) : undefined;
+
+// draws a board; "moved" = the index of the tile that moved last
+function boardHtml(s, opts = {}) {
+  const n = Math.sqrt(s.length), e = s.indexOf(0);
+  const er = Math.floor(e / n), ec = e % n;
+  return s.map((x, i) => {
+    const r = Math.floor(i / n), c = i % n;
+    const near = opts.click && x !== 0 && Math.abs(r - er) + Math.abs(c - ec) === 1;
+    const cls = ['cell', x === 0 ? 'empty' : '', near ? 'can' : '', i === opts.moved ? 'moved' : '',
+      opts.ok && x !== 0 && x === i + 1 ? 'ok' : ''].join(' ');
+    return `<div class="${cls}" data-i="${i}">${opts.idx ? `<span class="idx">${i}</span>` : ''}${x === 0 ? '' : x}</div>`;
+  }).join('');
+}
+function setBoard(el, s, opts) {
+  el.style.gridTemplateColumns = `repeat(${Math.sqrt(s.length)}, auto)`;
+  el.innerHTML = boardHtml(s, opts);
+}
+
+let N = 3, start = PRESETS[3][1][1].slice(), path = [start.slice()], movedIdx = -1;
+let lastMove = null; // { k, name, before, after }: used by "Why does the rule work?"
+const cur = () => path[path.length - 1];
+
+function say(text, kind) { const m = $('msg'); m.className = 'msg' + (kind ? ' ' + kind : ''); m.innerHTML = text; }
+
+function draw() {
+  const s = cur(), n = N, e = s.indexOf(0);
+  $('board').classList.toggle('n4', n === 4);
+  setBoard($('board'), s, { click: true, moved: movedIdx, ok: true });
+  setBoard($('goalBoard'), goalOf(n), {});
+
+  const steps = path.length - 1;
+  $('sGoal').innerHTML = isGoal(s) ? '<span class="yes">true</span>' : '<span class="no">false</span>';
+  $('sSteps').textContent = steps;
+  $('sCost').textContent = `${steps} × 1 = ${steps}`;
+  $('sEmpty').textContent = `index ${e} = (row ${Math.floor(e / n)}, col ${e % n})`;
+  const ok = solvable(s);
+  $('sSolv').innerHTML = ok ? '<span class="yes">yes</span>' : '<span class="no">no, never!</span>';
+  const d = distance(s);
+  $('sDist').innerHTML = n === 4 ? '<span class="hint">too many states to compute here</span>'
+    : d === undefined ? '<span class="no">no path</span>' : `${d} (the shortest)`;
+  $('hintBtn').disabled = n === 4 || d === undefined || d === 0;
+
+  $('actions').innerHTML = '<tr><th>Action</th><th>Allowed?</th><th>apply(state) gives</th></tr>'
+    + ACTIONS.map(([name, dr, dc], k) => {
+      const res = apply(s, dr, dc);
+      const tile = res.length ? res[0][e] : null; // the tile that slides into the empty cell
+      return `<tr class="${res.length ? 'click' : 'off'}" data-a="${k}"><td><b>${name}</b>`
+        + (res.length ? `<br><span class="hint">tile ${tile} slides ${['down', 'up', 'right', 'left'][k]}</span>` : '') + '</td>'
+        + `<td>${res.length ? '<span class="yes">yes</span>' : '<span class="no">no, border</span>'}</td>`
+        + `<td>${res.length ? `<div class="board small" style="grid-template-columns:repeat(${n},auto)">${boardHtml(res[0], { moved: e })}</div>` : '<span class="hint">[ ] nothing</span>'}</td></tr>`;
+    }).join('');
+
+  $('list').innerHTML = s.map((x, i) => `<span class="${x === 0 ? 'e' : ''}">${x}<sub>${i}</sub></span>`).join('');
+  $('undo').disabled = path.length === 1;
+  drawInv();
+}
+
+function move(k) {
+  const s = cur(), [name, dr, dc] = ACTIONS[k];
+  const res = apply(s, dr, dc);
+  if (!res.length) { say(`<b>${name}</b> is not possible here: the empty cell is on the border.`, 'bad'); return; }
+  const before = distance(s);
+  movedIdx = s.indexOf(0);
+  lastMove = { k, name, before: s, after: res[0] };
+  path.push(res[0]);
+  draw();
+  const t = res[0], d = distance(t);
+  if (isGoal(t)) {
+    const best = distance(path[0]);
+    say(`Goal reached in <b>${path.length - 1}</b> moves!` + (best !== undefined
+      ? (path.length - 1 === best ? ' That is the shortest solution.' : ` The shortest solution has ${best} moves. Can you find it?`) : ''), 'win');
+  } else if (path.slice(0, -1).some(p => same(p, t))) {
+    say(`<b>${name}</b>: you were on this board before. Going back to an old state does not help (a cycle).`, 'bad');
+  } else if (before !== undefined && d !== undefined) {
+    say(`<b>${name}</b>: ` + (d < before ? 'good, one move closer to the goal.' : 'one move <b>further</b> from the goal.'));
+  } else {
+    say(`<b>${name}</b>. isGoal() is false, keep going.`);
+  }
+}
+
+function newStart(s, text, kind) {
+  start = s.slice(); path = [start.slice()]; movedIdx = -1; lastMove = null;
+  draw();
+  say(text || 'A new start. Click a tile next to the empty cell.', kind);
+}
+
+function drawPresets() {
+  $('presets').innerHTML = PRESETS[N].map(([name], i) => `<button data-p="${i}">${name}</button>`).join(' ');
+}
+
+$('presets').onclick = e => {
+  const b = e.target.closest('[data-p]');
+  if (!b) return;
+  const [name, s] = PRESETS[N][+b.dataset.p];
+  newStart(s, `The "${name}" start` + (N === 3 ? ' (from the 2025 code).' : '.'));
+};
+function useSize(n) {
+  N = n;
+  document.querySelectorAll('[data-n]').forEach(x => x.classList.toggle('on', +x.dataset.n === n));
+  drawPresets();
+}
+document.querySelectorAll('[data-n]').forEach(b => b.onclick = () => {
+  useSize(+b.dataset.n);
+  newStart(PRESETS[N][0][1], `A ${N} × ${N} board: ${N * N - 1} tiles and one empty cell.`);
+});
+$('shuffleBtn').onclick = () => {
+  let s = goalOf(N), last = -1;
+  for (let i = 0; i < 20; i++) {
+    const ok = ACTIONS.map((a, k) => k).filter(k => apply(s, ACTIONS[k][1], ACTIONS[k][2]).length && k !== (last ^ 1));
+    const k = ok[Math.floor(Math.random() * ok.length)];
+    s = apply(s, ACTIONS[k][1], ACTIONS[k][2])[0]; last = k;
+  }
+  newStart(s, '20 random moves from the goal. This board can <b>always</b> be solved.');
+};
+$('randomBtn').onclick = () => {
+  const s = goalOf(N);
+  for (let i = s.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [s[i], s[j]] = [s[j], s[i]]; }
+  newStart(s, solvable(s)
+    ? 'Random tiles, like <code>Collections.shuffle</code> in the 2025 code. This time you are lucky: it <b>can</b> be solved.'
+    : 'Random tiles, like <code>Collections.shuffle</code> in the 2025 code. This board can <b>never</b> be solved! Look at "Can every board be solved?" below.',
+    solvable(s) ? '' : 'bad');
+};
+$('board').onclick = e => {
+  const c = e.target.closest('.cell.can');
+  if (!c) return;
+  const s = cur(), n = N, i = +c.dataset.i, z = s.indexOf(0);
+  const dr = Math.floor(i / n) - Math.floor(z / n), dc = i % n - z % n;
+  move(ACTIONS.findIndex(([, r, cc]) => r === dr && cc === dc));
+};
+$('actions').onclick = e => { const r = e.target.closest('tr.click'); if (r) move(+r.dataset.a); };
+document.addEventListener('keydown', e => {
+  const k = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3 }[e.key];
+  if (k === undefined || e.target.closest('input')) return;
+  const r = $('board').getBoundingClientRect();
+  if (r.bottom < 0 || r.top > innerHeight) return; // only when the board can be seen
+  e.preventDefault();
+  move(k);
+});
+$('undo').onclick = () => { if (path.length > 1) { path.pop(); movedIdx = -1; lastMove = null; draw(); say('Undo: one move back.'); } };
+$('reset').onclick = () => newStart(start, 'Back to the start board.');
+$('hintBtn').onclick = () => {
+  const s = cur(), d = distance(s);
+  const k = ACTIONS.findIndex(([, dr, dc]) => apply(s, dr, dc).some(t => distance(t) === d - 1));
+  say(`Hint: <b>${ACTIONS[k][0]}</b> (we found it with a BFS from the goal).`);
+};
+$('themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+
+// inversions of the current board
+const evenOdd = x => x % 2 ? 'odd' : 'even';
+const rowFromBottom = (s, n) => n - Math.floor(s.indexOf(0) / n);
+
+// the "Can every board be solved?" card: steps 1, 2 and 3
+function drawInv() {
+  const s = cur(), n = N, inv = inversions(s).length;
+  const read = s.filter(x => x !== 0);
+
+  // step 1: the reading order and the table
+  $('invList').innerHTML = read.map(x => `<span>${x}</span>`).join('');
+  // only the tiles that have inversions get a row; the others are in one line
+  const zeros = [];
+  let rows = '';
+  read.forEach((x, i) => {
+    const smaller = read.slice(i + 1).filter(y => y < x);
+    if (smaller.length === 0) zeros.push(x);
+    else rows += `<tr><td><b>${x}</b></td><td class="small">${smaller.join(', ')}</td><td class="r">${smaller.length}</td></tr>`;
+  });
+  $('invTable').innerHTML = '<tr><th>Tile</th><th>Smaller tiles after it</th><th class="r">Count</th></tr>' + rows
+    + (zeros.length ? `<tr><td class="small" colspan="2">All the other tiles (${zeros.join(', ')}): no smaller tile after them</td><td class="r">0</td></tr>` : '')
+    + `<tr><th>Total</th><th></th><th class="r">${inv}</th></tr>`;
+
+  // step 2: the rule for this size
+  $('ruleOdd').className = 'rule ' + (n % 2 ? 'active' : 'dim');
+  $('ruleEven').className = 'rule ' + (n % 2 ? 'dim' : 'active');
+  const er = Math.floor(s.indexOf(0) / n);
+  const rb = $('rowBoard');
+  rb.style.gridTemplateColumns = `repeat(${n}, auto)` + (n % 2 ? '' : ' auto');
+  let cells = '';
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const x = s[r * n + c];
+      cells += `<span class="${x === 0 ? 'e' : ''} ${n % 2 === 0 && r === er ? 'hl' : ''}">${x || ''}</span>`;
+    }
+    if (n % 2 === 0) cells += `<span class="lab ${r === er ? 'hl' : ''}">← row ${n - r}${r === er ? ' (the empty cell)' : ''}</span>`;
+  }
+  rb.innerHTML = cells;
+
+  let text, ok;
+  if (n % 2) {
+    ok = inv % 2 === 0;
+    text = `Inversions = <b>${inv}</b>, that is <b>${evenOdd(inv)}</b>.`;
+  } else {
+    const row = rowFromBottom(s, n);
+    ok = (inv + row) % 2 === 1;
+    text = `Inversions + row = ${inv} + ${row} = <b>${inv + row}</b>, that is <b>${evenOdd(inv + row)}</b>.`;
+  }
+  $('invText').className = 'msg ' + (ok ? 'win' : 'bad');
+  $('invText').innerHTML = text + (ok ? ' So this board <b>can</b> be solved.' : ' So this board can <b>never</b> be solved.');
+
+  // step 3: what did the last move change?
+  const box = $('moveEffect');
+  if (!lastMove) {
+    box.className = 'msg';
+    box.innerHTML = 'No move yet. Press an arrow above, and look at the numbers here.';
+    return;
+  }
+  const { k, name, before, after } = lastMove;
+  const iB = inversions(before).length, iA = inversions(after).length;
+  const from = after.indexOf(0), to = before.indexOf(0); // the tile moves from the new empty cell to the old one
+  const tile = after[to];
+  let h = `<b>${name}</b>: the tile <b>${tile}</b> slides into the empty cell.<br>`;
+  if (k >= 2) {
+    h += `It stays in the same row, so it keeps its place in the reading order. Inversions: ${iB} → ${iA} (no change).`;
+  } else {
+    const lo = Math.min(from, to), hi = Math.max(from, to);
+    const jumped = before.slice(lo + 1, hi).filter(x => x !== 0);
+    const readA = after.filter(x => x !== 0);
+    h += `In the reading order it jumps over <b>${jumped.length}</b> tiles (${jumped.join(', ')}):`
+      + `<div class="list">${readA.map(x => `<span class="${x === tile ? 'mv' : jumped.includes(x) ? 'jump' : ''}">${x}</span>`).join('')}</div>`
+      + `Inversions: ${iB} → ${iA} (change ${iA - iB >= 0 ? '+' : ''}${iA - iB}, an <b>${evenOdd(Math.abs(iA - iB))}</b> number).`;
+  }
+  if (n % 2) {
+    h += `<br>Inversions ${iB} (${evenOdd(iB)}) → ${iA} (${evenOdd(iA)}): <b>${evenOdd(iB) === evenOdd(iA) ? 'the same even/odd' : 'changed?!'}</b>.`;
+  } else {
+    const rB = rowFromBottom(before, n), rA = rowFromBottom(after, n);
+    h += `<br>Row of the empty cell: ${rB} → ${rA}` + (rB === rA ? ' (no change).' : ' (it changes by 1).')
+      + `<br>Sum: ${iB} + ${rB} = ${iB + rB} (${evenOdd(iB + rB)}) → ${iA} + ${rA} = ${iA + rA} (${evenOdd(iA + rA)}): `
+      + `<b>${evenOdd(iB + rB) === evenOdd(iA + rA) ? 'the same even/odd' : 'changed?!'}</b>.`;
+  }
+  box.className = 'msg';
+  box.innerHTML = h;
+}
+
+const INV_EXAMPLES = [
+  [4, 1, 2, 5, 8, 3, 7, 6, 0],
+  [1, 2, 3, 4, 5, 6, 8, 7, 0],
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 13, 14, 15, 12],
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 14, 0],
+];
+document.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => {
+  const s = INV_EXAMPLES[+b.dataset.ex];
+  useSize(Math.sqrt(s.length));
+  newStart(s, `Example: "${b.textContent}". Look at "Can every board be solved?".`, solvable(s) ? '' : 'bad');
+});
+document.querySelectorAll('[data-mv]').forEach(b => b.onclick = () => move(+b.dataset.mv));
+
+// "From index to (row, col)"
+setBoard($('idxBoard'), goalOf(3), { idx: true });
+$('idxBoard').onmouseover = e => {
+  const c = e.target.closest('.cell');
+  if (!c) return;
+  const i = +c.dataset.i;
+  $('idxText').innerHTML = `index <b>${i}</b> → row = ${i} / 3 = <b>${Math.floor(i / 3)}</b>, col = ${i} % 3 = <b>${i % 3}</b>`;
+};
+
+// "How big is it?"
+const fact = k => { let f = 1; for (let i = 2; i <= k; i++) f *= i; return f; };
+const fmt = x => x >= 1e12 ? (x / 1e12).toFixed(1) + ' trillion' : x >= 1e6 ? (x / 1e6).toFixed(1) + ' million' : x.toLocaleString();
+$('bigTable').innerHTML = '<tr><th>Puzzle</th><th class="r">All orders (n²)!</th><th class="r">Reachable states (half)</th><th class="r">Hardest board needs</th><th>BFS?</th></tr>'
+  + [[3, 31], [4, 80]].map(([n, hard]) => `<tr><td>${n * n - 1}-puzzle (${n} × ${n})</td><td class="r">${fmt(fact(n * n))}</td>`
+    + `<td class="r">${fmt(fact(n * n) / 2)}</td><td class="r">${hard} moves</td><td>${n === 3 ? '<span class="yes">yes</span>' : '<span class="no">no, too big</span>'}</td></tr>`).join('');
+
+// the example in "The question": easy test, 2 moves
+(function drawExample() {
+  let s = PRESETS[3][0][1], h = '';
+  const steps = [[3, 'Move empty right'], [1, 'Move empty down']];
+  h += `<div class="board small startb" style="grid-template-columns:repeat(3,auto)">${boardHtml(s)}</div>`;
+  for (const [k, name] of steps) {
+    const e = s.indexOf(0);
+    s = apply(s, ACTIONS[k][1], ACTIONS[k][2])[0];
+    h += `<span class="arrow">→<br>${name}</span><div class="board small${isGoal(s) ? ' goalb' : ''}" style="grid-template-columns:repeat(3,auto)">${boardHtml(s, { moved: e })}</div>`;
+  }
+  $('example').innerHTML = h;
+})();
+
+drawPresets();
+draw();
+say('Click a tile next to the empty cell (the tiles with a blue border).');
+// the BFS from the goal takes a short time, so we do it after the page is shown
+setTimeout(() => {
+  dist3();
+  draw();
+  $('ans3').innerHTML = `<b>${distance(PRESETS[3][1][1])}</b> moves (the shortest). The "easy" test needs ${distance(PRESETS[3][0][1])}
+    and the "hard" test ${distance(PRESETS[3][2][1])}. We found this with one BFS from the goal over all 181,440 states.`;
+}, 50);
+</script>
+</body>
+</html>
