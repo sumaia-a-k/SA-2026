@@ -2,11 +2,17 @@
 
 #include <memory>  // you need them in the TODOs
 #include <stack>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace sa2026::algorithms::incomplete_code {
 
-DepthLimitedDFS::DepthLimitedDFS(int limit) : SearchAlgorithm(false), limit(limit) {}
+DepthLimitedDFS::DepthLimitedDFS(int limit) : SearchAlgorithm(false), limit(limit) {
+    if (limit < 0) {
+        throw std::invalid_argument("The limit must be 0 or more, not " + std::to_string(limit) + ".");
+    }
+}
 
 bool DepthLimitedDFS::isCutoff() const {
     return cutoff;

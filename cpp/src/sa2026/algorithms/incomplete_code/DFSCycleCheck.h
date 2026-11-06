@@ -23,6 +23,7 @@ namespace sa2026::algorithms::incomplete_code {
  *
  * Good:  every cycle is stopped, and we need no new memory (the parents are already there).
  * Bad:   the same state can still come again on a DIFFERENT path, so we can do more work.
+ *        And in an INFINITE state space DFS can still go down forever (use DepthLimitedDFS).
  */
 class DFSCycleCheck : public core::SearchAlgorithm {
 public:
