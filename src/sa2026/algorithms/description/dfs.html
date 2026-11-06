@@ -1,0 +1,1969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DFS Step by Step</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --wall:#3d4556;
+  --q:#3b5bdb; --q-bg:#e8edfd;           /* in the stack */
+  --ex:#7b8494; --ex-bg:#e3e7ee;         /* expanded */
+  --cur:#d9480f; --cur-bg:#fff0e6;       /* current node */
+  --goal:#2b8a3e; --goal-bg:#dcf3e2;     /* goal and final path */
+  --ok:#2b8a3e; --bad:#e03131; --bad-bg:#ffe3e3; --warn:#d9480f; --warn-bg:#fff0e6;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --num:#c2410c; --str:#2b8a3e;
+  --new-bg:#fff3bf;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --wall:#4a5366;
+    --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+    --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+    --new-bg:#4a3f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --wall:#4a5366;
+  --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+  --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+  --new-bg:#4a3f10;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 24px 32px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 22px; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 14px; }
+.steps button { border-radius: 99px; padding: 5px 12px 5px 6px; display: inline-flex; align-items: center; gap: 7px; }
+.steps button .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--accent-bg); color: var(--accent);
+}
+.steps button.on .n { background: var(--surface); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.stack > * + * { margin-top: 18px; }
+h2 { margin: 0 0 8px; font-size: 24px; }
+h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+h3:first-child { margin-top: 0; }
+h3 .side { text-transform: none; letter-spacing: 0; font-weight: 400; }
+p { margin: 6px 0; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note b:first-child { color: var(--warn); }
+.okbox { background: var(--goal-bg); border-left: 4px solid var(--goal); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; background: var(--accent-bg); color: var(--accent); vertical-align: 2px; }
+.tag.ex { background: var(--warn-bg); color: var(--warn); }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.kw { color: var(--kw); font-weight: 600; } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); } .str { color: var(--str); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+.navrow { display: flex; justify-content: space-between; margin-top: 18px; }
+
+/* pseudo code */
+.pseudo { padding: 8px 0; }
+.pseudo .ln { display: block; padding: 1px 14px 1px 10px; border-left: 4px solid transparent; white-space: pre; }
+.pseudo .ln.hl { background: var(--new-bg); border-left-color: var(--warn); }
+.pseudo .ln.off { opacity: .4; }
+.pseudo .ln.new { box-shadow: inset 3px 0 0 var(--goal); }
+.pseudo .ln.chg { background: var(--goal-bg); }
+.pseudo .star { color: var(--goal); font-weight: 700; }
+.diff .add { display: block; background: var(--goal-bg); margin: 0 -14px; padding: 0 14px; }
+.diff .del { display: block; background: var(--bad-bg); margin: 0 -14px; padding: 0 14px; text-decoration: line-through; opacity: .75; }
+
+/* run tab */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; margin-bottom: 18px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font-size: 13px; color: var(--muted); }
+#speed { width: 90px; vertical-align: middle; }
+#limitOut { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+svg { display: block; width: 100%; height: auto; user-select: none; }
+#board { max-height: 420px; }
+#tree { max-height: 560px; }
+.hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 2px solid; }
+.msg { font-size: 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-height: 72px; }
+.msg .stepno { font-size: 12px; color: var(--muted); display: block; }
+.qstrip { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 34px; }
+.qstrip .end { font-size: 12px; color: var(--muted); }
+.chip { display: inline-flex; align-items: baseline; gap: 1px; padding: 3px 8px; border-radius: 7px; font: 13px ui-monospace, Consolas, monospace;
+  border: 1.5px solid var(--line); background: var(--surface); }
+.chip sub { font-size: 10px; color: var(--muted); }
+.chip.q { background: var(--q-bg); border-color: var(--q); }
+.chip.new { background: var(--new-bg); border-color: var(--warn); }
+.chip.ex { background: var(--ex-bg); border-color: var(--ex); }
+.chip.top { box-shadow: 0 0 0 2px var(--cur); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.stat { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+#log { margin: 4px 0 0; padding-left: 0; list-style: none; font-size: 13px; color: var(--muted); max-height: 170px; overflow: auto; }
+#log li { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+#log li b { color: var(--ink); }
+
+/* drawing */
+.e { stroke: var(--line); stroke-width: 3; }
+.e-cur { stroke: var(--cur); stroke-width: 4; }
+.e-path { stroke: var(--goal); stroke-width: 6; }
+.e-tree { stroke: var(--cur); stroke-width: 3; }
+.arrowhead { fill: var(--cur); }
+.nd { stroke-width: 3; }
+.st-new { fill: var(--surface); stroke: var(--line); }
+.st-q { fill: var(--q-bg); stroke: var(--q); }
+.st-ex { fill: var(--ex-bg); stroke: var(--ex); }
+.st-cur { fill: var(--cur-bg); stroke: var(--cur); stroke-width: 4; }
+.st-path { fill: var(--goal-bg); stroke: var(--goal); stroke-width: 4; }
+.st-just { fill: var(--new-bg); stroke: var(--warn); }
+.st-skip { fill: var(--surface); stroke: var(--bad); stroke-dasharray: 3 3; }
+.st-cut { fill: var(--ex-bg); stroke: var(--bad); stroke-dasharray: 5 2; }
+.newring { fill: none; stroke: var(--warn); stroke-width: 2; stroke-dasharray: 3 2; }
+.goalring { fill: none; stroke: var(--goal); stroke-width: 2; }
+.nlbl { font-weight: 700; font-size: 16px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.tlbl { font-weight: 700; font-size: 11px; }
+.dlbl { font-size: 11px; fill: var(--muted); }
+.badge { fill: var(--q); }
+.badge.order { fill: var(--cur); }
+.badgetxt { fill: var(--surface); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.limitline { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.limittxt { font-size: 11px; fill: var(--bad); font-weight: 700; }
+.wall { fill: var(--wall); }
+.cellbox { stroke: var(--line); stroke-width: 1; }
+.corner { font-size: 11px; font-weight: 800; fill: var(--muted); }
+.walk { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.walk.cur { stroke: var(--cur); opacity: .7; }
+.walk.path { stroke: var(--goal); }
+.walk.bfs { stroke: var(--goal); stroke-dasharray: 2 9; stroke-width: 6; }
+.walk.dfs { stroke: var(--cur); opacity: .8; }
+.walk.ghost { stroke: var(--cur); stroke-width: 2; stroke-dasharray: 4 4; opacity: .7; }
+.st-thrown { fill: var(--ex-bg); stroke: var(--ex); opacity: .35; }
+.st-unborn { fill: none; stroke: var(--line); stroke-dasharray: 2 2; }
+.e-unborn { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; opacity: .7; }
+.walker { fill: var(--cur); stroke: var(--surface); stroke-width: 2; }
+.cycline { stroke: var(--bad); stroke-width: 3; stroke-dasharray: 5 3; }
+.cycarrow { fill: var(--bad); }
+.cyctxt { font-size: 24px; font-weight: 800; fill: var(--bad); text-anchor: middle; dominant-baseline: central; }
+.chalk { font-size: 22px; font-weight: 700; fill: var(--ex); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.clickable { cursor: pointer; }
+
+/* idea tab */
+.plates { display: flex; flex-direction: column-reverse; align-items: center; gap: 4px; min-height: 190px;
+  justify-content: flex-start; padding: 8px 0; border-bottom: 4px solid var(--line); width: 170px; }
+.plate { width: 130px; height: 28px; border-radius: 99px; background: var(--q-bg); border: 2px solid var(--q);
+  display: grid; place-items: center; font-weight: 700; }
+.plate.top { background: var(--new-bg); border-color: var(--warn); }
+.platerow { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; margin-top: 8px; }
+.platebtns { display: flex; flex-direction: column; gap: 8px; }
+
+.slider { display: flex; gap: 10px; align-items: center; margin: 4px 0; }
+.slider input { flex: 1; max-width: 260px; }
+.slider b { min-width: 28px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding: 14px 16px 28px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { padding: 14px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Depth-First Search (DFS)</h1>
+      <p>Intelligent Search Algorithms · Latakia University · Go deep first</p>
+    </div>
+    <button id="themeBtn">Dark / Light</button>
+  </header>
+
+  <nav class="steps" id="tabs"></nav>
+
+  <!-- ================= 1. The idea ================= -->
+  <section data-tab="0">
+    <div class="grid">
+      <div class="card">
+        <h2>The idea</h2>
+        <p class="lead">You are inside a maze. You do not try every corridor a little bit.
+          You choose <b>one</b> corridor and walk to its <b>end</b>.</p>
+        <p>At a dead end, you <b>go back</b> to the last crossing and try the next corridor there.
+          This "go back and try another way" is called <b>backtracking</b>.</p>
+        <div class="box"><b>DFS in one sentence:</b> always expand the <b>deepest</b> node first (the newest node we found).</div>
+        <p>BFS was careful: near places first. DFS is brave: it goes deep first, and comes back only when it must.</p>
+
+        <h3>How does DFS remember the order?</h3>
+        <p>With a <b>stack</b>, like a pile of plates: you put a plate on the <b>top</b>,
+          and you take a plate from the <b>top</b>. This is called <b>LIFO</b>: Last In, First Out.</p>
+        <ul>
+          <li>New nodes go on the <b>top</b> of the stack (<code>push</code>).</li>
+          <li>DFS always takes the node on the <b>top</b> (<code>pop</code>).</li>
+        </ul>
+        <p>So the newest (deepest) node is always taken first.</p>
+
+        <h3>Try the stack</h3>
+        <div class="platerow">
+          <div class="plates" id="plates"></div>
+          <div class="platebtns">
+            <button id="ppPush">Push (put on top)</button>
+            <button id="ppPop">Pop (take from top)</button>
+          </div>
+        </div>
+        <p id="ppMsg" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h3>The same graph, two orders</h3>
+        <div class="grp" style="margin-bottom:8px">
+          <button data-order="dfs" class="on">DFS order</button>
+          <button data-order="bfs">BFS order</button>
+        </div>
+        <svg id="orderSvg" viewBox="0 0 400 300" aria-label="The order of DFS and BFS on a small graph"></svg>
+        <div class="legend">
+          <span><i style="background:var(--cur);border-color:var(--cur)"></i>number = the order we expand the node</span>
+          <span><i style="background:var(--surface);border-color:var(--cur)"></i>arrow = how we reached the node</span>
+        </div>
+        <p id="orderText"></p>
+        <p class="muted">Question: why does DFS take <b>B</b> before <b>A</b>? Go to step 2 and press <b>Step</b> to check.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. Watch it run ================= -->
+  <section data-tab="1" class="hidden">
+    <div class="card toolbar">
+      <div class="grp"><span class="lbl">Example</span>
+        <button data-ex="graph" class="on">Small graph</button>
+        <button data-ex="maze">Maze</button>
+      </div>
+      <div class="grp" id="modeBtns"><span class="lbl">Version</span>
+        <button data-mode="tree">Tree search</button>
+        <button data-mode="graph" class="on">Graph search</button>
+        <button data-mode="path">+ path check</button>
+        <button data-mode="dls">Depth-limited</button>
+        <button data-mode="ids">Iterative deepening</button>
+      </div>
+      <div class="grp hidden" id="limitGrp"><span class="lbl">Limit</span>
+        <button id="limDown" title="Smaller limit">−</button>
+        <b id="limitOut"></b>
+        <button id="limUp" title="Bigger limit">+</button>
+      </div>
+      <div class="grp">
+        <button id="bReset" title="Start again">⏮ Reset</button>
+        <button id="bBack" title="Left arrow">◀ Back</button>
+        <button id="bStep" class="on" title="Right arrow">Step ▶</button>
+        <button id="bPlay">Play</button>
+        <button id="bEnd">Finish ⏭</button>
+        <label class="lbl">Speed <input type="range" id="speed" min="1" max="30" value="3"></label>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <svg id="board" aria-label="Search board"></svg>
+        <div class="hint" id="hint"></div>
+        <div id="treeWrap">
+          <h3>Search tree <span class="side muted">(every circle is a node; the same state can appear more than once)</span></h3>
+          <svg id="tree" aria-label="Search tree"></svg>
+        </div>
+        <div class="legend">
+          <span><i style="background:var(--surface);border-color:var(--line)"></i>not seen yet</span>
+          <span><i style="background:var(--q-bg);border-color:var(--q)"></i>in the stack</span>
+          <span><i style="background:var(--new-bg);border-color:var(--warn)"></i>just pushed</span>
+          <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>current node</span>
+          <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>expanded</span>
+          <span><i style="background:var(--goal-bg);border-color:var(--goal)"></i>solution path</span>
+          <span><i style="background:var(--surface);border-color:var(--bad);border-style:dashed"></i>skipped</span>
+          <span id="cutLegend"><i style="background:var(--ex-bg);border-color:var(--bad);border-style:dashed"></i>at the limit (not expanded)</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="msg" id="msg"></div>
+        <h3>Stack (frontier) <span class="side muted">· small number = depth</span></h3>
+        <div class="qstrip" id="stackStrip"></div>
+        <h3 id="seenTitle">Explored</h3>
+        <div class="qstrip" id="seen"></div>
+        <div class="stats" id="stats"></div>
+        <h3>Pseudo code <span class="side muted" id="codeNote"></span></h3>
+        <pre class="pseudo" id="code"></pre>
+        <h3>History</h3>
+        <ol id="log"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. Pseudo code ================= -->
+  <section data-tab="2" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Standard pseudo code</h2>
+        <p>This is the code of our <code>DFS.java</code>. One function works for tree search and for graph search.</p>
+        <pre class="pseudo" id="stdCode"></pre>
+        <p>The green lines are the <b>only</b> lines that are different from BFS. Everything else is the same!</p>
+        <h3>BFS or DFS? Only the frontier changes</h3>
+        <table>
+          <tr><th></th><th>BFS</th><th>DFS</th></tr>
+          <tr><td>Frontier</td><td>queue (FIFO)</td><td>stack (LIFO)</td></tr>
+          <tr><td>Take a node</td><td><code>removeFirst()</code>: the oldest</td><td><code>pop()</code>: the newest</td></tr>
+          <tr><td>Add a child</td><td><code>addLast()</code>: to the back</td><td><code>push()</code>: on the top</td></tr>
+        </table>
+        <h3>Line by line</h3>
+        <table>
+          <tr><td><b>frontier</b></td><td>The stack of nodes we found but did not expand yet.</td></tr>
+          <tr><td><b>pop()</b></td><td>Take the <b>newest</b> node. This one line is what makes it DFS.</td></tr>
+          <tr><td><b>explored</b></td><td>Graph search only. The states we already expanded. A <b>set</b>, so checking is fast.</td></tr>
+          <tr><td><b>continue</b></td><td>The same state can be in the stack twice. If it was expanded before, we skip it.</td></tr>
+          <tr><td><b>isGoal</b></td><td>We test the node when we <b>take it out</b> of the stack (like in BFS).</td></tr>
+          <tr><td><b>push(child)</b></td><td>Children go on the <b>top</b>. The <b>last</b> child we push is taken first.</td></tr>
+        </table>
+        <div class="note"><b>Tree search is dangerous here.</b> In BFS, tree search only did more work.
+          In DFS it can go around a cycle <b>forever</b> (S → B → S → B ...) and never find the goal. Look at the trace on the right.
+          Step 4 shows how to stop it.</div>
+      </div>
+
+      <div class="card">
+        <h2>Trace by hand</h2>
+        <p>The small graph from step 1, <b>graph search</b>, goal = <b>G</b>. The small number is the depth.
+          The stack is written <b>top first</b>.</p>
+        <div class="tablewrap"><table id="traceGraph"></table></div>
+        <p class="muted" style="margin-top:12px">Your turn: write the same table for <b>tree search</b>. What happens? Then check.</p>
+        <button id="showTreeTrace">Show the tree search trace</button>
+        <div class="tablewrap hidden" id="treeTraceWrap"><table id="traceTree"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4. Stop the cycles ================= -->
+  <section data-tab="3" class="hidden">
+    <div class="grid">
+      <div class="stack">
+        <div class="card">
+          <h2>The problem: cycles</h2>
+          <p>In step 3 we saw it: DFS tree search goes S → B → S → B ... <b>forever</b>.</p>
+          <div class="box"><b>What is a cycle?</b> <b>One</b> path that comes back to a state that is <b>already on the same path</b>.
+            <ul style="margin:4px 0 0; padding-left:20px">
+              <li><b>A cycle:</b> S → A → S. The second S is already on this path (it is the start of it).</li>
+              <li><b>Not a cycle:</b> S → A → D and S → B → D. D is on two <b>different</b> paths, not twice on one path.</li>
+            </ul></div>
+          <p>Tree search does not remember anything, so it visits states again all the time. Visiting a state again
+            in <b>another</b> branch only costs time (see "Be careful" in this step). But a cycle is worse:
+            DFS always goes deeper on the <b>same</b> path, so it goes S → A → S → A ... and never comes back.
+            In BFS, tree search was only slow. In DFS it can be <b>stuck forever</b>.</p>
+          <p>So DFS must be able to say: "do not go there, this state is already on my path".
+            There are two ways to do it. Think of a man walking in a maze:</p>
+          <div class="tablewrap"><table>
+            <tr><th></th><th>Chalk marks<br><span class="muted">= explored set (graph search)</span></th><th>A thread<br><span class="muted">= path check</span></th></tr>
+            <tr><td>How?</td><td>Draw a mark in every room you leave. Never go into a marked room again.</td>
+              <td>Tie a thread at the door and unroll it as you walk. When you go back, roll it up again.
+                Do not go into a room where your thread already is.</td></tr>
+            <tr><td>What does it remember?</td><td><b>Every</b> room you have ever expanded.</td><td>Only the rooms on your way <b>now</b>, from the door to you.</td></tr>
+            <tr><td>How does it grow?</td><td>Always bigger. The marks never go away.</td><td>Up and down. It gets shorter when you go back.</td></tr>
+            <tr><td>Memory</td><td class="no">can be all the states</td><td class="yes">at most the depth m</td></tr>
+          </table></div>
+          <div class="box"><b>Why does the thread find cycles?</b> A cycle means "I came back to a room I am still in the middle of".
+            That room is on my way now, so my thread is in it. Rooms I left long ago (and rolled up) are not cycles.</div>
+        </div>
+
+        <div class="card">
+          <h2>The path check in code</h2>
+          <pre class="pseudo" id="pathCode"></pre>
+          <p>Only the line with <span class="star">★</span> is new. But where is "the path"?</p>
+          <p>We do <b>not</b> need a new list for it. Every node already knows its <b>parent</b>,
+            so the path is already there: node → parent → parent → ... → start. We just follow the parents:</p>
+          <pre class="pseudo" id="onPathCode"></pre>
+          <p class="note"><b>Important:</b> we do not compare whole paths. We ask only:
+            "is the <b>state</b> of this child already on my path?"</p>
+          <p><b>Example: S → A → S → A ...</b> (a graph with only S and A)</p>
+          <table>
+            <tr><th>Expand</th><th>Path from the start</th><th>Children</th><th>Push?</th></tr>
+            <tr><td><b>S</b></td><td>S</td><td>A</td><td class="yes">A is not on the path: push A</td></tr>
+            <tr><td><b>A</b></td><td>S → A</td><td>S</td><td class="no">S is on the path: do not push S</td></tr>
+          </table>
+          <p>The node S → A → S is <b>never made</b>, so the loop S → A → S → A ... never starts.
+            Every cycle is stopped at the moment it closes, if it is short or long.</p>
+          <p class="muted">The same in the small graph: we expand B (path S → B). Its children are D, E and S.
+            S is on the path, so we do not push it. D and E are not on the path, so we push them.</p>
+          <div class="box"><b>Is this really DFS?</b> Yes, it is very "DFS". DFS always has <b>one</b> current path
+            (in recursive DFS, it is the call stack). In the classic DFS from graph theory, the nodes on the current path are called
+            <b>gray</b>, and an edge to a gray node is a <b>back edge</b>, which means a cycle. BFS cannot do this: it jumps between branches, so it has no single path.</div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>Try it: thread or chalk?</h2>
+          <p class="muted">The same small maze, two ways. Press Step and watch what DFS remembers.</p>
+          <div class="grp">
+            <button data-cyc="path" class="on">Thread (path check)</button>
+            <button data-cyc="graph">Chalk (explored set)</button>
+          </div>
+          <div class="grp" style="margin-top:8px">
+            <button id="cReset">⏮ Reset</button>
+            <button id="cBack">◀ Back</button>
+            <button id="cStep" class="on">Step ▶</button>
+            <button id="cPlay">Play</button>
+            <button id="cEnd">Finish ⏭</button>
+          </div>
+          <svg id="cycBoard" style="margin-top:12px; max-height:340px" aria-label="Maze for the cycle demo"></svg>
+          <div class="legend">
+            <span><i style="background:var(--cur);border-color:var(--cur)"></i>the thread (the path now)</span>
+            <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>chalk mark</span>
+            <span><i style="background:var(--q-bg);border-color:var(--q)"></i>in the stack</span>
+            <span><i style="background:var(--surface);border-color:var(--bad);border-style:dashed"></i>seen before: skipped</span>
+          </div>
+          <div class="msg" id="cycMsg" style="margin-top:12px"></div>
+          <div class="stats" id="cycStats"></div>
+          <p id="cycNote"></p>
+        </div>
+
+        <div class="card">
+          <h2>Be careful: a cycle is not the only repeat</h2>
+          <svg id="diamondSvg" viewBox="0 0 420 190" aria-label="Two different paths to D"></svg>
+          <p>Here there is <b>no cycle</b>: S → A → D and S → B → D are two <b>different</b> paths to D.
+            The path check does not stop this, so D (and everything under D) is searched <b>two times</b>.
+            You can see this in the demo too: the thread version expands more cells than the chalk version.</p>
+          <table>
+            <tr><th></th><th>Chalk (explored set)</th><th>Thread (path check)</th></tr>
+            <tr><td>Stops cycles?</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+            <tr><td>Stops every repeat?</td><td class="yes">Yes</td><td class="no">No</td></tr>
+            <tr><td>Memory</td><td class="no">big</td><td class="yes">small</td></tr>
+          </table>
+          <div class="okbox"><b>Which one?</b> Small search space with many repeats (like a small maze): the explored set.
+            Huge search space: the path check, so DFS keeps its small memory.
+            Depth-limited search and iterative deepening (next step) use the path check.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 5. Make it better ================= -->
+  <section data-tab="4" class="hidden">
+    <div class="grid">
+      <div class="stack">
+        <div class="card">
+          <h2>1 · Depth-limited search (DLS)</h2>
+          <p>Some search trees are very deep or even <b>infinite</b> (for example, counting numbers: 1, 2, 3, ...).
+            DFS can go down forever and never come back.</p>
+          <p><b>The fix:</b> give DFS a <b>limit</b> L. A node at depth L is not expanded.
+            DLS also uses the path check from step 4.</p>
+          <pre class="pseudo" id="dlsCode"></pre>
+          <table>
+            <tr><td>L &lt; d</td><td>The goal is too deep. DLS finds <b>nothing</b>. <span class="no">Not complete.</span></td></tr>
+            <tr><td>L = d</td><td>The best case. DLS finds a shortest path (if all steps cost the same).</td></tr>
+            <tr><td>L &gt; d</td><td>DLS finds a goal, but maybe a long path. <span class="no">Not optimal.</span></td></tr>
+          </table>
+          <div class="box"><b>Two kinds of "no":</b> <i>cutoff</i> = "maybe there is a goal deeper than L",
+            <i>failure</i> = "no goal at all". DLS returns <i>cutoff</i> if at least one node stopped at the limit.</div>
+          <p class="muted">Try it in step 2 with "Depth-limited". Change the limit with − and +.</p>
+        </div>
+
+        <div class="card">
+          <h2>2 · Iterative deepening (IDS)</h2>
+          <p>The problem of DLS: we must <b>guess</b> L, but we do not know the depth of the goal.
+            So IDS tries <b>every</b> limit: L = 0, then 1, then 2, ... until it finds the goal.</p>
+          <pre class="pseudo" id="idsCode"></pre>
+          <h3>Why does IDS find the shortest path?</h3>
+          <p>With limit L, DLS looks at <b>every</b> node with depth ≤ L.</p>
+          <ul>
+            <li>Limits 0, 1, ..., d−1 are too small. They cannot see the goal.</li>
+            <li>Limit d is the <b>first</b> limit that can see the goal. So the goal we find has depth d.</li>
+          </ul>
+          <p>That is a shortest path: <b>the same answer as BFS</b>. Try it in step 2: IDS and BFS find the same number of steps.</p>
+          <h3>Is the repeated work a big waste?</h3>
+          <p>IDS makes the top levels again and again. But most of the nodes are on the <b>last</b> level,
+            and the last level is made only <b>once</b>.</p>
+          <div class="grp"><span class="lbl">Branching factor b =</span>
+            <button data-b="2">2</button><button data-b="3">3</button><button data-b="10" class="on">10</button>
+          </div>
+          <div class="tablewrap"><table id="idsTable"></table></div>
+          <p class="muted">In a tree with depth d = 5. The level-k nodes are made once in every iteration with L ≥ k.</p>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>IDS or BFS? The same answer, so why IDS?</h2>
+          <p>Good question! Both find the <b>shortest</b> path, and both need about the <b>same time</b>.
+            The big difference is the <b>memory</b>.</p>
+          <h3>What is in memory? <span class="side muted">(a tree with b = 3, d = 3, the goal is ★)</span></h3>
+          <div class="grp">
+            <button data-mem="bfs" class="on">BFS</button>
+            <button data-mem="ids">IDS</button>
+          </div>
+          <svg id="memTree" viewBox="0 0 520 190" aria-label="The nodes in memory for BFS and IDS"></svg>
+          <div class="slider"><span class="lbl">Moment</span><input type="range" id="memStep" min="0" value="0"><b id="memStepOut" style="min-width:70px"></b></div>
+          <div class="legend">
+            <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>the path now</span>
+            <span><i style="background:var(--q-bg);border-color:var(--q)"></i>waiting in the frontier</span>
+            <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>kept: a child points to it</span>
+            <span><i style="background:var(--ex-bg);border-color:var(--ex);opacity:.35"></i>searched, thrown away</span>
+            <span><i style="background:none;border-color:var(--line);border-style:dashed"></i>not made yet</span>
+          </div>
+          <p id="memCount"></p>
+          <div id="memTreeText"></div>
+
+          <h3>Try bigger numbers <span class="side muted">(1 KB per node, 1 million nodes per second)</span></h3>
+          <div class="slider"><span>b =</span><input type="range" id="cmpB" min="2" max="10" value="10"><b id="cmpBOut"></b></div>
+          <div class="slider"><span>d =</span><input type="range" id="cmpD" min="2" max="14" value="10"><b id="cmpDOut"></b></div>
+          <div class="tablewrap"><table id="bfsIdsTable"></table></div>
+
+          <div class="okbox"><b>The gain:</b> IDS gives the <b>answer of BFS</b> with the <b>memory of DFS</b>.
+            We pay a little more time to save a lot of memory. And memory is the real problem of BFS: it runs out first.</div>
+          <div class="box"><b>What do we gain from iterating?</b>
+            <ul style="margin:4px 0 0; padding-left:20px">
+              <li><b>DFS alone:</b> small memory, but maybe a long path, or it never ends.</li>
+              <li><b>DLS alone:</b> good only if we guess L = d. We do not know d.</li>
+              <li><b>Iterating:</b> we try the small limits first, so the first goal we meet is the nearest one. Like the levels of BFS!</li>
+            </ul>
+            BFS <b>keeps</b> a whole level in memory. IDS does not keep it: it <b>makes it again</b> in the next iteration.
+            Keeping costs memory. Making again costs only a little time.</div>
+          <div class="note"><b>When is BFS better?</b> IDS does not remember states. When there are many paths to the same state (like in a maze),
+            IDS repeats a lot of work (look at "The numbers" below). If there is enough memory, BFS is faster there.</div>
+        </div>
+
+        <div class="card">
+          <h2>3 · Use the right data structure</h2>
+          <table>
+            <tr><th>Job</th><th>Good</th><th>Not so good</th></tr>
+            <tr><td>Stack</td><td><code>ArrayDeque</code> with <code>push</code> and <code>pop</code>: O(1)</td><td><code>java.util.Stack</code>: it works, but it is old and slower</td></tr>
+            <tr><td>Explored</td><td><code>HashSet</code>: <code>contains</code> is O(1)</td><td><code>ArrayList</code>: <code>contains</code> checks every item, O(n)</td></tr>
+          </table>
+          <div class="note"><b>Trap:</b> in an <code>ArrayDeque</code>, <code>push()</code> puts a node on the <b>top</b>,
+            but <code>add()</code> puts it at the <b>bottom</b>! Mix them and your DFS becomes a strange BFS.</div>
+        </div>
+
+        <div class="card">
+          <h2>The numbers</h2>
+          <p>The maze from <code>MazeDemo</code> (shortest path: 10 steps). BFS is in the last row, to compare.</p>
+          <div class="tablewrap"><table id="cmpTable"></table></div>
+          <p class="muted">Expanded = nodes we took out and opened. Generated = nodes we created (the start node too).
+            Max frontier = the biggest size of the stack or queue (memory). IDS: the numbers of all iterations together.</p>
+          <div class="box"><b>Look:</b> here DFS graph search was <b>lucky</b>: "right" was a good first choice. Change the maze in step 2 and it can be very unlucky.
+            IDS does a lot of work here: a maze has many paths to the same cell, and the path check does not remember them.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6. Is DFS good? ================= -->
+  <section data-tab="5" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Is DFS good?</h2>
+        <p><b>b</b> = branching factor, <b>d</b> = depth of the nearest goal, <b>m</b> = the <b>maximum</b> depth of the tree (it can be infinite).</p>
+        <table>
+          <tr><th>Question</th><th>Answer</th><th>Why</th></tr>
+          <tr><td>Complete?<br><span class="muted">Does it always find a solution if one exists?</span></td>
+            <td class="no">No</td><td>Tree search can go around a cycle forever, or go down an infinite path.
+              <span class="yes">Yes</span> with graph search (or the path check) when the number of states is finite.</td></tr>
+          <tr><td>Optimal?<br><span class="muted">Is the solution the cheapest?</span></td>
+            <td class="no">No</td><td>DFS returns the <b>first</b> goal it finds, not the nearest one.</td></tr>
+          <tr><td>Time</td><td><b>O(b<sup>m</sup>)</b></td><td>In the worst case it visits the whole tree. m can be much bigger than d.</td></tr>
+          <tr><td>Space (memory)</td><td><b>O(b·m)</b></td><td>Tree search keeps only one path and the brothers of each node on it.
+            <b>This is the big win of DFS.</b> (Graph search loses it: the explored set can hold all states.)</td></tr>
+        </table>
+
+        <h3>When is DFS not optimal?</h3>
+        <svg id="mazeCmp" aria-label="The DFS path and the BFS path in the maze"></svg>
+        <p id="mazeCmpText"></p>
+        <div class="box"><b>Good for DFS:</b> deep trees with many goals (puzzles like Sudoku or N-Queens), and small memory.<br>
+          <b>Bad for DFS:</b> a goal near the start in a very deep (or infinite) tree, or when we need the shortest path.</div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>Memory: BFS vs DFS</h2>
+          <p>Move the sliders. We say one node needs 1 KB of memory.
+            BFS keeps a whole level (about b<sup>d</sup> nodes). DFS keeps one path and its brothers (about b·d nodes).</p>
+          <div class="slider"><span>b =</span><input type="range" id="bIn" min="2" max="10" value="10"><b id="bOut"></b></div>
+          <div class="slider"><span>d =</span><input type="range" id="dIn" min="1" max="16" value="10"><b id="dOut"></b></div>
+          <div class="tablewrap"><table id="memTable"></table></div>
+          <div class="note"><b>Look:</b> BFS runs out of memory (a normal PC has about 16 GB). DFS needs only a few KB, even for very deep trees.</div>
+        </div>
+
+        <div class="card">
+          <h2>All four together</h2>
+          <div class="tablewrap">
+            <table>
+              <tr><th></th><th>BFS</th><th>DFS</th><th>DLS (limit L)</th><th>IDS</th></tr>
+              <tr><td>Complete?</td><td class="yes">Yes¹</td><td class="no">No</td><td class="no">No (if L &lt; d)</td><td class="yes">Yes¹</td></tr>
+              <tr><td>Optimal?</td><td class="yes">Yes²</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes²</td></tr>
+              <tr><td>Time</td><td>O(b<sup>d</sup>)</td><td>O(b<sup>m</sup>)</td><td>O(b<sup>L</sup>)</td><td>O(b<sup>d</sup>)</td></tr>
+              <tr><td>Space</td><td class="no">O(b<sup>d</sup>)</td><td class="yes">O(b·m)</td><td class="yes">O(b·L)</td><td class="yes">O(b·d)</td></tr>
+            </table>
+          </div>
+          <p class="muted">¹ if b is finite. ² if all steps have the same cost.</p>
+          <p>When the search space is big and we do not know the depth of the goal, <b>IDS</b> is usually the best uninformed search.
+            For different step costs we still need <b>UCS</b>, our next algorithm.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 7. Java code ================= -->
+  <section data-tab="6" class="hidden">
+    <div class="grid">
+      <div class="stack">
+        <div class="card">
+          <h2>DFS.java</h2>
+          <p class="muted">src/sa2026/algorithms/DFS.java</p>
+          <pre id="javaDfs"></pre>
+        </div>
+        <div class="card">
+          <h2>From BFS.java to DFS.java</h2>
+          <p class="muted">Only these lines change. Red = BFS, green = DFS.</p>
+          <pre class="diff" id="javaFromBfs"></pre>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h2>DFSCycleCheck.java</h2>
+          <p class="muted">Tree search + the path check (step 4). The green lines are the changes from DFS tree search.</p>
+          <pre class="diff" id="javaCycle"></pre>
+        </div>
+        <div class="card">
+          <h2>DepthLimitedDFS.java</h2>
+          <p class="muted">DFSCycleCheck + a depth limit (step 5). The green lines are the changes from DFSCycleCheck.java.</p>
+          <pre class="diff" id="javaDls"></pre>
+        </div>
+        <div class="card">
+          <h2>IterativeDeepening.java</h2>
+          <p class="muted">It only calls DepthLimitedDFS again and again, with limit 0, 1, 2, ...</p>
+          <pre id="javaIds"></pre>
+        </div>
+        <div class="card">
+          <h2>Mistakes to avoid</h2>
+          <ul>
+            <li>Use <code>push()</code> and <code>pop()</code> together. <code>add()</code> puts the node at the <b>bottom</b> of an <code>ArrayDeque</code>.</li>
+            <li>Do not run DFS <b>tree search</b> on a graph with cycles: it may never stop. Use graph search or the path check.</li>
+            <li>Create the stack and the set <b>inside</b> <code>search()</code>, not as fields.</li>
+            <li>Call <code>resetCounters()</code> at the start. In IDS, <b>add</b> the counters of every iteration.</li>
+            <li>Write <code>equals()</code> and <code>hashCode()</code> in your State class (for the set and for the path check).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 8. Student task ================= -->
+  <section data-tab="7" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Student task</h2>
+        <p>A student wanted a <b>faster</b> depth-limited search, so they added an <code>explored</code> set to it. Read the code.</p>
+        <pre class="pseudo" id="taskCode"></pre>
+      </div>
+      <div class="card">
+        <h2>Your task</h2>
+        <ol>
+          <li>Is this code correct?</li>
+          <li>Why?</li>
+        </ol>
+        <button id="taskHintBtn">Need a hint?</button>
+        <div class="box hidden" id="taskHint">Run it by hand on the small graph from step 1, with goal = <b>F</b> and limit = <b>3</b>.
+          Is there a path to F with 3 steps or less?</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="navrow">
+    <button id="prevBtn">← Back</button>
+    <button id="nextBtn" class="on">Next →</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/* ================= the two problems (the same as in bfs.html) ================= */
+const G_POS = { S:[200,36], A:[110,112], B:[290,112], C:[45,192], D:[200,192], E:[355,192], F:[110,266], G:[290,266] };
+const G_EDGES = [['S','A'],['S','B'],['A','C'],['A','D'],['B','D'],['B','E'],['C','F'],['D','G'],['E','G'],['F','G']];
+const G_ADJ = {};
+for (const k in G_POS) G_ADJ[k] = [];
+for (const [a, b] of G_EDGES) { G_ADJ[a].push(b); G_ADJ[b].push(a); }
+for (const k in G_ADJ) G_ADJ[k].sort(); // children in ABC order
+
+function graphProblem(goal) {
+  return { kind: 'graph', start: 'S', goal, isGoal: s => s === goal, next: s => G_ADJ[s], label: s => s };
+}
+
+const MAZE0 = ['S.#....', '.##.##.', '....#..', '.##....', '...#.#G'];
+function mazeProblem(rows) {
+  let start, goal;
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    if (ch === 'S') start = r + ',' + c;
+    if (ch === 'G') goal = r + ',' + c;
+  }));
+  const free = (r, c) => r >= 0 && r < rows.length && c >= 0 && c < rows[0].length && rows[r][c] !== '#';
+  const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // up, down, left, right (same order as MazeProblem)
+  return {
+    kind: 'maze', rows, start, goal, isGoal: s => s === goal,
+    next: s => {
+      const [r, c] = s.split(',').map(Number);
+      return DIRS.filter(([dr, dc]) => free(r + dr, c + dc)).map(([dr, dc]) => (r + dr) + ',' + (c + dc));
+    },
+    label: s => '(' + s + ')'
+  };
+}
+
+/* ================= the DFS engine (one small step at a time) ================= */
+// graph = explored set, path = path check, limit = depth limit, ids = iterative deepening,
+// queue = take from the front (BFS, only to compare), task = the student code
+const MODES = {
+  tree:  { graph: false, path: false, limit: false, ids: false, name: 'DFS, tree search' },
+  graph: { graph: true,  path: false, limit: false, ids: false, name: 'DFS, graph search' },
+  path:  { graph: false, path: true,  limit: false, ids: false, name: 'DFS + path check' },
+  dls:   { graph: false, path: true,  limit: true,  ids: false, name: 'Depth-limited' },
+  ids:   { graph: false, path: true,  limit: true,  ids: true,  name: 'Iterative deepening' },
+  bfs:   { graph: true,  path: false, limit: false, ids: false, queue: true, name: 'BFS, graph search' },
+  task:  { graph: true,  path: false, limit: true,  ids: false, name: 'Student code' },
+};
+const LIMIT = 30000; // tree search can go on forever
+
+function newRun(prob, opt, limit = 3) {
+  const R = { prob, opt, L: opt.ids ? 0 : limit, stack: [], nodes: [], seen: new Set(), current: null, phase: 'pop',
+    expanded: 0, generated: 0, maxS: 1, steps: 0, done: false, found: null, stopped: false, cutoff: false,
+    order: [], line: [], msg: '', kind: 'init', newIds: new Set(), log: [] };
+  pushRoot(R);
+  R.line = opt.ids ? ['ifor', 'icall', 'init'] : opt.graph ? ['init', 'exset'] : ['init'];
+  R.msg = `Push the start node <b>${esc(prob.label(prob.start))}</b> on the stack.`
+    + (opt.limit ? ` The limit is <b>${R.L}</b>.` : '');
+  return R;
+}
+
+// a new, empty stack with only the start node (IDS does this again for every limit)
+function pushRoot(R) {
+  R.nodes = []; R.stack = []; R.cutoff = false; R.current = null;
+  const root = makeNode(R, R.prob.start, null);
+  R.stack.push(root);
+  R.generated++;
+  R.newIds = new Set([root.id]);
+}
+
+function makeNode(R, s, parent) {
+  const n = { id: R.nodes.length, s, parent, depth: parent ? parent.depth + 1 : 0, status: 'queue' };
+  R.nodes.push(n);
+  return n;
+}
+
+function onPath(n, s) {
+  for (; n; n = n.parent) if (n.s === s) return true;
+  return false;
+}
+
+const nameOf = (R, n) => `<b>${esc(R.prob.label(n.s))}</b>`;
+const pathText = (R, n) => { const p = []; for (; n; n = n.parent) p.unshift(R.prob.label(n.s)); return p.join(' → '); };
+
+// does one small step. Returns false when there is nothing more to do.
+function step(R) {
+  if (R.done) return false;
+  const p = R.prob, o = R.opt;
+  R.steps++;
+  R.newIds = new Set();
+  R.skipped = [];
+
+  if (R.phase === 'pop') {
+    if (R.stack.length === 0) {
+      if (o.ids && R.cutoff) {
+        R.L++;
+        pushRoot(R);
+        R.kind = 'iter'; R.line = ['ifor', 'icall', 'init'];
+        R.msg = `No goal with limit ${R.L - 1}, but some nodes stopped at the limit. Start again with limit <b>${R.L}</b>.`;
+      } else {
+        R.done = true; R.kind = 'fail';
+        if (o.limit && R.cutoff) {
+          R.line = ['fail'];
+          R.msg = `The stack is empty. No goal with depth ≤ ${R.L} (<b>cutoff</b>). Maybe the goal is deeper.`;
+        } else {
+          R.line = o.ids ? ['fail', 'iret'] : ['fail'];
+          R.msg = 'The stack is empty. There is <b>no solution</b>.';
+        }
+      }
+    } else {
+      const n = o.queue ? R.stack.shift() : R.stack.pop();
+      // not deeper than the last node: we go back up (backtracking)
+      const back = !o.queue && R.current && n.depth <= R.current.depth;
+      R.current = n;
+      if (o.graph && R.seen.has(n.s)) {
+        n.status = 'skip'; R.kind = 'skip'; R.line = ['pop', 'skip'];
+        R.msg = `Pop ${nameOf(R, n)} from the top. We expanded it before, so we <b>skip</b> it.`;
+      } else {
+        n.status = 'cur'; R.kind = 'pop'; R.line = ['pop'];
+        R.msg = `Pop ${nameOf(R, n)} (depth ${n.depth}) from the <b>top</b> of the stack.`
+          + (back ? ' We go <b>back</b> up (backtracking).' : '');
+        R.phase = 'test';
+      }
+    }
+  } else if (R.phase === 'test') {
+    const n = R.current;
+    R.kind = 'test'; R.line = ['goal'];
+    if (p.isGoal(n.s)) {
+      R.done = true; R.found = n; n.status = 'goal';
+      if (o.ids) R.line = ['goal', 'iret'];
+      R.msg = `Is ${nameOf(R, n)} the goal? <b>Yes!</b> Path: ${esc(pathText(R, n))} (${n.depth} steps).`;
+    } else {
+      R.msg = `Is ${nameOf(R, n)} the goal? No.`;
+      R.phase = 'expand';
+    }
+  } else { // expand
+    const n = R.current;
+    if (o.graph) R.seen.add(n.s);
+    R.phase = 'pop';
+    if (o.limit && n.depth >= R.L) {
+      n.status = 'cut'; R.cutoff = true; R.kind = 'cut'; R.line = ['lim'];
+      R.msg = `${nameOf(R, n)} is at depth ${n.depth} = the limit. We do <b>not</b> expand it.`;
+    } else {
+      R.expanded++;
+      R.order.push(n);
+      n.status = 'ex';
+      const added = [], skipped = [];
+      for (const s of p.next(n.s)) {
+        if (o.path && onPath(n, s)) { skipped.push(s); continue; }
+        const child = makeNode(R, s, n);
+        R.generated++;
+        R.stack.push(child);
+        R.newIds.add(child.id);
+        added.push(p.label(s));
+      }
+      R.maxS = Math.max(R.maxS, R.stack.length);
+      R.skipped = skipped;
+      R.kind = 'expand';
+      R.line = o.path ? ['for', 'chk', 'push'] : o.graph ? ['addex', 'for', 'push'] : ['for', 'push'];
+      R.msg = `Expand ${nameOf(R, n)}: ` + (added.length
+        ? `push <b>${esc(added.join(', '))}</b>.` + (added.length > 1 ? ` <b>${esc(added[added.length - 1])}</b> was pushed last, so it is on the <b>top</b>.` : '')
+        : 'no new children.');
+      if (skipped.length) R.msg += ` Do not push ${esc(skipped.map(p.label).join(', '))}: already on the path (a cycle).`;
+      if (R.generated > LIMIT) {
+        R.done = true; R.stopped = true;
+        R.msg = `Stopped after ${LIMIT.toLocaleString()} nodes. DFS goes around a cycle <b>forever</b> here.`;
+      }
+    }
+  }
+  R.log.push(R.msg);
+  return true;
+}
+
+function runToEnd(prob, opt, limit) {
+  const R = newRun(prob, opt, limit);
+  while (step(R));
+  return R;
+}
+
+/* ================= pseudo code ================= */
+// [key, indent, text, isNew]  (isNew: 'star' = a new line, 'chg' = different from BFS)
+const DLS_LINES = [
+  ['fn',    0, '<k>function</k> DLS(problem, limit):'],
+  ['init',  1, 'frontier ← a stack with the start node'],
+  ['loop',  1, '<k>while</k> frontier is not empty:'],
+  ['pop',   2, 'node ← frontier.pop()'],
+  ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+  ['lim',   2, '<k>if</k> node.depth = limit: <k>continue</k>     <c># remember: cutoff</c>', 'star'],
+  ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+  ['chk',   3, '<k>if</k> child.state <k>is on the path of</k> node: <k>continue</k>'],
+  ['push',  3, 'frontier.push(child)'],
+  ['fail',  1, '<k>return</k> cutoff <k>if</k> a node stopped at the limit, <k>else</k> failure'],
+];
+const CODE = {
+  std: [
+    ['fn',    0, '<k>function</k> DFS(problem, graphSearch):'],
+    ['init',  1, 'frontier ← a stack with the start node', 'chg'],
+    ['exset', 1, 'explored ← an empty set'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.pop()              <c># the newest node (top)</c>', 'chg'],
+    ['skip',  2, '<k>if</k> graphSearch <k>and</k> node.state <k>in</k> explored: <k>continue</k>'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['addex', 2, '<k>if</k> graphSearch: explored.add(node.state)'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:              <c># apply every action</c>'],
+    ['push',  3, 'frontier.push(child)               <c># on the top</c>', 'chg'],
+    ['fail',  1, '<k>return</k> failure                      <c># no solution</c>'],
+  ],
+  path: [
+    ['fn',    0, '<k>function</k> DFS(problem):                 <c># tree search</c>'],
+    ['init',  1, 'frontier ← a stack with the start node'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.pop()'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['chk',   3, '<k>if</k> child.state <k>is on the path of</k> node: <k>continue</k>', 'star'],
+    ['push',  3, 'frontier.push(child)'],
+    ['fail',  1, '<k>return</k> failure'],
+  ],
+  onpath: [
+    ['fn',    0, '<k>function</k> isOnPath(node, state):'],
+    ['loop',  1, '<k>while</k> node is not null:            <c># up to the start</c>'],
+    ['eq',    2, '<k>if</k> node.state = state: <k>return</k> true'],
+    ['up',    2, 'node ← node.parent'],
+    ['no',    1, '<k>return</k> false'],
+  ],
+  dls: DLS_LINES,
+  ids: [
+    ['ifn',   0, '<k>function</k> IDS(problem):'],
+    ['ifor',  1, '<k>for</k> limit = 0, 1, 2, 3, ...:', 'star'],
+    ['icall', 2, 'result ← DLS(problem, limit)', 'star'],
+    ['iret',  2, '<k>if</k> result ≠ cutoff: <k>return</k> result   <c># a goal, or failure</c>', 'star'],
+    ['gap',   0, ''],
+    ...DLS_LINES.map(([k, i, t]) => [k, i, t]),
+  ],
+  task: [
+    ['fn',    0, '<k>function</k> DLS(problem, limit):'],
+    ['init',  1, 'frontier ← a stack with the start node'],
+    ['exset', 1, 'explored ← an empty set'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.pop()'],
+    ['skip',  2, '<k>if</k> node.state <k>in</k> explored: <k>continue</k>'],
+    ['addex', 2, 'explored.add(node.state)'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['lim',   2, '<k>if</k> node.depth = limit: <k>continue</k>'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['push',  3, 'frontier.push(child)'],
+    ['fail',  1, '<k>return</k> failure'],
+  ],
+};
+
+function codeHtml(lines, hl = [], off = [], marks = true) {
+  return lines.map(([k, ind, t, mark]) => {
+    const txt = '    '.repeat(ind) + t
+      .replace(/<k>/g, '<span class="kw">').replace(/<\/k>/g, '</span>')
+      .replace(/<c>/g, '<span class="com">').replace(/<\/c>/g, '</span>');
+    const m = marks ? mark : '';
+    const cls = ['ln', hl.includes(k) ? 'hl' : '', off.includes(k) ? 'off' : '', m === 'star' ? 'new' : '', m === 'chg' ? 'chg' : ''].join(' ');
+    return `<span class="${cls}">${txt || ' '}${m === 'star' ? '  <span class="star">★</span>' : ''}</span>`;
+  }).join('');
+}
+
+/* ================= tabs ================= */
+const TABS = ['The idea', 'Watch it run', 'Pseudo code', 'Stop the cycles', 'Make it better', 'Is DFS good?', 'Java code', 'Student task'];
+let tab = 0;
+$('#tabs').innerHTML = TABS.map((t, i) => `<button data-i="${i}"><span class="n">${i + 1}</span>${t}</button>`).join('');
+function setTab(i) {
+  tab = Math.max(0, Math.min(TABS.length - 1, i));
+  $$('#tabs button').forEach((b, j) => b.classList.toggle('on', j === tab));
+  $$('section[data-tab]').forEach(s => s.classList.toggle('hidden', +s.dataset.tab !== tab));
+  $('#prevBtn').disabled = tab === 0;
+  $('#nextBtn').disabled = tab === TABS.length - 1;
+  if (tab !== 1) stopPlay();
+  if (tab !== 3) cycStop();
+  try { localStorage.setItem('dfs-tab', tab); } catch (e) {}
+}
+$('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) setTab(+b.dataset.i); };
+$('#prevBtn').onclick = () => { setTab(tab - 1); scrollTo(0, 0); };
+$('#nextBtn').onclick = () => { setTab(tab + 1); scrollTo(0, 0); };
+
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+
+/* ================= 1. the idea ================= */
+const ARROW_DEFS = `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">`
+  + `<path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>`;
+
+function drawOrder(which) {
+  const R = runToEnd(graphProblem('none'), which === 'dfs' ? MODES.graph : MODES.bfs);
+  const num = {}, via = {};
+  R.order.forEach((n, i) => { num[n.s] = i + 1; via[n.s] = n; });
+  let h = ARROW_DEFS;
+  for (const [a, b] of G_EDGES) h += `<line class="e" x1="${G_POS[a][0]}" y1="${G_POS[a][1]}" x2="${G_POS[b][0]}" y2="${G_POS[b][1]}"/>`;
+  for (const s in via) {
+    const n = via[s];
+    if (!n.parent) continue;
+    const [x1, y1] = G_POS[n.parent.s], [x2, y2] = G_POS[s];
+    const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    h += `<line class="e-tree" marker-end="url(#arr)" x1="${x1 + ux * 22}" y1="${y1 + uy * 22}" x2="${x2 - ux * 24}" y2="${y2 - uy * 24}"/>`;
+  }
+  for (const s in G_POS) {
+    const [x, y] = G_POS[s];
+    h += `<circle class="nd st-new" cx="${x}" cy="${y}" r="20"/><text class="nlbl" x="${x}" y="${y}">${s}</text>`
+      + `<circle class="badge order" cx="${x + 19}" cy="${y - 18}" r="10"/><text class="badgetxt" style="font-size:11px" x="${x + 19}" y="${y - 18}">${num[s]}</text>`;
+  }
+  $('#orderSvg').innerHTML = h;
+  const list = R.order.map(n => n.s).join(', ');
+  if (which === 'dfs') {
+    const d = via.D;
+    $('#orderText').innerHTML = `DFS order: <b>${list}</b>. It runs down one long road first.
+      Look at <b>D</b>: DFS reached it with a path of <b>${d.depth} steps</b> (${pathText(R, d)}), but D is only 2 steps from S!`;
+  } else {
+    $('#orderText').innerHTML = `BFS order: <b>${list}</b>. Level by level, like a stone in water. Every node is reached with the fewest steps.`;
+  }
+}
+$$('[data-order]').forEach(b => b.onclick = () => {
+  $$('[data-order]').forEach(x => x.classList.toggle('on', x === b));
+  drawOrder(b.dataset.order);
+});
+drawOrder('dfs');
+
+let pp = ['A', 'B', 'C'], ppNext = 3;
+function drawPlates() {
+  $('#plates').innerHTML = pp.length
+    ? pp.map((x, i) => `<div class="plate${i === pp.length - 1 ? ' top' : ''}">${x}</div>`).join('')
+    : '<span class="muted">empty</span>';
+  $('#ppPop').disabled = !pp.length;
+  $('#ppPush').disabled = pp.length >= 6;
+}
+$('#ppPush').onclick = () => {
+  const x = String.fromCharCode(65 + (ppNext++ % 26));
+  pp.push(x); drawPlates();
+  $('#ppMsg').innerHTML = `<b>${x}</b> is on the top now.`;
+};
+$('#ppPop').onclick = () => {
+  const x = pp.pop(); drawPlates();
+  $('#ppMsg').innerHTML = `<b>${x}</b> came last, so <b>${x}</b> goes out first.`;
+};
+drawPlates();
+
+/* ================= 2. watch it run ================= */
+const DEF_LIMIT = { graph: 3, maze: 10 };
+let ex = 'graph', mode = 'graph', goalG = 'G', mazeRows = MAZE0.slice(), limit = DEF_LIMIT.graph, run, timer = null;
+
+const problemNow = () => ex === 'graph' ? graphProblem(goalG) : mazeProblem(mazeRows);
+function restart() { stopPlay(); run = newRun(problemNow(), MODES[mode], limit); drawRun(); }
+
+// the state of each graph node / maze cell, built from all the tree nodes
+function stateInfo(R) {
+  const info = {};
+  const get = s => info[s] || (info[s] = { inS: 0, ex: false, cut: false, depth: Infinity, path: false, isNew: false });
+  for (const n of R.nodes) {
+    const i = get(n.s);
+    i.depth = Math.min(i.depth, n.depth);
+    if (n.status === 'ex') i.ex = true;
+    if (n.status === 'cut') i.cut = true;
+    if (R.newIds.has(n.id)) i.isNew = true;
+  }
+  for (const n of R.stack) get(n.s).inS++;
+  if (R.found) for (let n = R.found; n; n = n.parent) get(n.s).path = true;
+  return info;
+}
+function stateClass(R, s, i) {
+  if (!i) return 'st-new';
+  if (i.path) return 'st-path';
+  if (R.current && R.current.s === s && !R.done) return 'st-cur';
+  if (i.isNew) return 'st-just';
+  if (i.inS) return 'st-q';
+  if (i.ex) return 'st-ex';
+  if (i.cut) return 'st-cut';
+  return 'st-new';
+}
+const badge = (x, y, k) => k > 1 ? `<circle class="badge" cx="${x}" cy="${y}" r="9"/><text class="badgetxt" x="${x}" y="${y}">×${k}</text>` : '';
+
+function drawGraphBoard(R) {
+  const svg = $('#board');
+  svg.setAttribute('viewBox', '0 0 400 300');
+  const info = stateInfo(R);
+  const ek = (a, b) => a < b ? a + b : b + a;
+  const chain = new Set();
+  const chainNode = R.found || (R.done ? null : R.current);
+  for (let n = chainNode; n && n.parent; n = n.parent) chain.add(ek(n.s, n.parent.s));
+  let h = '';
+  for (const [a, b] of G_EDGES) {
+    const cls = chain.has(ek(a, b)) ? (R.found ? 'e-path' : 'e-cur') : 'e';
+    h += `<line class="${cls}" x1="${G_POS[a][0]}" y1="${G_POS[a][1]}" x2="${G_POS[b][0]}" y2="${G_POS[b][1]}"/>`;
+  }
+  for (const s in G_POS) {
+    const [x, y] = G_POS[s], i = info[s];
+    h += `<g class="clickable" data-s="${s}">`
+      + `<circle class="nd ${stateClass(R, s, i)}" cx="${x}" cy="${y}" r="20"/>`
+      + (s === goalG ? `<circle class="goalring" cx="${x}" cy="${y}" r="26"/>` : '')
+      + `<text class="nlbl" x="${x}" y="${y}">${s}</text>`
+      + (i ? `<text class="dlbl" x="${x - 34}" y="${y - 18}">d=${i.depth}</text>` : '')
+      + (i ? badge(x + 18, y - 18, i.inS) : '')
+      + `</g>`;
+  }
+  svg.innerHTML = h;
+}
+
+function drawMazeBoard(R) {
+  const svg = $('#board'), rows = mazeRows, S = 52, W = rows[0].length * S, H = rows.length * S;
+  svg.setAttribute('viewBox', `-2 -2 ${W + 4} ${H + 4}`);
+  const info = stateInfo(R);
+  const mid = s => { const [r, c] = s.split(',').map(Number); return [c * S + S / 2, r * S + S / 2]; };
+  let h = '';
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    const s = r + ',' + c, x = c * S, y = r * S;
+    if (ch === '#') {
+      h += `<rect class="wall cellbox clickable" data-r="${r}" data-c="${c}" x="${x}" y="${y}" width="${S}" height="${S}"/>`;
+      return;
+    }
+    const i = info[s];
+    h += `<rect class="cellbox nd ${stateClass(R, s, i)} clickable" data-r="${r}" data-c="${c}" x="${x + 2}" y="${y + 2}" width="${S - 4}" height="${S - 4}" rx="6"/>`;
+    if (ch === 'S' || ch === 'G') h += `<text class="corner" x="${x + 6}" y="${y + 15}">${ch}</text>`;
+    if (i) h += `<text class="nlbl" x="${x + S / 2}" y="${y + S / 2 + 2}">${i.depth}</text>`;
+    if (i) h += badge(x + S - 11, y + 11, i.inS);
+  }));
+  const chainNode = R.found || (R.done ? null : R.current);
+  if (chainNode) {
+    const pts = []; for (let n = chainNode; n; n = n.parent) pts.push(mid(n.s).join(','));
+    h += `<polyline class="walk ${R.found ? 'path' : 'cur'}" points="${pts.join(' ')}" style="pointer-events:none"/>`;
+  }
+  svg.innerHTML = h;
+}
+
+// a simple tree layout: every leaf gets its own column, a parent sits over its children
+function drawTree(R) {
+  const svg = $('#tree');
+  if (R.nodes.length > 160) {
+    svg.setAttribute('viewBox', '0 0 400 40');
+    svg.innerHTML = `<text class="dlbl" x="200" y="22" text-anchor="middle">The tree has ${R.nodes.length.toLocaleString()} nodes now. Too big to draw!</text>`;
+    return;
+  }
+  const kids = {};
+  for (const n of R.nodes) if (n.parent) (kids[n.parent.id] = kids[n.parent.id] || []).push(n);
+  const col = {};
+  let leaves = 0, maxD = 0;
+  (function place(n) {
+    maxD = Math.max(maxD, n.depth);
+    const ks = kids[n.id] || [];
+    if (!ks.length) { col[n.id] = leaves++; return; }
+    ks.forEach(place);
+    col[n.id] = (col[ks[0].id] + col[ks[ks.length - 1].id]) / 2;
+  })(R.nodes[0]);
+  if (R.opt.limit) maxD = Math.max(maxD, R.L);
+  const DX = 32, DY = 46;
+  const W = Math.max(400, leaves * DX + 50), H = (maxD + 1) * DY + 6;
+  const x0 = 40 + (W - 40 - leaves * DX) / 2;
+  const pos = id => [x0 + (col[id] + 0.5) * DX, 22 + R.nodes[id].depth * DY];
+  const onPath = new Set(); for (let n = R.found; n; n = n.parent) onPath.add(n.id);
+  let h = '';
+  for (let d = 0; d <= maxD; d++) h += `<text class="dlbl" x="2" y="${26 + d * DY}">d=${d}</text>`;
+  if (R.opt.limit) {
+    const y = 22 + R.L * DY + DY / 2;
+    h += `<line class="limitline" x1="30" y1="${y}" x2="${W}" y2="${y}"/><text class="limittxt" x="${W - 4}" y="${y - 5}" text-anchor="end">limit = ${R.L}</text>`;
+  }
+  for (const n of R.nodes) if (n.parent) {
+    const [x1, y1] = pos(n.parent.id), [x2, y2] = pos(n.id);
+    h += `<line class="${onPath.has(n.id) ? 'e-path' : 'e'}" style="stroke-width:${onPath.has(n.id) ? 4 : 1.5}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  }
+  for (const n of R.nodes) {
+    const [x, y] = pos(n.id);
+    let cls = { queue: 'st-q', ex: 'st-ex', skip: 'st-skip', cur: 'st-cur', goal: 'st-path', cut: 'st-cut' }[n.status];
+    if (onPath.has(n.id)) cls = 'st-path';
+    else if (n === R.current && !R.done) cls = n.status === 'skip' ? 'st-skip' : n.status === 'cut' ? 'st-cut' : 'st-cur';
+    h += `<circle class="nd ${cls}" style="stroke-width:2" cx="${x}" cy="${y}" r="12"/>`
+      + (R.newIds.has(n.id) ? `<circle class="newring" cx="${x}" cy="${y}" r="16"/>` : '')
+      + `<text class="nlbl tlbl" x="${x}" y="${y}">${esc(n.s)}</text>`;
+  }
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = h;
+}
+
+function chip(R, n, cls) {
+  return `<span class="chip ${cls}">${esc(R.prob.label(n.s))}<sub>${n.depth}</sub></span>`;
+}
+
+function drawRun() {
+  const R = run, o = R.opt;
+  if (ex === 'graph') { drawGraphBoard(R); drawTree(R); } else drawMazeBoard(R);
+  $('#treeWrap').classList.toggle('hidden', ex !== 'graph');
+  $('#hint').textContent = ex === 'graph' ? 'Click a node to make it the goal.' : 'Click a cell to add or remove a wall. The number is the depth.';
+  $('#limitGrp').classList.toggle('hidden', mode !== 'dls');
+  $('#limitOut').textContent = limit;
+  $('#cutLegend').classList.toggle('hidden', !o.limit);
+
+  const head = R.steps === 0 ? 'Start' : `Step ${R.steps}`;
+  $('#msg').innerHTML = `<span class="stepno">${head}${R.done ? ' · finished' : ''}</span>${R.msg}`;
+
+  // the top of the stack is drawn first
+  const MAXS = 30, top = R.stack.slice().reverse();
+  $('#stackStrip').innerHTML = top.length
+    ? '<span class="end">top →</span>' + top.slice(0, MAXS).map((n, i) => chip(R, n, (R.newIds.has(n.id) ? 'new' : 'q') + (i === 0 ? ' top' : ''))).join('')
+      + (top.length > MAXS ? `<span class="end">… +${top.length - MAXS} more</span>` : '<span class="end">← bottom</span>')
+    : '<span class="muted">empty</span>';
+
+  if (o.graph) {
+    $('#seenTitle').textContent = 'Explored (expanded)';
+    const all = [...R.seen];
+    $('#seen').innerHTML = all.length
+      ? all.slice(0, 40).map(s => `<span class="chip ex">${esc(R.prob.label(s))}</span>`).join('') + (all.length > 40 ? `<span class="end">… +${all.length - 40}</span>` : '')
+      : '<span class="muted">empty</span>';
+  } else if (o.path) {
+    $('#seenTitle').textContent = 'Current path (the only thing we check)';
+    const n = R.found || R.current;
+    $('#seen').innerHTML = n
+      ? `<span class="chip ex">${esc(pathText(R, n))}</span>`
+      : '<span class="muted">empty</span>';
+  } else {
+    $('#seenTitle').textContent = 'Explored';
+    $('#seen').innerHTML = '<span class="muted">Tree search remembers nothing. DFS can go around a cycle forever.</span>';
+  }
+
+  $('#stats').innerHTML = [
+    [R.expanded, 'expanded'], [R.generated, 'generated'], [R.stack.length, 'in the stack'], [R.maxS, 'max stack']
+  ].map(([v, t]) => `<div class="stat"><b>${v.toLocaleString()}</b><span>${t}</span></div>`).join('');
+
+  const key = mode === 'tree' ? 'std' : mode === 'graph' ? 'std' : mode;
+  $('#code').innerHTML = codeHtml(CODE[key], R.line, mode === 'tree' ? ['exset', 'skip', 'addex'] : [], key !== 'std');
+  $('#codeNote').textContent = key === 'std' ? '· graphSearch = ' + o.graph : o.limit ? '· limit = ' + R.L : '';
+
+  const start = Math.max(0, R.log.length - 12);
+  $('#log').innerHTML = R.log.slice(start).map((m, i) => `<li><b>${start + i + 1}.</b> ${m}</li>`).reverse().join('');
+
+  $('#bBack').disabled = R.steps === 0;
+  $('#bStep').disabled = $('#bEnd').disabled = R.done;
+}
+
+function doStep() { if (!step(run)) stopPlay(); drawRun(); if (run.done) stopPlay(); }
+function doBack() {
+  if (run.steps === 0) return;
+  stopPlay();
+  const k = run.steps - 1;
+  run = newRun(problemNow(), MODES[mode], limit);
+  while (run.steps < k && step(run));
+  drawRun();
+}
+function stopPlay() { clearInterval(timer); timer = null; $('#bPlay').textContent = 'Play'; }
+function startPlay() {
+  if (run.done) restart();
+  clearInterval(timer);
+  timer = setInterval(doStep, 1000 / +$('#speed').value);
+  $('#bPlay').textContent = 'Pause';
+}
+
+$('#bStep').onclick = () => { stopPlay(); doStep(); };
+$('#bBack').onclick = doBack;
+$('#bReset').onclick = restart;
+$('#bPlay').onclick = () => timer ? stopPlay() : startPlay();
+$('#bEnd').onclick = () => { stopPlay(); while (step(run)); drawRun(); };
+$('#speed').oninput = () => { if (timer) startPlay(); };
+$('#limDown').onclick = () => { limit = Math.max(0, limit - 1); restart(); };
+$('#limUp').onclick = () => { limit = Math.min(30, limit + 1); restart(); };
+document.addEventListener('keydown', e => {
+  if (tab !== 1 || e.target.closest('input')) return;
+  if (e.key === 'ArrowRight') { stopPlay(); doStep(); }
+  if (e.key === 'ArrowLeft') doBack();
+});
+
+$$('[data-ex]').forEach(b => b.onclick = () => {
+  ex = b.dataset.ex;
+  limit = DEF_LIMIT[ex];
+  $$('[data-ex]').forEach(x => x.classList.toggle('on', x === b));
+  restart();
+});
+$$('[data-mode]').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  $$('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+  restart();
+});
+$('#board').onclick = e => {
+  const g = e.target.closest('[data-s]');
+  if (g) { goalG = g.dataset.s === 'S' ? goalG : g.dataset.s; restart(); return; }
+  const cell = e.target.closest('[data-r]');
+  if (cell) {
+    const r = +cell.dataset.r, c = +cell.dataset.c, ch = mazeRows[r][c];
+    if (ch !== '.' && ch !== '#') return;
+    mazeRows[r] = mazeRows[r].slice(0, c) + (ch === '#' ? '.' : '#') + mazeRows[r].slice(c + 1);
+    restart();
+  }
+};
+
+/* ================= 3. pseudo code + traces ================= */
+$('#stdCode').innerHTML = codeHtml(CODE.std);
+
+function traceTable(opt, maxRows = 40) {
+  const R = newRun(graphProblem('G'), opt);
+  const rows = [];
+  const st = () => R.stack.slice().reverse().map(n => `${n.s}<sub>${n.depth}</sub>`).join(' ') || '—';
+  const seen = () => opt.graph ? ([...R.seen].join(', ') || '—') : '—';
+  let row = null, more = false;
+  while (step(R)) {
+    if (rows.length >= maxRows) { more = true; break; }
+    if (R.kind === 'skip') rows.push({ take: R.current, res: '<span class="no">skip</span> (explored)', add: '—', st: st(), seen: seen() });
+    else if (R.kind === 'pop') row = { take: R.current };
+    else if (R.kind === 'test' && R.done) rows.push({ ...row, res: '<span class="yes">GOAL ✓</span>', add: '—', st: st(), seen: seen() });
+    else if (R.kind === 'expand') {
+      const kids = R.nodes.filter(n => n.parent === row.take).map(n => n.s).join(', ') || '—';
+      rows.push({ ...row, res: 'no', add: kids, st: st(), seen: seen() });
+    }
+  }
+  const cols = opt.graph ? 6 : 5;
+  return `<tr><th>#</th><th>Pop</th><th>Goal?</th><th>Push</th><th>Stack after (top … bottom)</th>${opt.graph ? '<th>Explored</th>' : ''}</tr>`
+    + rows.map((r, i) => `<tr><td>${i + 1}</td><td><b>${r.take.s}</b><sub>${r.take.depth}</sub></td><td>${r.res}</td><td>${r.add}</td><td class="mono">${r.st}</td>${opt.graph ? `<td>${r.seen}</td>` : ''}</tr>`).join('')
+    + (more ? `<tr><td colspan="${cols}" class="no">… and so on, forever: S → B → S → B → ... The stack only grows, and DFS never finds G.</td></tr>` : '');
+}
+$('#traceGraph').innerHTML = traceTable(MODES.graph);
+$('#traceTree').innerHTML = traceTable(MODES.tree, 6);
+$('#showTreeTrace').onclick = () => {
+  const w = $('#treeTraceWrap');
+  w.classList.toggle('hidden');
+  $('#showTreeTrace').textContent = w.classList.contains('hidden') ? 'Show the tree search trace' : 'Hide the tree search trace';
+};
+
+/* ================= 4. stop the cycles ================= */
+$('#pathCode').innerHTML = codeHtml(CODE.path);
+$('#onPathCode').innerHTML = codeHtml(CODE.onpath);
+
+const CYC_MAZE = ['S....', '.#.#.', '.#...', '.####', '....G'];
+let cycMode = 'path', cycRun, cycTimer = null;
+
+// what DFS remembers to stop the cycles: the thread (the path now) or the chalk marks (explored set)
+function cycMem(R, m) {
+  if (m === 'graph') return R.seen.size;
+  const n = R.found || R.current;
+  return n ? n.depth + 1 : 1;
+}
+function cycNew() { cycRun = newRun(mazeProblem(CYC_MAZE), MODES[cycMode]); cycRun.maxMem = 1; }
+function cycOne() {
+  const ok = step(cycRun);
+  cycRun.maxMem = Math.max(cycRun.maxMem, cycMem(cycRun, cycMode));
+  return ok;
+}
+const CYC_END = {};
+for (const m of ['path', 'graph']) {
+  const R = newRun(mazeProblem(CYC_MAZE), MODES[m]);
+  let mx = 1;
+  while (step(R)) mx = Math.max(mx, cycMem(R, m));
+  CYC_END[m] = { mem: mx, ex: R.expanded };
+}
+
+function drawCyc() {
+  const R = cycRun, rows = CYC_MAZE, S = 56, W = rows[0].length * S, H = rows.length * S;
+  const mid = s => { const [r, c] = s.split(',').map(Number); return [c * S + S / 2, r * S + S / 2]; };
+  const inStack = new Set(R.stack.map(n => n.s));
+  const skipped = new Set(R.skipped);
+  if (R.kind === 'skip') skipped.add(R.current.s);
+  const head = R.found || (R.done ? null : R.current);
+  let h = '';
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    const s = r + ',' + c, x = c * S, y = r * S;
+    if (ch === '#') { h += `<rect class="wall cellbox" x="${x}" y="${y}" width="${S}" height="${S}"/>`; return; }
+    const cls = skipped.has(s) ? 'st-skip' : inStack.has(s) ? 'st-q' : cycMode === 'graph' && R.seen.has(s) ? 'st-ex' : 'st-new';
+    h += `<rect class="cellbox nd ${cls}" x="${x + 2}" y="${y + 2}" width="${S - 4}" height="${S - 4}" rx="6"/>`;
+    if (cycMode === 'graph' && R.seen.has(s)) h += `<text class="chalk" x="${x + S / 2}" y="${y + S / 2}">✕</text>`;
+    if (ch === 'S' || ch === 'G') h += `<text class="corner" x="${x + 6}" y="${y + 15}">${ch}</text>`;
+  }));
+  if (head) {
+    const pts = []; for (let n = head; n; n = n.parent) pts.push(mid(n.s).join(','));
+    const cls = R.found ? 'path' : cycMode === 'path' ? 'cur' : 'ghost';
+    const [x, y] = mid(head.s);
+    h += `<polyline class="walk ${cls}" points="${pts.join(' ')}"/>`;
+    // the children we did not push because of a cycle
+    for (const s of R.skipped) {
+      const [sx, sy] = mid(s);
+      h += `<line class="cycline" marker-end="url(#cycArr)" x1="${x}" y1="${y}" x2="${x + (sx - x) * 0.72}" y2="${y + (sy - y) * 0.72}"/>`
+        + `<text class="cyctxt" x="${sx}" y="${sy}">✕</text>`;
+    }
+    h += `<circle class="walker" cx="${x}" cy="${y}" r="9"/>`;
+  }
+  h = `<defs><marker id="cycArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">`
+    + `<path class="cycarrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>` + h;
+  const svg = $('#cycBoard');
+  svg.setAttribute('viewBox', `-2 -2 ${W + 4} ${H + 4}`);
+  svg.innerHTML = h;
+
+  $('#cycMsg').innerHTML = `<span class="stepno">${R.steps === 0 ? 'Start' : 'Step ' + R.steps}${R.done ? ' · finished' : ''}</span>${R.msg}`;
+  const what = cycMode === 'path' ? 'states on the thread' : 'chalk marks';
+  $('#cycStats').innerHTML = [
+    [R.expanded, 'expanded'], [R.stack.length, 'in the stack'], [cycMem(R, cycMode), what + ' now'], [R.maxMem, 'max ' + what]
+  ].map(([v, t]) => `<div class="stat"><b>${v}</b><span>${t}</span></div>`).join('');
+  $('#cycNote').innerHTML = (cycMode === 'path'
+    ? 'The thread is only the path <b>now</b>. Look: it gets <b>shorter</b> when DFS goes back.'
+    : 'The chalk marks <b>never go away</b>. The number only grows.')
+    + `<br><span class="muted">At the end: thread = max ${CYC_END.path.mem} states, ${CYC_END.path.ex} expanded ·
+      chalk = max ${CYC_END.graph.mem} states, ${CYC_END.graph.ex} expanded.
+      In a big search space the difference in memory is huge.</span>`;
+  $('#cBack').disabled = R.steps === 0;
+  $('#cStep').disabled = $('#cEnd').disabled = R.done;
+}
+
+function cycStop() { clearInterval(cycTimer); cycTimer = null; $('#cPlay').textContent = 'Play'; }
+function cycRestart() { cycStop(); cycNew(); drawCyc(); }
+function cycDo() { cycOne(); drawCyc(); if (cycRun.done) cycStop(); }
+$('#cStep').onclick = () => { cycStop(); cycDo(); };
+$('#cReset').onclick = cycRestart;
+$('#cEnd').onclick = () => { cycStop(); while (cycOne()); drawCyc(); };
+$('#cBack').onclick = () => {
+  cycStop();
+  const k = cycRun.steps - 1;
+  cycNew();
+  while (cycRun.steps < k && cycOne());
+  drawCyc();
+};
+$('#cPlay').onclick = () => {
+  if (cycTimer) { cycStop(); return; }
+  if (cycRun.done) cycNew();
+  cycTimer = setInterval(cycDo, 450);
+  $('#cPlay').textContent = 'Pause';
+};
+$$('[data-cyc]').forEach(b => b.onclick = () => {
+  cycMode = b.dataset.cyc;
+  $$('[data-cyc]').forEach(x => x.classList.toggle('on', x === b));
+  cycRestart();
+});
+cycRestart();
+
+(function drawDiamond() {
+  const P = { S: [100, 28], A: [45, 95], B: [155, 95], D: [100, 162] };
+  const T = { S: [320, 28], A: [265, 95], B: [375, 95], D1: [265, 162], D2: [375, 162] };
+  const line = ([x1, y1], [x2, y2], cls = 'e') => `<line class="${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  const node = ([x, y], t, cls = 'st-new') => `<circle class="nd ${cls}" cx="${x}" cy="${y}" r="18"/><text class="nlbl" x="${x}" y="${y}">${t}</text>`;
+  let h = line(P.S, P.A) + line(P.S, P.B) + line(P.A, P.D) + line(P.B, P.D)
+    + line(T.S, T.A) + line(T.S, T.B) + line(T.A, T.D1) + line(T.B, T.D2);
+  h += node(P.S, 'S') + node(P.A, 'A') + node(P.B, 'B') + node(P.D, 'D');
+  h += node(T.S, 'S') + node(T.A, 'A') + node(T.B, 'B') + node(T.D1, 'D', 'st-just') + node(T.D2, 'D', 'st-just');
+  h += `<text class="dlbl" style="font-size:13px" x="100" y="188" text-anchor="middle">the graph</text>`
+    + `<text class="dlbl" style="font-size:13px" x="320" y="188" text-anchor="middle">the search tree (path check)</text>`
+    + `<text class="dlbl" style="font-size:22px" x="210" y="100" text-anchor="middle">→</text>`;
+  $('#diamondSvg').innerHTML = h;
+})();
+
+/* ================= 5. make it better ================= */
+$('#dlsCode').innerHTML = codeHtml(CODE.dls);
+$('#idsCode').innerHTML = codeHtml(CODE.ids.slice(0, 4));
+
+// a full tree with b = 3, d = 3: which nodes are in memory for BFS and for IDS, moment by moment?
+const MT = (() => {
+  const b = 3, d = 3, nodes = [];
+  (function make(parent, depth) {
+    const n = { id: nodes.length, parent, depth, kids: [] };
+    nodes.push(n);
+    if (parent) parent.kids.push(n);
+    if (depth < d) for (let i = 0; i < b; i++) make(n, depth + 1);
+  })(null, 0);
+  const leaves = nodes.filter(n => n.depth === d), goal = leaves[13];
+  const pos = new Map();
+  leaves.forEach((n, i) => pos.set(n, [26 + i * 18, 20 + d * 50]));
+  for (let k = d - 1; k >= 0; k--) for (const n of nodes) if (n.depth === k) {
+    const a = pos.get(n.kids[0]), z = pos.get(n.kids[n.kids.length - 1]);
+    pos.set(n, [(a[0] + z[0]) / 2, 20 + k * 50]);
+  }
+  return { nodes, goal, pos };
+})();
+
+// runs BFS (queue) or the last DFS of IDS (stack, limit 3) and keeps a picture of every moment
+function memSnapshots(which) {
+  const frontier = [MT.nodes[0]], born = new Set([MT.nodes[0]]), snaps = [];
+  const snap = cur => snaps.push({ cur, frontier: frontier.slice(), born: new Set(born) });
+  snap(null);
+  while (frontier.length) {
+    const n = which === 'bfs' ? frontier.shift() : frontier.pop();
+    if (n === MT.goal) { snap(n); break; }
+    for (const k of n.kids) { frontier.push(k); born.add(k); }
+    snap(n);
+  }
+  return snaps;
+}
+
+// what each node is at one moment
+function memClasses(s) {
+  const cls = new Map();
+  for (const n of MT.nodes) cls.set(n, s.born.has(n) ? 'st-thrown' : 'st-unborn');
+  for (const f of s.frontier) for (let p = f.parent; p; p = p.parent) cls.set(p, 'st-ex'); // a child points to it
+  for (let p = s.cur; p; p = p.parent) cls.set(p, 'st-cur');
+  for (const f of s.frontier) cls.set(f, 'st-q');
+  return cls;
+}
+const memSize = cls => [...cls.values()].filter(c => c !== 'st-thrown' && c !== 'st-unborn').length;
+
+const MEM_TEXT = {
+  bfs: `<p><b>Why so many?</b> BFS goes level by level. Before it can take the first node of level 3, it must make
+      <b>all 27</b> nodes of level 3 and keep them in the queue. Their parents stay in memory too, because every node points to its parent.
+      BFS cannot throw anything away: everything is still waiting or is a parent of a waiting node.</p>
+    <p class="muted">Move the slider: the number grows level by level. With b = 10 and d = 10 the last level alone is 10 billion nodes.</p>`,
+  ids: `<p><b>Why only these nodes?</b> This is the last iteration of IDS (limit 3).
+      DFS pushes the children in order, so the <b>last</b> child is on the top: DFS goes to the <b>right</b> first.</p>
+    <ul style="margin:4px 0; padding-left:20px">
+      <li><b>The right side (faded):</b> DFS searched it first. No goal there, so the nodes were popped and <b>thrown away</b>.
+        Nothing points to them any more, so Java frees that memory (the garbage collector).</li>
+      <li><b>The left side (dashed):</b> <b>not made yet!</b> We make the children of a node only when we expand it.
+        The blue nodes wait in the stack, and they are not expanded yet, so the nodes below them do not exist yet.</li>
+      <li><b>Kept:</b> only the path (orange), so we can go back, and the brothers that wait in the stack (blue).</li>
+    </ul>
+    <p class="muted">The earlier iterations (limit 0, 1, 2) were thrown away completely before this one started.
+      Move the slider: the number goes up and down, but it never gets big. It is about b·d: with b = 10 and d = 10, about 100 nodes.</p>`,
+};
+
+let memMode = 'bfs', memSnaps = [];
+function setMemMode(which) {
+  memMode = which;
+  memSnaps = memSnapshots(which);
+  const sizes = memSnaps.map(s => memSize(memClasses(s)));
+  // BFS: start at the biggest moment; IDS: start at the moment it finds the goal
+  const start = which === 'bfs' ? sizes.indexOf(Math.max(...sizes)) : memSnaps.length - 1;
+  const r = $('#memStep');
+  r.max = memSnaps.length - 1;
+  r.value = start;
+  memSnaps.biggest = Math.max(...sizes);
+  drawMemTree();
+}
+
+function drawMemTree() {
+  const k = +$('#memStep').value, s = memSnaps[k], cls = memClasses(s);
+  let h = '';
+  for (const n of MT.nodes) if (n.parent) {
+    const [x1, y1] = MT.pos.get(n.parent), [x2, y2] = MT.pos.get(n);
+    h += `<line class="${cls.get(n) === 'st-unborn' ? 'e-unborn' : 'e'}" style="stroke-width:1.5" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  }
+  for (const n of MT.nodes) {
+    const [x, y] = MT.pos.get(n);
+    h += `<circle class="nd ${cls.get(n)}" style="stroke-width:2" cx="${x}" cy="${y}" r="7"/>`;
+  }
+  const [gx, gy] = MT.pos.get(MT.goal);
+  h += `<text class="nlbl" style="font-size:14px;fill:var(--goal)" x="${gx}" y="${gy + 17}">★</text>`;
+  $('#memTree').innerHTML = h;
+
+  const count = c => [...cls.values()].filter(x => x === c).length;
+  const found = s.cur === MT.goal;
+  $('#memStepOut').textContent = `${k} / ${memSnaps.length - 1}`;
+  $('#memCount').innerHTML = (found ? `<b>${memMode === 'bfs' ? 'BFS' : 'IDS'} found ★.</b> ` : '')
+    + `In memory now: <b>${memSize(cls)} nodes</b> = ${count('st-cur')} on the path + ${count('st-q')} waiting`
+    + (count('st-ex') ? ` + ${count('st-ex')} kept as parents` : '')
+    + `. Thrown away: ${count('st-thrown')}. Not made yet: ${count('st-unborn')}.`
+    + ` <span class="muted">The biggest moment: ${memSnaps.biggest} nodes.</span>`;
+  $('#memTreeText').innerHTML = MEM_TEXT[memMode];
+}
+$('#memStep').oninput = drawMemTree;
+$$('[data-mem]').forEach(b => b.onclick = () => {
+  $$('[data-mem]').forEach(x => x.classList.toggle('on', x === b));
+  setMemMode(b.dataset.mem);
+});
+setMemMode('bfs');
+
+function drawBfsIds() {
+  const b = +$('#cmpB').value, d = +$('#cmpD').value;
+  $('#cmpBOut').textContent = b; $('#cmpDOut').textContent = d;
+  let nB = 0, nI = 0;
+  for (let k = 0; k <= d; k++) { nB += Math.pow(b, k); nI += (d + 1 - k) * Math.pow(b, k); }
+  const mB = Math.pow(b, d), mI = b * d + 1;
+  const big = kb => kb > 16e6 ? 'no' : 'yes'; // more than 16 GB
+  $('#bfsIdsTable').innerHTML = '<tr><th></th><th class="r">BFS</th><th class="r">IDS</th></tr>'
+    + `<tr><td>Shortest path?</td><td class="r yes">Yes</td><td class="r yes">Yes</td></tr>`
+    + `<tr><td>Nodes made</td><td class="r">${fmtBig(nB)}</td><td class="r">${fmtBig(nI)}</td></tr>`
+    + `<tr><td>Time</td><td class="r">${fmtTime(nB / 1e6)}</td><td class="r">${fmtTime(nI / 1e6)}</td></tr>`
+    + `<tr><td>Nodes in memory</td><td class="r">${fmtBig(mB)}</td><td class="r">${fmtBig(mI)}</td></tr>`
+    + `<tr><td>Memory</td><td class="r ${big(mB)}">${fmtBytes(mB)}</td><td class="r ${big(mI)}">${fmtBytes(mI)}</td></tr>`
+    + `<tr><td colspan="3">IDS needs <b>${Math.round((nI / nB - 1) * 100)}% more time</b>, but <b>${fmtBig(mB / mI)} times less memory</b>.</td></tr>`;
+}
+$('#cmpB').oninput = $('#cmpD').oninput = drawBfsIds;
+drawBfsIds();
+
+function drawIdsTable(b) {
+  const d = 5;
+  let one = 0, all = 0;
+  let rows = '<tr><th>Level k</th><th class="r">Nodes on level k</th><th class="r">Created by IDS</th><th class="r">IDS total</th></tr>';
+  for (let k = 0; k <= d; k++) {
+    const n = Math.pow(b, k), times = d + 1 - k;
+    one += n; all += n * times;
+    rows += `<tr><td>${k}</td><td class="r">${n.toLocaleString()}</td><td class="r">${times} ×</td><td class="r">${(n * times).toLocaleString()}</td></tr>`;
+  }
+  rows += `<tr><th>Sum</th><th class="r">${one.toLocaleString()}</th><th></th><th class="r">${all.toLocaleString()}</th></tr>`;
+  $('#idsTable').innerHTML = rows
+    + `<tr><td colspan="4">IDS creates <b>${Math.round((all / one - 1) * 100)}% more</b> nodes than one search with L = d.</td></tr>`;
+}
+$$('[data-b]').forEach(btn => btn.onclick = () => {
+  $$('[data-b]').forEach(x => x.classList.toggle('on', x === btn));
+  drawIdsTable(+btn.dataset.b);
+});
+drawIdsTable(10);
+
+(function compare() {
+  const list = [['tree'], ['graph'], ['path'], ['dls', 10], ['dls', 9], ['ids'], ['bfs']];
+  $('#cmpTable').innerHTML = '<tr><th>Version</th><th class="r">Steps</th><th class="r">Expanded</th><th class="r">Generated</th><th class="r">Max frontier</th></tr>'
+    + list.map(([m, L]) => {
+      const R = runToEnd(mazeProblem(MAZE0), MODES[m], L);
+      const name = MODES[m].name + (L !== undefined ? ` (L = ${L})` : '');
+      const res = R.found ? R.found.depth : R.stopped ? '<span class="no">never stops</span>' : '<span class="no">cutoff</span>';
+      return `<tr><td>${name}</td><td class="r">${res}</td><td class="r">${R.expanded.toLocaleString()}${R.stopped ? '+' : ''}</td>`
+        + `<td class="r">${R.generated.toLocaleString()}${R.stopped ? '+' : ''}</td><td class="r">${R.maxS.toLocaleString()}</td></tr>`;
+    }).join('');
+})();
+
+/* ================= 5. is DFS good? ================= */
+(function drawMazeCmp() {
+  const rows = ['S......', '.#####.', 'G......'], S = 52, W = rows[0].length * S, H = rows.length * S;
+  const dfs = runToEnd(mazeProblem(rows), MODES.graph).found;
+  const bfs = runToEnd(mazeProblem(rows), MODES.bfs).found;
+  const mid = s => { const [r, c] = s.split(',').map(Number); return [c * S + S / 2, r * S + S / 2]; };
+  const pts = n => { const p = []; for (; n; n = n.parent) p.push(mid(n.s).join(',')); return p.join(' '); };
+  let h = '';
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    const x = c * S, y = r * S;
+    if (ch === '#') h += `<rect class="wall cellbox" x="${x}" y="${y}" width="${S}" height="${S}"/>`;
+    else h += `<rect class="cellbox nd st-new" x="${x + 2}" y="${y + 2}" width="${S - 4}" height="${S - 4}" rx="6"/>`;
+    if (ch === 'S' || ch === 'G') h += `<text class="corner" x="${x + 6}" y="${y + 15}">${ch}</text>`;
+  }));
+  h += `<polyline class="walk dfs" points="${pts(dfs)}"/><polyline class="walk bfs" points="${pts(bfs)}"/>`;
+  const svg = $('#mazeCmp');
+  svg.setAttribute('viewBox', `-2 -2 ${W + 4} ${H + 4}`);
+  svg.style.maxHeight = '300px';
+  svg.innerHTML = h;
+  $('#mazeCmpText').innerHTML = `<span style="color:var(--cur)"><b>Orange line</b></span> = DFS (graph search): <b>${dfs.depth} steps</b>.
+    <span style="color:var(--goal)"><b>Green dots</b></span> = BFS: <b>${bfs.depth} steps</b>.
+    G is just under S, but DFS tries "right" first (the last action we push), so it walks all the way around.`;
+})();
+
+function fmtBig(x) {
+  if (x < 1e6) return Math.round(x).toLocaleString();
+  const units = [[1e18, 'quintillion'], [1e15, 'quadrillion'], [1e12, 'trillion'], [1e9, 'billion'], [1e6, 'million']];
+  for (const [v, n] of units) if (x >= v) return (x / v).toFixed(x / v < 10 ? 1 : 0) + ' ' + n;
+}
+function fmtBytes(kb) {
+  const u = [['KB', 1], ['MB', 1e3], ['GB', 1e6], ['TB', 1e9], ['PB', 1e12], ['EB', 1e15]];
+  let best = u[0];
+  for (const x of u) if (kb >= x[1]) best = x;
+  const v = kb / best[1];
+  return (v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString()) + ' ' + best[0];
+}
+function fmtTime(s) {
+  if (s < 1) return 'less than 1 second';
+  const u = [['years', 31536000], ['days', 86400], ['hours', 3600], ['minutes', 60], ['seconds', 1]];
+  for (const [n, v] of u) if (s >= v) { const k = s / v; return (k < 10 ? k.toFixed(1) : fmtBig(k)) + ' ' + n; }
+}
+function drawMem() {
+  const b = +$('#bIn').value, d = +$('#dIn').value;
+  $('#bOut').textContent = b; $('#dOut').textContent = d;
+  let rows = '<tr><th>Depth</th><th class="r">BFS nodes in memory</th><th class="r">BFS memory</th><th class="r">DFS nodes in memory</th><th class="r">DFS memory</th></tr>';
+  for (let k = Math.max(1, d - 4); k <= d; k++) {
+    const nb = Math.pow(b, k), nd = b * k + 1;
+    rows += `<tr><td>${k}</td><td class="r">${fmtBig(nb)}</td><td class="r ${nb > 16e6 ? 'no' : ''}">${fmtBytes(nb)}</td>`
+      + `<td class="r">${nd}</td><td class="r yes">${fmtBytes(nd)}</td></tr>`;
+  }
+  $('#memTable').innerHTML = rows;
+}
+$('#bIn').oninput = $('#dIn').oninput = drawMem;
+drawMem();
+
+/* ================= 6. java code ================= */
+function hlJava(src) {
+  const re = /(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|\b(package|import|public|private|protected|class|extends|implements|return|new|for|while|if|else|continue|static|final|void|boolean|int|double|null|true|false|super)\b|\b([A-Z][A-Za-z0-9]*)\b|\b(\d+(?:\.\d+)?)\b/gm;
+  let out = '', last = 0, m;
+  while ((m = re.exec(src))) {
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : m[4] ? 'ty' : 'num';
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(src.slice(last));
+}
+// lines that start with "+" are added, lines that start with "-" are removed
+function hlDiff(src) {
+  return src.split('\n').map(l => l.startsWith('+') ? `<span class="add">${hlJava(l.slice(1))}</span>`
+    : l.startsWith('-') ? `<span class="del">${hlJava(l.slice(1))}</span>`
+    : hlJava(l) + '\n').join('');
+}
+
+const JAVA_DFS = `package sa2026.algorithms;
+
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
+
+import sa2026.core.IAction;
+import sa2026.core.Node;
+import sa2026.core.Problem;
+import sa2026.core.SearchAlgorithm;
+import sa2026.core.State;
+
+/**
+ * Depth-First Search (DFS), the standard version.
+ *
+ * DFS always goes deeper first. At a dead end it goes back
+ * to the newest node that is still waiting in the stack.
+ * The frontier is a Stack (LIFO): the last node in is the first node out.
+ *
+ * Tree search:  we do not remember anything. In a graph with cycles
+ *               DFS can go around a cycle forever!
+ * Graph search: we remember the explored states and do not expand them again.
+ *
+ * DFS is not optimal: the first path it finds can be a long one.
+ */
+public class DFS extends SearchAlgorithm {
+
+    // tree search
+    public DFS() {
+        super(false);
+    }
+
+    // true = graph search, false = tree search
+    public DFS(boolean useGraphSearch) {
+        super(useGraphSearch);
+    }
+
+    @Override
+    public Node search(Problem p) {
+        resetCounters();
+
+        // ArrayDeque used as a stack: push() and pop() both work on the top
+        Deque<Node> frontier = new ArrayDeque<>();
+        Set<State> explored = new HashSet<>(); // HashSet: contains() is fast
+        int visitingOrder = 0;
+
+        Node startNode = new Node(p.getInitialState());
+        frontier.push(startNode);
+        generatedNodes++; // the start node is a generated node too
+
+        while (!frontier.isEmpty()) {
+            // take the newest node (the top of the stack)
+            Node currentNode = frontier.pop();
+
+            // graph search: the same state can be in the stack more than once,
+            // so skip it if we expanded it before
+            if (useGraphSearch && explored.contains(currentNode.getState())) {
+                continue;
+            }
+
+            currentNode.setVisitingOrder(++visitingOrder);
+
+            // goal test when we take the node out of the stack
+            if (p.isGoal(currentNode.getState())) {
+                return currentNode;
+            }
+
+            if (useGraphSearch) {
+                explored.add(currentNode.getState());
+            }
+
+            // expand: apply every action and push the children on the top.
+            // The last child we push is the first one we take.
+            nodesActuallyExpanded++;
+            for (IAction action : p.getActions()) {
+                Collection<State> nextStates = action.apply(currentNode.getState());
+                for (State s : nextStates) {
+                    double pathCost = currentNode.getPathCost()
+                            + p.getActionCost(currentNode.getState(), action, s);
+                    Node child = new Node(s, currentNode, action, pathCost);
+                    frontier.push(child);
+                    generatedNodes++;
+                }
+            }
+        }
+
+        // the stack is empty and we did not find a goal
+        return null;
+    }
+}`;
+
+const JAVA_FROM_BFS = `-import java.util.LinkedList;
+-import java.util.Queue;
++import java.util.ArrayDeque;
++import java.util.Deque;
+    ...
+-        Queue<Node> frontier = new LinkedList<>();
++        Deque<Node> frontier = new ArrayDeque<>();
+    ...
+-        frontier.add(startNode);
++        frontier.push(startNode);
+    ...
+-            Node currentNode = frontier.poll();
++            Node currentNode = frontier.pop();
+    ...
+-                    frontier.add(child);
++                    frontier.push(child);`;
+
+const JAVA_CYCLE = `public class DFSCycleCheck extends SearchAlgorithm {
+
+    public DFSCycleCheck() {
+        super(false); // tree search with a cycle check
+    }
+
+    @Override
+    public Node search(Problem p) {
+        resetCounters();
+
+        Deque<Node> frontier = new ArrayDeque<>();
+        int visitingOrder = 0;
+
+        Node startNode = new Node(p.getInitialState());
+        frontier.push(startNode);
+        generatedNodes++;
+
+        while (!frontier.isEmpty()) {
+            Node currentNode = frontier.pop();
+            currentNode.setVisitingOrder(++visitingOrder);
+
+            if (p.isGoal(currentNode.getState())) {
+                return currentNode;
+            }
+
+            nodesActuallyExpanded++;
+            for (IAction action : p.getActions()) {
+                Collection<State> nextStates = action.apply(currentNode.getState());
+                for (State s : nextStates) {
++                    // the change: s is already on our path, so it is a cycle
++                    if (isOnPath(currentNode, s)) {
++                        continue;
++                    }
+                    double pathCost = currentNode.getPathCost()
+                            + p.getActionCost(currentNode.getState(), action, s);
+                    Node child = new Node(s, currentNode, action, pathCost);
+                    frontier.push(child);
+                    generatedNodes++;
+                }
+            }
+        }
+
+        return null;
+    }
+
++    // true if the state is in this node or in one of its parents
++    // static: it does not use any field of the object
++    private static boolean isOnPath(Node node, State s) {
++        for (Node n = node; n != null; n = n.getParent()) {
++            if (n.getState().equals(s)) {
++                return true;
++            }
++        }
++        return false;
++    }
+}`;
+
+const JAVA_DLS = `public class DepthLimitedDFS extends SearchAlgorithm {
+
++    private final int limit;  // do not expand nodes at this depth
++    private boolean cutoff;   // only a flag: did at least one node stop at the limit? (yes / no)
+
++    public DepthLimitedDFS(int limit) {
++        super(false); // tree search with a cycle check
++        if (limit < 0) {
++            throw new IllegalArgumentException("The limit must be 0 or more, not " + limit + ".");
++        }
++        this.limit = limit;
++    }
+
++    // IDS asks this after the search: true = try a bigger limit, false = no solution
++    public boolean isCutoff() {
++        return cutoff;
++    }
+
+    @Override
+    public Node search(Problem p) {
+        resetCounters();
++        cutoff = false; // a new search: no cutoff yet
+
+        Deque<Node> frontier = new ArrayDeque<>();
+        int visitingOrder = 0;
+
+        Node startNode = new Node(p.getInitialState());
+        frontier.push(startNode);
+        generatedNodes++;
+
+        while (!frontier.isEmpty()) {
+            Node currentNode = frontier.pop();
+            currentNode.setVisitingOrder(++visitingOrder);
+
+            if (p.isGoal(currentNode.getState())) {
+                return currentNode;
+            }
+
++            // do not go deeper than the limit
++            if (currentNode.getDepth() >= limit) {
++                cutoff = true; // remember that it happened, nothing more
++                continue;
++            }
+
+            nodesActuallyExpanded++;
+            for (IAction action : p.getActions()) {
+                Collection<State> nextStates = action.apply(currentNode.getState());
+                for (State s : nextStates) {
+                    // cycle check: do not go back to a state on our own path
+                    if (isOnPath(currentNode, s)) {
+                        continue;
+                    }
+                    double pathCost = currentNode.getPathCost()
+                            + p.getActionCost(currentNode.getState(), action, s);
+                    Node child = new Node(s, currentNode, action, pathCost);
+                    frontier.push(child);
+                    generatedNodes++;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    // true if the state is in this node or in one of its parents
+    // static: it does not use any field of the object
+    private static boolean isOnPath(Node node, State s) {
+        for (Node n = node; n != null; n = n.getParent()) {
+            if (n.getState().equals(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}`;
+
+const JAVA_IDS = `public class IterativeDeepening extends SearchAlgorithm {
+
+    public IterativeDeepening() {
+        super(false); // every iteration is a tree search with a cycle check
+    }
+
+    @Override
+    public Node search(Problem p) {
+        resetCounters();
+
+        // try limit 0, 1, 2, ... until we find the goal
+        for (int limit = 0; ; limit++) {
+            DepthLimitedDFS dls = new DepthLimitedDFS(limit);
+            Node result = dls.search(p);
+
+            // count the work of every iteration
+            generatedNodes += dls.getGeneratedNodes();
+            nodesActuallyExpanded += dls.getNodesActuallyExpanded();
+
+            if (result != null) {
+                return result;   // found the goal
+            }
+            if (!dls.isCutoff()) {
+                return null;     // no node stopped at the limit: there is no solution
+            }
+        }
+    }
+}`;
+
+$('#javaDfs').innerHTML = hlJava(JAVA_DFS);
+$('#javaFromBfs').innerHTML = hlDiff(JAVA_FROM_BFS);
+$('#javaCycle').innerHTML = hlDiff(JAVA_CYCLE);
+$('#javaDls').innerHTML = hlDiff(JAVA_DLS);
+$('#javaIds').innerHTML = hlJava(JAVA_IDS);
+
+/* ================= 7. student task ================= */
+$('#taskCode').innerHTML = codeHtml(CODE.task);
+$('#taskHintBtn').onclick = () => $('#taskHint').classList.toggle('hidden');
+
+/* ================= start ================= */
+let saved = 0;
+try { saved = +localStorage.getItem('dfs-tab') || 0; } catch (e) {}
+restart();
+setTab(saved);
+</script>
+</body>
+</html>
