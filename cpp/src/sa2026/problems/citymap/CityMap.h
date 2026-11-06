@@ -47,6 +47,10 @@ private:
      * }
      */
     std::map<std::string, std::map<std::string, int>> roads;
+
+    // the roads of a city, or a clear error if the city is not on the map
+    // (returns a const reference: no copy, and the caller can not change it)
+    const std::map<std::string, int>& roadsOf(const std::string& city) const;
 };
 
 }  // namespace sa2026::problems::citymap

@@ -1,7 +1,8 @@
 package sa2026.problems.citymap;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -75,34 +76,49 @@ public class CityMap {
     }
 
     // the cities we can drive to from this city, in ABC order
-    public Set<String> getNeighbors(String city) {
+    public List<String> getNeighbors(String city) {
         /*
          * Looks up the city's inner map,
-         * then .keySet() = just the neighbor names (not the distances), as a Set.
-         * Because the inner map is a TreeMap, the Set iterates in alphabetical order —
+         * then .keySet() = just the neighbor names (not the distances).
+         * Because the inner map is a TreeMap, they come in alphabetical order —
          * the search algorithm will expand neighbors in ABC order.
          *
-         * ⚠️ Minor design note: this returns a live view of the internal map's keys, not a copy.
-         * It's fine for a course, but in production you might return a defensive copy.
+         * new ArrayList<>(...) = we return a COPY of the names, not the keySet() itself.
+         * keySet() is a live view of our map: removing a name from it would delete
+         * that road from the map (in one direction only!). With a copy, the caller
+         * can not change our map by mistake. Python and C++ also return a new list.
          */
-        return roads.get(city).keySet();
+        return new ArrayList<>(roadsOf(city).keySet());
     }
 
     // the length of the road between two neighbor cities
     public int getDistance(String from, String to) {
         /*
          * Example: getDistance("A", "C")
-         *   roads.get("A")          // → { C=5, D=12, S=10 }
+         *   roadsOf("A")            // → { C=5, D=12, S=10 }
          *        .get("C")          // → Integer 5   (found!)
          *   Integer km = ...        // km = 5
          *   if (km == null) ...     // 5 == null → false, skip
          *   return km;              // auto-unbox Integer 5 → int 5
          * If there is no road (for example "A" to "G"), get() returns null, so we throw an error.
          */
-        Integer km = roads.get(from).get(to);
+        Integer km = roadsOf(from).get(to);
         if (km == null) {
             throw new IllegalArgumentException("There is no road from " + from + " to " + to + ".");
         }
         return km;
+    }
+
+    /*
+     * The roads of a city, or a clear error if the city is not on the map.
+     * Without this check, roads.get("Z") returns null, and the next call on it
+     * gives a NullPointerException that does not say which city is wrong.
+     */
+    private Map<String, Integer> roadsOf(String city) {
+        Map<String, Integer> cityRoads = roads.get(city);
+        if (cityRoads == null) {
+            throw new IllegalArgumentException("Unknown city: " + city + ". It is not on the map.");
+        }
+        return cityRoads;
     }
 }

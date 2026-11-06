@@ -53,11 +53,10 @@ std::vector<std::string> CityMap::getNeighbors(const std::string& city) const {
      * Because the inner map is a std::map, the loop goes in alphabetical order —
      * the search algorithm will expand neighbors in ABC order.
      * We return a new vector (a copy), so the caller can not change our map by mistake.
-     * (Java returns a live view with keySet(), not a copy.)
+     * (Java does the same with new ArrayList<>(...).)
      */
     std::vector<std::string> neighbors;
-    // at() is like [] but it does not add a missing city (and it works on a const map)
-    for (const auto& [neighbor, km] : roads.at(city)) {
+    for (const auto& [neighbor, km] : roadsOf(city)) {
         neighbors.push_back(neighbor);
     }
     return neighbors;
@@ -66,18 +65,32 @@ std::vector<std::string> CityMap::getNeighbors(const std::string& city) const {
 int CityMap::getDistance(const std::string& from, const std::string& to) const {
     /*
      * Example: getDistance("A", "C")
-     *   roads.at("A")             // → { C: 5, D: 12, S: 10 }
+     *   roadsOf("A")              // → { C: 5, D: 12, S: 10 }
      *   neighbors.find("C")       // → points to the pair (C, 5)   (found!)
      *   road == neighbors.end()   // false, skip
      *   return road->second;      // 5
      * If there is no road (for example "A" to "G"), find() returns end(), so we throw an error.
      */
-    const auto& neighbors = roads.at(from);
+    const auto& neighbors = roadsOf(from);
     auto road = neighbors.find(to);
     if (road == neighbors.end()) {
         throw std::invalid_argument("There is no road from " + from + " to " + to + ".");
     }
     return road->second;  // first = the neighbor, second = the km
+}
+
+/*
+ * The roads of a city, or a clear error if the city is not on the map.
+ * Without this check, roads.at("Z") throws std::out_of_range with the text "map::at",
+ * which does not say which city is wrong.
+ * (We can not use roads["Z"] here: [] would ADD the city, and this method is const.)
+ */
+const std::map<std::string, int>& CityMap::roadsOf(const std::string& city) const {
+    auto found = roads.find(city);
+    if (found == roads.end()) {
+        throw std::invalid_argument("Unknown city: " + city + ". It is not on the map.");
+    }
+    return found->second;  // first = the city, second = its roads
 }
 
 }  // namespace sa2026::problems::citymap

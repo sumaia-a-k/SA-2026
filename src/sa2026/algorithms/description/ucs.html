@@ -320,7 +320,8 @@ svg { display: block; width: 100%; height: auto; user-select: none; }
           The frontier is written <b>cheapest first</b>.</p>
         <div class="tablewrap"><table id="traceG"></table></div>
         <p class="muted" style="margin-top:12px">Your turn: write the same table with goal = <b>D</b>. Be careful: some nodes are skipped! Then check.
-          Rule for a tie (the same g): take the node that came into the queue <b>first</b>.</p>
+          In your hand trace, when two nodes have the same g, take the one that came into the queue <b>first</b>.
+          A real priority queue (Java, Python or C++) may choose another order for ties. The cost of the answer is the same.</p>
         <button id="showTraceD">Show the trace for goal D</button>
         <div class="tablewrap hidden" id="traceDWrap"><table id="traceD"></table></div>
       </div>

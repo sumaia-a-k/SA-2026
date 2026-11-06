@@ -67,16 +67,25 @@ class CityMap:
         # We need sorted(): a Python dict keeps the order we ADDED the keys, not ABC order
         # (Java's TreeMap does the sorting for us).
         # sorted() makes a new list (a copy), so the caller can not change our map by mistake.
-        return sorted(self._roads[city])
+        return sorted(self._roads_of(city))
 
     # the length of the road between two neighbor cities
     def get_distance(self, from_city: str, to_city: str) -> int:
         # Example: get_distance("A", "C")
-        #   self._roads["A"]           # → {"C": 5, "D": 12, "S": 10}
+        #   self._roads_of("A")        # → {"C": 5, "D": 12, "S": 10}
         #   "C" not in ... ?           # "C" is there → False, skip
-        #   self._roads["A"]["C"]      # → 5
+        #   city_roads["C"]            # → 5
         # If there is no road (for example "A" to "G"), we raise an error ourselves.
-        # (Without the check, self._roads["A"]["G"] would raise a KeyError, which is less clear.)
-        if to_city not in self._roads[from_city]:
+        # (Without the check, city_roads["G"] would raise a KeyError, which is less clear.)
+        city_roads = self._roads_of(from_city)
+        if to_city not in city_roads:
             raise ValueError(f"There is no road from {from_city} to {to_city}.")
-        return self._roads[from_city][to_city]
+        return city_roads[to_city]
+
+    # The roads of a city, or a clear error if the city is not on the map.
+    # Without this check, self._roads["Z"] raises KeyError: 'Z', which does not say what is wrong.
+    # "_" at the start = use it only inside the class (like private in Java).
+    def _roads_of(self, city: str) -> dict[str, int]:
+        if city not in self._roads:
+            raise ValueError(f"Unknown city: {city}. It is not on the map.")
+        return self._roads[city]
