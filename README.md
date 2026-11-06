@@ -11,6 +11,15 @@ The code is added step by step, one session at a time.
 - Informed search: Greedy Best-First Search and A*.
 - How to design and use heuristic functions.
 
+## The code structure (start here)
+
+Open [Code-Structure.html](Code-Structure.html) in your browser. It shows, in Java, Python and C++:
+
+- the parts of the code (core, problems, algorithms, Main) and the files of each part,
+- what happens step by step when Main calls `problem.solve(algorithm)`,
+- how to write your own `Main`: choose a problem and an algorithm, and copy the code,
+- what you can use after the search, and how to add a new problem.
+
 ## Python version
 
 The same code is also written in **Python**, in the [`python`](python) folder.
