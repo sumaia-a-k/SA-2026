@@ -4,17 +4,22 @@ import java.util.Locale;
 
 import sa2026.algorithms.BFS;
 import sa2026.algorithms.BFSOptimized;
+import sa2026.algorithms.DFS;
+import sa2026.algorithms.DFSCycleCheck;
+import sa2026.algorithms.DepthLimitedDFS;
+import sa2026.algorithms.IterativeDeepening;
 import sa2026.core.Node;
 import sa2026.core.Problem;
 import sa2026.core.SearchAlgorithm;
 import sa2026.problems.wordladder.WordDictionary;
 import sa2026.problems.wordladder.WordLadderProblem;
+import sa2026.problems.npuzzle.NpuzzleProblem;
 import sa2026.problems.maze.Maze;
 import sa2026.problems.maze.MazeProblem;
 
 /**
  * The start point of the program.
- * We solve the maze with BFS, then we compare the BFS versions.
+ * We solve the maze with BFS, then we compare the BFS versions and the DFS versions.
  */
 public class Main {
 
@@ -25,10 +30,11 @@ public class Main {
                 "....#..",
                 ".##....",
                 "...#.#G");
-        Problem problem = new MazeProblem(maze);
+       Problem problem = new MazeProblem(maze);
 
         
         // Problem problem = new WordLadderProblem("cat", "dog", WordDictionary.threeLetterWords());
+      //Problem problem = NpuzzleProblem.medium();
         // 1. solve the maze with BFS (graph search) and print every step
         System.out.println("=== BFS, graph search ===");
         SearchAlgorithm algorithm = new BFS(true);
@@ -41,6 +47,16 @@ public class Main {
         compare("BFS, tree search", new BFS(false), problem);
         compare("BFS, graph search", new BFS(true), problem);
         compare("BFSOptimized, graph", new BFSOptimized(true), problem);
+
+        // 3. the DFS versions on the same maze (-1 steps = no solution found).
+        // No DFS tree search: on this maze it goes around a cycle forever.
+        System.out.println("\n=== Compare the DFS versions ===");
+        System.out.println("Version                  Steps  Expanded  Generated");
+        compare("DFS, graph search", new DFS(true), problem);
+        compare("DFS + cycle check", new DFSCycleCheck(), problem);
+        compare("DLS, limit 10", new DepthLimitedDFS(10), problem);
+        compare("DLS, limit 9", new DepthLimitedDFS(9), problem);
+        compare("IDS", new IterativeDeepening(), problem);
     }
 
     // solves the problem and prints one line of numbers

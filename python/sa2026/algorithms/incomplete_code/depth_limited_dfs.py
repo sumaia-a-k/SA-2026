@@ -25,6 +25,8 @@ class DepthLimitedDFS(SearchAlgorithm):
 
     def __init__(self, limit: int):
         super().__init__(False)  # tree search with a cycle check
+        if limit < 0:
+            raise ValueError(f"The limit must be 0 or more, not {limit}.")
         self._limit = limit      # do not expand nodes at this depth
         self._cutoff = False     # only a flag: did at least one node stop at the limit? (yes / no)
 
@@ -56,6 +58,8 @@ class DepthLimitedDFS(SearchAlgorithm):
         return None
 
     # True if the state is in this node or in one of its parents
-    def _is_on_path(self, node: Node, s: State) -> bool:
+    # @staticmethod: it does not use self (like "static" in Java)
+    @staticmethod
+    def _is_on_path(node: Node, s: State) -> bool:
         # TODO 5: the same as _is_on_path() in your dfs_cycle_check.py
         return False

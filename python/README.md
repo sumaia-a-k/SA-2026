@@ -66,6 +66,8 @@ The same error comes if you are in the wrong folder. Go into `SA-2026/python` an
 
 ## Folder structure
 
+To see the parts of the code and how to write `Main`, open [Code-Structure.html](../Code-Structure.html) and choose **Python** at the top.
+
 The folders are the same as in Java. Only the file names change.
 
 ```
@@ -134,7 +136,9 @@ The HTML lesson pages show the Java code:
 [UML](../UML-Interactive.html),
 [Maze](../src/sa2026/problems/description/maze.html),
 [Word ladder](../src/sa2026/problems/description/wordladder.html),
-[BFS](../src/sa2026/algorithms/description/bfs.html).
+[BFS](../src/sa2026/algorithms/description/bfs.html),
+[DFS](../src/sa2026/algorithms/description/dfs.html),
+[N-puzzle](../src/sa2026/problems/description/npuzzle.html).
 
 The ideas are the same in Python. Use the table above to find the Python name.
 

@@ -17,6 +17,8 @@ import sa2026.core.SearchAlgorithm;
  * The first limit that finds a goal is its depth, so the path is a shortest one
  * (the same answer as BFS, if all steps cost the same).
  * But the memory is small, like DFS: only one path and the nodes that wait next to it.
+ *
+ * If the state space is INFINITE and there is no solution, IDS never stops (BFS neither).
  */
 public class IterativeDeepening extends SearchAlgorithm {
 
