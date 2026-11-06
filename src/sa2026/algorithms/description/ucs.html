@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UCS Step by Step</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --q:#3b5bdb; --q-bg:#e8edfd;           /* in the frontier */
+  --ex:#7b8494; --ex-bg:#e3e7ee;         /* expanded */
+  --cur:#d9480f; --cur-bg:#fff0e6;       /* current node */
+  --goal:#2b8a3e; --goal-bg:#dcf3e2;     /* goal and final path */
+  --ok:#2b8a3e; --bad:#e03131; --bad-bg:#ffe3e3; --warn:#d9480f; --warn-bg:#fff0e6;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --num:#c2410c; --str:#2b8a3e;
+  --new-bg:#fff3bf;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+    --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+    --new-bg:#4a3f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+  --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+  --new-bg:#4a3f10;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 24px 32px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 22px; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 14px; }
+.steps button { border-radius: 99px; padding: 5px 12px 5px 6px; display: inline-flex; align-items: center; gap: 7px; }
+.steps button .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--accent-bg); color: var(--accent);
+}
+.steps button.on .n { background: var(--surface); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.stack > * + * { margin-top: 18px; }
+h2 { margin: 0 0 8px; font-size: 24px; }
+h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+h3:first-child { margin-top: 0; }
+h3 .side { text-transform: none; letter-spacing: 0; font-weight: 400; }
+p { margin: 6px 0; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note b:first-child { color: var(--warn); }
+.okbox { background: var(--goal-bg); border-left: 4px solid var(--goal); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.badbox { background: var(--bad-bg); border-left: 4px solid var(--bad); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.kw { color: var(--kw); font-weight: 600; } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); } .str { color: var(--str); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+.navrow { display: flex; justify-content: space-between; margin-top: 18px; }
+td code { font-size: 12.5px; }
+
+/* pseudo code */
+.pseudo { padding: 8px 0; }
+.pseudo .ln { display: block; padding: 1px 14px 1px 10px; border-left: 4px solid transparent; white-space: pre; }
+.pseudo .ln.hl { background: var(--new-bg); border-left-color: var(--warn); }
+.pseudo .ln.off { opacity: .4; }
+.pseudo .ln.new { box-shadow: inset 3px 0 0 var(--goal); }
+.pseudo .ln.chg { background: var(--goal-bg); }
+.pseudo .star { color: var(--goal); font-weight: 700; }
+.diff .add { display: block; background: var(--goal-bg); margin: 0 -14px; padding: 0 14px; }
+.diff .del { display: block; background: var(--bad-bg); margin: 0 -14px; padding: 0 14px; text-decoration: line-through; opacity: .75; }
+
+/* run tab */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; margin-bottom: 18px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font-size: 13px; color: var(--muted); }
+#speed { width: 90px; vertical-align: middle; }
+svg { display: block; width: 100%; height: auto; user-select: none; }
+.board { max-height: 440px; }
+.hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 2px solid; }
+.msg { font-size: 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-height: 72px; }
+.msg .stepno { font-size: 12px; color: var(--muted); display: block; }
+.qstrip { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 34px; }
+.qstrip .end { font-size: 12px; color: var(--muted); }
+.chip { display: inline-flex; align-items: baseline; gap: 1px; padding: 3px 8px; border-radius: 7px; font: 13px ui-monospace, Consolas, monospace;
+  border: 1.5px solid var(--line); background: var(--surface); }
+.chip sub { font-size: 10px; color: var(--muted); }
+.chip.q { background: var(--q-bg); border-color: var(--q); }
+.chip.new { background: var(--new-bg); border-color: var(--warn); }
+.chip.ex { background: var(--ex-bg); border-color: var(--ex); }
+.chip.top { box-shadow: 0 0 0 2px var(--cur); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.stat { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+#log { margin: 4px 0 0; padding-left: 0; list-style: none; font-size: 13px; color: var(--muted); max-height: 170px; overflow: auto; }
+#log li { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+#log li b { color: var(--ink); }
+
+/* drawing */
+.e { stroke: var(--line); stroke-width: 3; }
+.e-cur { stroke: var(--cur); stroke-width: 5; }
+.e-path { stroke: var(--goal); stroke-width: 7; }
+.e-bfs { stroke: var(--bad); stroke-width: 5; stroke-dasharray: 9 6; }
+.wbox { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.wtxt { font-size: 12px; font-weight: 700; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.nd { stroke-width: 3; }
+.st-new { fill: var(--surface); stroke: var(--line); }
+.st-q { fill: var(--q-bg); stroke: var(--q); }
+.st-ex { fill: var(--ex-bg); stroke: var(--ex); }
+.st-cur { fill: var(--cur-bg); stroke: var(--cur); stroke-width: 4; }
+.st-path { fill: var(--goal-bg); stroke: var(--goal); stroke-width: 4; }
+.st-just { fill: var(--new-bg); stroke: var(--warn); }
+.st-skip { fill: var(--surface); stroke: var(--bad); stroke-dasharray: 3 3; }
+.st-bad { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 4; }
+.goalring { fill: none; stroke: var(--goal); stroke-width: 2; }
+.nlbl { font-weight: 700; font-size: 16px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.glbl { font-size: 12px; font-weight: 700; fill: var(--accent); text-anchor: middle; }
+.glbl.ex { fill: var(--muted); }
+.badge { fill: var(--q); }
+.badgetxt { fill: var(--surface); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.clickable { cursor: pointer; }
+
+/* idea tab */
+.pq { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 44px; padding: 8px 10px;
+  border: 2px dashed var(--line); border-radius: 12px; margin: 8px 0; }
+.pq .chip { font-size: 15px; padding: 5px 10px; }
+.slider { display: flex; gap: 10px; align-items: center; margin: 4px 0; }
+.slider input { flex: 1; max-width: 300px; }
+.slider b { min-width: 28px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding: 14px 16px 28px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { padding: 14px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Uniform-Cost Search (UCS)</h1>
+      <p>Intelligent Search Algorithms · Latakia University · Cheapest first</p>
+    </div>
+    <button id="themeBtn">Dark / Light</button>
+  </header>
+
+  <nav class="steps" id="tabs"></nav>
+
+  <!-- ================= 1. The idea ================= -->
+  <section data-tab="0">
+    <div class="grid">
+      <div class="card">
+        <h2>The idea</h2>
+        <p class="lead">You drive from city <b>S</b> to city <b>G</b>. Do you want the path with the <b>fewest roads</b>,
+          or the path with the <b>fewest kilometres</b>?</p>
+        <p>BFS counts <b>roads</b> (steps). It finds the path with the fewest steps.
+          But real roads have <b>different lengths</b>. A map app wants the shortest trip in km (or in minutes).</p>
+        <div class="box"><b>UCS in one sentence:</b> always expand the <b>cheapest</b> node first:
+          the node with the smallest path cost <b>g(n)</b>.</div>
+        <p><b>g(n)</b> = the real cost from the start to the node n = the sum of the road lengths on its path.
+          Example: S → A → C has g = 10 + 5 = <b>15</b>.</p>
+
+        <h3>How does UCS remember the order?</h3>
+        <p>With a <b>priority queue</b>. Think of a hospital: the patient who is most in need goes first,
+          not the patient who came first. In UCS, the node with the <b>smallest cost</b> goes first.</p>
+        <ul>
+          <li>New nodes do <b>not</b> go to the end. Each node goes to its <b>place by cost</b>.</li>
+          <li>UCS always takes the node at the front: the <b>cheapest</b> one.</li>
+        </ul>
+
+        <h3>Try the priority queue</h3>
+        <div class="grp">
+          <button id="pqAdd">Add a node</button>
+          <button id="pqTake">Take the cheapest</button>
+          <button id="pqReset">Reset</button>
+        </div>
+        <div class="pq" id="pq"></div>
+        <p id="pqMsg" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h3>The same map as in BFS and DFS, now with road lengths (km)</h3>
+        <div class="grp" style="margin-bottom:8px">
+          <button data-idea="none" class="on">Only the map</button>
+          <button data-idea="bfs">BFS path</button>
+          <button data-idea="ucs">UCS path</button>
+        </div>
+        <svg id="ideaSvg" class="board" aria-label="A map of 8 cities with road lengths"></svg>
+        <p id="ideaText"></p>
+        <div class="box"><b>Before you click:</b> find the shortest path from S to G by hand. How many km? How many roads?</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. Watch it run ================= -->
+  <section data-tab="1" class="hidden">
+    <div class="card toolbar">
+      <div class="grp"><span class="lbl">Version</span>
+        <button data-mode="graph" class="on">UCS graph search</button>
+        <button data-mode="tree">UCS tree search</button>
+        <button data-mode="bfs">BFS (to compare)</button>
+      </div>
+      <div class="grp">
+        <button id="bReset" title="Start again">⏮ Reset</button>
+        <button id="bBack" title="Left arrow">◀ Back</button>
+        <button id="bStep" class="on" title="Right arrow">Step ▶</button>
+        <button id="bPlay">Play</button>
+        <button id="bEnd">Finish ⏭</button>
+        <label class="lbl">Speed <input type="range" id="speed" min="1" max="10" value="2"></label>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <svg id="board" class="board" aria-label="Search board"></svg>
+        <div class="hint" id="hint"></div>
+        <div class="legend">
+          <span><i style="background:var(--surface);border-color:var(--line)"></i>not seen yet</span>
+          <span><i style="background:var(--q-bg);border-color:var(--q)"></i>in the frontier</span>
+          <span><i style="background:var(--new-bg);border-color:var(--warn)"></i>just added</span>
+          <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>current node</span>
+          <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>expanded</span>
+          <span><i style="background:var(--goal-bg);border-color:var(--goal)"></i>solution path</span>
+          <span><i style="background:var(--surface);border-color:var(--bad);border-style:dashed"></i>skipped copy</span>
+        </div>
+        <p class="muted" style="margin-top:10px">The blue number next to a city is <b>g</b>: the cost of the cheapest copy
+          of this city in the frontier (grey = the cost when we expanded it). ×2 = two copies in the frontier.</p>
+      </div>
+
+      <div class="card">
+        <div class="msg" id="msg"></div>
+        <h3 id="frontTitle">Frontier</h3>
+        <div class="qstrip" id="frontStrip"></div>
+        <h3 id="seenTitle">Explored</h3>
+        <div class="qstrip" id="seen"></div>
+        <div class="stats" id="stats"></div>
+        <h3>Pseudo code <span class="side muted" id="codeNote"></span></h3>
+        <pre class="pseudo" id="code"></pre>
+        <h3>History</h3>
+        <ol id="log"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. Pseudo code ================= -->
+  <section data-tab="2" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Standard pseudo code</h2>
+        <p>This is the code of our <code>UCS.java</code>. One function works for tree search and for graph search.</p>
+        <pre class="pseudo" id="stdCode"></pre>
+        <p>The green lines are the <b>only</b> lines that are different from BFS. Everything else is the same!</p>
+        <div class="box"><b>removeCheapest() = take the first node.</b>
+          A priority queue always keeps the <b>cheapest</b> node in the <b>first</b> place (the front).
+          So "take the cheapest" is the same as "take the first one". We do not search the whole queue for it.
+          <div class="qstrip" style="margin-top:6px"><span class="end">first →</span><span class="chip q top">B<sub>12</sub></span><span class="chip q">C<sub>15</sub></span><span class="chip q">S<sub>20</sub></span><span class="chip q">D<sub>22</sub></span><span class="end">← last</span></div>
+          When we add a child, the queue puts it in its place by g. Example: add D<sub>20</sub> → it goes before D<sub>22</sub>, not at the end.</div>
+        <p class="muted">Inside, Java's <code>PriorityQueue</code> (and Python's <code>heapq</code>, and C++'s <code>priority_queue</code>) does not sort the whole list.
+          It only makes sure that the <b>first</b> node is always the cheapest. On this page we show the frontier fully sorted, so it is easy to read.</p>
+        <h3>BFS, DFS or UCS? Only the frontier changes</h3>
+        <div class="tablewrap">
+          <table>
+            <tr><th></th><th>BFS</th><th>DFS</th><th>UCS</th></tr>
+            <tr><td>Frontier</td><td>queue (FIFO)</td><td>stack (LIFO)</td><td>priority queue (by g)</td></tr>
+            <tr><td>Takes</td><td>the oldest node</td><td>the newest node</td><td>the <b>cheapest</b> node</td></tr>
+            <tr><td>Finds</td><td>the fewest steps</td><td>any path</td><td>the <b>smallest cost</b></td></tr>
+          </table>
+        </div>
+        <h3>Line by line</h3>
+        <table>
+          <tr><td><b>frontier</b></td><td>A priority queue. It keeps the nodes sorted by <b>g</b> (the path cost).</td></tr>
+          <tr><td><b>removeCheapest()</b></td><td>Take the <b>first</b> node of the priority queue: it is always the one with the <b>smallest g</b>. This is what makes it UCS.</td></tr>
+          <tr><td><b>continue</b></td><td>The same state can be in the queue twice, with two costs. The cheaper copy comes out first, so a later copy is skipped.</td></tr>
+          <tr><td><b>isGoal</b></td><td>We test the node when we <b>take it out</b>. In UCS this is a <b>must</b>. (Why? Think about it!)</td></tr>
+          <tr><td><b>child.g</b></td><td>The cost of the parent + the cost of this one road.</td></tr>
+          <tr><td><b>add(child)</b></td><td>The queue puts the child in its place by cost (not at the end).</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Trace by hand</h2>
+        <p>The city map from step 1, <b>graph search</b>, from S to <b>G</b>. The small number is g (the path cost).
+          The frontier is written <b>cheapest first</b>.</p>
+        <div class="tablewrap"><table id="traceG"></table></div>
+        <p class="muted" style="margin-top:12px">Your turn: write the same table with goal = <b>D</b>. Be careful: some nodes are skipped! Then check.
+          In your hand trace, when two nodes have the same g, take the one that came into the queue <b>first</b>.
+          A real priority queue (Java, Python or C++) may choose another order for ties. The cost of the answer is the same.</p>
+        <button id="showTraceD">Show the trace for goal D</button>
+        <div class="tablewrap hidden" id="traceDWrap"><table id="traceD"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4. Is UCS good? ================= -->
+  <section data-tab="3" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Is UCS good?</h2>
+        <h3>First, three words</h3>
+        <table>
+          <tr><th>Word</th><th>What it means</th><th>On our city map</th></tr>
+          <tr><td><b>b</b></td><td>branching factor: the most children a node can have</td><td>A has 3 roads, so <b>b = 3</b></td></tr>
+          <tr><td><b>C*</b> <span class="muted">("C star")</span></td><td>the cost of the <b>best</b> solution</td><td>S → A → C → F → G, so <b>C* = 18</b></td></tr>
+          <tr><td><b>ε</b> <span class="muted">("epsilon")</span></td><td>the cost of the <b>cheapest</b> action (the shortest road)</td><td>the road F–G, so <b>ε = 1</b></td></tr>
+        </table>
+        <div class="box"><b>C*/ε</b> = the most steps the best path can have.
+          Every step costs at least ε, so a path with cost C* has at most C*/ε steps.<br>
+          Our map: 18 / 1 = <b>18 steps</b> at most. If the shortest road was 6 km: 18 / 6 = only <b>3 steps</b>.</div>
+
+        <h3>The four questions</h3>
+        <table>
+          <tr><th>Question</th><th>Answer</th><th>Why</th></tr>
+          <tr><td>Complete?<br><span class="muted">Does it find a solution if one exists?</span></td>
+            <td class="yes">Yes</td><td>If every action costs at least ε &gt; 0. Each step makes the cost bigger,
+              so UCS can not walk on one path forever.</td></tr>
+          <tr><td>Optimal?<br><span class="muted">Is the solution the cheapest?</span></td>
+            <td class="yes">Yes</td><td>If every cost &gt; 0. UCS takes the nodes from the cheapest up,
+              so the first goal it takes is the cheapest one.</td></tr>
+          <tr><td>Time</td><td style="white-space:nowrap"><b>O(b<sup>1 + C*/ε</sup>)</b></td><td>UCS may look at every path that is cheaper than C*.
+              These paths have at most C*/ε steps.</td></tr>
+          <tr><td>Space</td><td style="white-space:nowrap"><b>O(b<sup>1 + C*/ε</sup>)</b></td><td>The same: like BFS, the frontier can be very big.</td></tr>
+        </table>
+        <p class="muted">C*/ε is rounded down to a whole number.</p>
+        <div class="box"><b>Example:</b> b = 3, C*/ε = 18, so in the worst case 3<sup>19</sup> ≈ 1 billion nodes.
+          This is only the worst case: on our map UCS expanded <b>6</b> nodes, because most roads are long.
+          With small ε (many cheap steps) the number grows very fast.</div>
+        <div class="okbox"><b>All actions cost the same?</b> Then C*/ε = d (the depth of the goal), and UCS works like BFS: O(b<sup>d+1</sup>).<br>
+          Example: the maze, every step costs 1, the goal is 10 steps away: C* = 10, ε = 1, so C*/ε = 10 = d.</div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>UCS grows like a ring of water</h2>
+          <p>Move the slider. UCS expands every city with cost ≤ X <b>before</b> any city with a bigger cost.
+            The ring grows in <b>all</b> directions, also away from the goal.</p>
+          <div class="slider"><span>X =</span><input type="range" id="ringIn" min="0" max="30" value="0"><b id="ringOut"></b></div>
+          <svg id="ringSvg" class="board" aria-label="Cities with cost up to X"></svg>
+          <p id="ringText"></p>
+          <p><b>The weak point:</b> UCS does not know <b>where</b> the goal is. It only looks back (the cost so far, g),
+            never forward. So it also spends time on cities far from the goal.</p>
+        </div>
+        <div class="card">
+          <h2>All the uninformed searches</h2>
+          <div class="tablewrap">
+            <table>
+              <tr><th></th><th>BFS</th><th>DFS</th><th>IDS</th><th>UCS</th></tr>
+              <tr><td>Frontier</td><td>queue</td><td>stack</td><td>stack</td><td>priority queue</td></tr>
+              <tr><td>Complete?</td><td class="yes">Yes¹</td><td class="no">No</td><td class="yes">Yes¹</td><td class="yes">Yes³</td></tr>
+              <tr><td>Optimal?</td><td class="yes">Yes²</td><td class="no">No</td><td class="yes">Yes²</td><td class="yes">Yes³</td></tr>
+              <tr><td>Time</td><td>O(b<sup>d</sup>)</td><td>O(b<sup>m</sup>)</td><td>O(b<sup>d</sup>)</td><td>O(b<sup>1+C*/ε</sup>)</td></tr>
+              <tr><td>Space</td><td class="no">O(b<sup>d</sup>)</td><td class="yes">O(b·m)</td><td class="yes">O(b·d)</td><td class="no">O(b<sup>1+C*/ε</sup>)</td></tr>
+            </table>
+          </div>
+          <p class="muted">¹ if b is finite. ² if all steps have the same cost. ³ if b is finite and every cost ≥ ε &gt; 0.</p>
+          <p>UCS is the only one of the four that finds the cheapest path when the costs are <b>different</b>.</p>
+          <p class="muted">Fun fact: UCS is almost the same as <b>Dijkstra's algorithm</b> (1959).
+            Dijkstra finds the cheapest path to <b>every</b> city; UCS stops at the goal.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 5. Java code ================= -->
+  <section data-tab="4" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>UCS.java</h2>
+        <p class="muted">src/sa2026/algorithms/UCS.java</p>
+        <pre id="javaUcs"></pre>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <h2>From BFS.java to UCS.java</h2>
+          <p class="muted">Only these lines change. Red = BFS, green = UCS.</p>
+          <pre class="diff" id="javaFromBfs"></pre>
+          <p>In Java the calls <code>add()</code> and <code>poll()</code> stay the same. Only the <b>type</b> of the frontier changes,
+            and now <code>poll()</code> gives the cheapest node, not the oldest.</p>
+          <p>How does the <code>PriorityQueue</code> know the cost? It calls <code>Node.compareTo()</code>,
+            which compares <code>totalCost</code>. For UCS, totalCost = pathCost (look at the Node constructors).</p>
+        </div>
+        <div class="card">
+          <h2>The priority queue in three languages</h2>
+          <div class="tablewrap">
+            <table>
+              <tr><th></th><th>Java</th><th>Python</th><th>C++</th></tr>
+              <tr><td>Create</td><td><code>new PriorityQueue&lt;&gt;()</code></td><td><code>frontier = []</code></td><td><code>std::priority_queue&lt;NodePtr, std::vector&lt;NodePtr&gt;, CheaperFirst&gt;</code></td></tr>
+              <tr><td>Add</td><td><code>frontier.add(child)</code></td><td><code>heapq.heappush(frontier, child)</code></td><td><code>frontier.push(child)</code></td></tr>
+              <tr><td>Take the cheapest</td><td><code>frontier.poll()</code></td><td><code>heapq.heappop(frontier)</code></td><td><code>frontier.top()</code> then <code>frontier.pop()</code></td></tr>
+              <tr><td>Compares with</td><td><code>Node.compareTo()</code></td><td><code>Node.__lt__()</code></td><td><code>CheaperFirst</code> (it calls <code>compareTo()</code>)</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6. Student task ================= -->
+  <section data-tab="5" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Student task</h2>
+        <p>A student remembered <code>BFSOptimized.java</code>: "check the state when you <b>create</b> the child,
+          so each state goes into the queue only once. It saves memory!" They used the same idea in UCS. Read the code.</p>
+        <pre class="pseudo" id="taskCode"></pre>
+      </div>
+      <div class="card">
+        <h2>Your task</h2>
+        <ol>
+          <li>Is this code correct?</li>
+          <li>Why?</li>
+        </ol>
+        <button id="taskHintBtn">Need a hint?</button>
+        <div class="box hidden" id="taskHint">Run it by hand on the city map from step 1, from S to <b>G</b>.
+          Look at city <b>D</b>: which copy of D goes into the queue? Then look at <b>G</b>.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="navrow">
+    <button id="prevBtn">← Back</button>
+    <button id="nextBtn" class="on">Next →</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/* ENGINE START */
+/* ================= the maps (the city map is the same as CityMap.example()) ================= */
+const CITY_POS = { S:[200,36], A:[110,112], B:[290,112], C:[45,192], D:[200,192], E:[355,192], F:[110,266], G:[290,266] };
+const CITY_ROADS = [['S','A',10],['S','B',12],['A','C',5],['A','D',12],['B','D',8],['B','E',4],['C','F',2],['D','G',11],['E','G',5],['F','G',1]];
+
+function makeMap(pos, roads, goal, view) {
+  const adj = {};
+  for (const k in pos) adj[k] = {};
+  for (const [a, b, w] of roads) { adj[a][b] = w; adj[b][a] = w; }
+  return { pos, roads, start: 'S', goal, view,
+    next: s => Object.keys(adj[s]).sort(),  // neighbors in ABC order (like the TreeMap in CityMap.java)
+    cost: (a, b) => adj[a][b] };
+}
+const cityMap = goal => makeMap(CITY_POS, CITY_ROADS, goal, '0 -16 400 316');
+
+/* ================= the engine (one small step at a time) ================= */
+// graph = explored set, queue = BFS (a normal queue, to compare)
+const MODES = {
+  graph: { graph: true,  queue: false, name: 'UCS, graph search' },
+  tree:  { graph: false, queue: false, name: 'UCS, tree search' },
+  bfs:   { graph: true,  queue: true,  name: 'BFS, graph search' },
+};
+const LIMIT = 5000;
+
+function newRun(prob, opt) {
+  const R = { prob, opt, front: [], seen: new Set(), gAt: {}, current: null, phase: 'pop', expanded: 0, generated: 0,
+    maxF: 1, steps: 0, done: false, found: null, skipped: null, ids: 0, newIds: new Set(), log: [], rows: [], line: [], msg: '' };
+  const root = makeNode(R, prob.start, null);
+  R.front.push(root);
+  R.generated = 1;
+  R.newIds.add(root.id);
+  R.line = opt.graph ? ['init', 'exset'] : ['init'];
+  R.msg = `Put the start node <b>${prob.start}</b> in the ${opt.queue ? 'queue' : 'priority queue'}. Its cost is g = 0.`;
+  return R;
+}
+
+function makeNode(R, s, parent) {
+  return { id: R.ids++, s, parent, g: parent ? parent.g + R.prob.cost(parent.s, s) : 0, depth: parent ? parent.depth + 1 : 0 };
+}
+
+// UCS: put the node in its place by cost (after the nodes with the same cost). BFS: at the end.
+function addToFrontier(R, n) {
+  let i = R.opt.queue ? -1 : R.front.findIndex(x => x.g > n.g);
+  if (i < 0) i = R.front.length;
+  R.front.splice(i, 0, n);
+}
+
+const nn = n => `${n.s}<sub>${n.g}</sub>`;
+const pathOf = n => { const p = []; for (; n; n = n.parent) p.unshift(n.s); return p.join(' → '); };
+
+function step(R) {
+  if (R.done) return false;
+  if (R.steps >= LIMIT) { R.done = true; R.msg = `Stopped after ${LIMIT} steps.`; return false; }
+  R.steps++;
+  R.newIds = new Set();
+  R.skipped = null;
+  const o = R.opt, P = R.prob;
+  const which = o.queue ? 'the oldest node' : 'the cheapest node';
+
+  if (R.phase === 'pop') {
+    if (R.front.length === 0) {
+      R.done = true; R.current = null; R.line = ['loop', 'fail'];
+      R.msg = 'The frontier is empty. There is <b>no solution</b>.';
+      R.log.push('frontier empty → no solution');
+      return true;
+    }
+    const n = R.front.shift();
+    R.current = n;
+    if (o.graph && R.seen.has(n.s)) {
+      R.skipped = n; R.line = ['pop', 'skip'];
+      R.msg = `Take ${which}: <b>${nn(n)}</b>. But ${n.s} is already explored (we expanded it with g = ${R.gAt[n.s]}). <b>Skip this copy.</b>`;
+      R.log.push(`take ${nn(n)} → skip, already explored`);
+      R.rows.push({ take: n, result: 'skip', added: [], front: R.front.slice() });
+      return true;
+    }
+    if (n.s === P.goal) {
+      R.found = n; R.done = true; R.line = ['pop', 'goal'];
+      R.msg = `Take ${which}: <b>${nn(n)}</b>. It is the goal! <b>Return it.</b><br>Path: ${pathOf(n)} · ${n.depth} roads · cost <b>${n.g}</b>`;
+      R.log.push(`take ${nn(n)} → goal! cost ${n.g}`);
+      R.rows.push({ take: n, result: 'goal', added: [], front: R.front.slice() });
+      return true;
+    }
+    R.line = o.graph ? ['pop', 'skip', 'goal'] : ['pop', 'goal'];
+    R.msg = `Take ${which}: <b>${nn(n)}</b>. It is not the goal. Now we expand it.`;
+    R.phase = 'expand';
+    return true;
+  }
+
+  // expand the current node
+  const n = R.current;
+  if (o.graph) R.seen.add(n.s);
+  if (!(n.s in R.gAt)) R.gAt[n.s] = n.g;
+  R.expanded++;
+  const added = [];
+  for (const t of P.next(n.s)) {
+    const c = makeNode(R, t, n);
+    R.generated++;
+    addToFrontier(R, c);
+    R.newIds.add(c.id);
+    added.push(c);
+  }
+  R.maxF = Math.max(R.maxF, R.front.length);
+  R.line = (o.graph ? ['addex'] : []).concat(['for', 'child', 'push']);
+  R.msg = `Expand <b>${nn(n)}</b>: ` + added.map(c => `${c.s}: ${n.g} + ${P.cost(n.s, c.s)} = <b>${c.g}</b>`).join(', ') + '. '
+    + (o.queue ? 'They go to the <b>end</b> of the queue.' : 'Each child goes to its <b>place by cost</b>.');
+  R.log.push(`expand ${nn(n)} → add ${added.map(nn).join(' ')}`);
+  R.rows.push({ take: n, result: 'expand', added, front: R.front.slice() });
+  R.phase = 'pop';
+  return true;
+}
+
+function runToEnd(prob, opt) {
+  const R = newRun(prob, opt);
+  while (step(R));
+  return R;
+}
+/* ENGINE END */
+
+/* ================= pseudo code ================= */
+// [key, indent, text, mark]  (mark: 'chg' = different from BFS, 'star' = a new line)
+const UCS_LINES = [
+  ['fn',    0, '<k>function</k> UCS(problem, graphSearch):'],
+  ['init',  1, 'frontier ← a priority queue (by g) with the start node', 'chg'],
+  ['exset', 1, 'explored ← an empty set'],
+  ['loop',  1, '<k>while</k> frontier is not empty:'],
+  ['pop',   2, 'node ← frontier.removeCheapest()   <c># first = cheapest</c>', 'chg'],
+  ['skip',  2, '<k>if</k> graphSearch <k>and</k> node.state <k>in</k> explored: <k>continue</k>'],
+  ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node  <c># when we TAKE it</c>'],
+  ['addex', 2, '<k>if</k> graphSearch: explored.add(node.state)'],
+  ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+  ['child', 3, 'child.g ← node.g + cost(node, child)'],
+  ['push',  3, 'frontier.add(child)               <c># in its place by g</c>', 'chg'],
+  ['fail',  1, '<k>return</k> failure                     <c># no solution</c>'],
+];
+const CODE = {
+  ucs: UCS_LINES,
+  bfs: [
+    ['fn',    0, '<k>function</k> BFS(problem):                <c># graph search</c>'],
+    ['init',  1, 'frontier ← a queue with the start node', 'chg'],
+    ['exset', 1, 'explored ← an empty set'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeFirst()      <c># the oldest</c>', 'chg'],
+    ['skip',  2, '<k>if</k> node.state <k>in</k> explored: <k>continue</k>'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['addex', 2, 'explored.add(node.state)'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['child', 3, 'child.g ← node.g + cost(node, child)'],
+    ['push',  3, 'frontier.addLast(child)           <c># at the end</c>', 'chg'],
+    ['fail',  1, '<k>return</k> failure'],
+  ],
+  task: [
+    ['fn',    0, '<k>function</k> UCS(problem):                <c># graph search</c>'],
+    ['init',  1, 'frontier ← a priority queue (by g) with the start node'],
+    ['reach', 1, 'reached ← a set with the start state', 'star'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeCheapest()'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['chk',   3, '<k>if</k> child.state <k>in</k> reached: <k>continue</k>', 'star'],
+    ['add',   3, 'reached.add(child.state)', 'star'],
+    ['child', 3, 'child.g ← node.g + cost(node, child)'],
+    ['push',  3, 'frontier.add(child)'],
+    ['fail',  1, '<k>return</k> failure'],
+  ],
+};
+
+function codeHtml(lines, hl = [], off = [], marks = true) {
+  return lines.map(([k, ind, t, mark]) => {
+    const txt = '    '.repeat(ind) + t
+      .replace(/<k>/g, '<span class="kw">').replace(/<\/k>/g, '</span>')
+      .replace(/<c>/g, '<span class="com">').replace(/<\/c>/g, '</span>');
+    const m = marks ? mark : '';
+    const cls = ['ln', hl.includes(k) ? 'hl' : '', off.includes(k) ? 'off' : '', m === 'star' ? 'new' : '', m === 'chg' ? 'chg' : ''].join(' ');
+    return `<span class="${cls}">${txt || ' '}${m === 'star' ? '  <span class="star">★</span>' : ''}</span>`;
+  }).join('');
+}
+
+/* ================= drawing a map ================= */
+// look: { node: s => class, edge: (a, b) => class, g: s => [text, isGrey], badge: s => count }
+function drawMap(svg, prob, look = {}) {
+  svg.setAttribute('viewBox', prob.view);
+  const P = prob.pos;
+  let lines = '', weights = '', nodes = '';
+  for (const [a, b, w] of prob.roads) {
+    const cls = (look.edge && look.edge(a, b)) || 'e';
+    lines += `<line class="${cls}" x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}"/>`;
+    const mx = (P[a][0] + P[b][0]) / 2, my = (P[a][1] + P[b][1]) / 2;
+    const bw = String(w).length > 1 ? 24 : 18;
+    weights += `<rect class="wbox" x="${mx - bw / 2}" y="${my - 9}" width="${bw}" height="18" rx="5"/><text class="wtxt" x="${mx}" y="${my}">${w}</text>`;
+  }
+  for (const s in P) {
+    const [x, y] = P[s];
+    const g = look.g ? look.g(s) : null;
+    const k = look.badge ? look.badge(s) : 0;
+    nodes += `<g class="clickable" data-s="${s}">`
+      + `<circle class="nd ${(look.node && look.node(s)) || 'st-new'}" cx="${x}" cy="${y}" r="20"/>`
+      + (s === prob.goal ? `<circle class="goalring" cx="${x}" cy="${y}" r="26"/>` : '')
+      + `<text class="nlbl" x="${x}" y="${y}">${s}</text>`
+      + (g ? `<text class="glbl${g[1] ? ' ex' : ''}" x="${x}" y="${y - 30}">g=${g[0]}</text>` : '')
+      + (k > 1 ? `<circle class="badge" cx="${x + 18}" cy="${y + 18}" r="9"/><text class="badgetxt" x="${x + 18}" y="${y + 18}">×${k}</text>` : '')
+      + `</g>`;
+  }
+  svg.innerHTML = lines + weights + nodes;
+}
+
+const edgeKey = (a, b) => a < b ? a + b : b + a;
+function pathEdges(n) {
+  const set = new Set();
+  for (; n && n.parent; n = n.parent) set.add(edgeKey(n.s, n.parent.s));
+  return set;
+}
+const pathStates = n => { const set = new Set(); for (; n; n = n.parent) set.add(n.s); return set; };
+
+/* ================= tabs ================= */
+const TABS = ['The idea', 'Watch it run', 'Pseudo code', 'Is UCS good?', 'Java code', 'Student task'];
+let tab = 0;
+$('#tabs').innerHTML = TABS.map((t, i) => `<button data-i="${i}"><span class="n">${i + 1}</span>${t}</button>`).join('');
+function setTab(i) {
+  tab = Math.max(0, Math.min(TABS.length - 1, i));
+  $$('#tabs button').forEach((b, j) => b.classList.toggle('on', j === tab));
+  $$('section[data-tab]').forEach(s => s.classList.toggle('hidden', +s.dataset.tab !== tab));
+  $('#prevBtn').disabled = tab === 0;
+  $('#nextBtn').disabled = tab === TABS.length - 1;
+  if (tab !== 1) stopPlay();
+  try { localStorage.setItem('ucs-tab', tab); } catch (e) {}
+}
+$('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) setTab(+b.dataset.i); };
+$('#prevBtn').onclick = () => { setTab(tab - 1); scrollTo(0, 0); };
+$('#nextBtn').onclick = () => { setTab(tab + 1); scrollTo(0, 0); };
+
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+
+/* ================= 1. the idea ================= */
+const UCS_G = runToEnd(cityMap('G'), MODES.graph).found;
+const BFS_G = runToEnd(cityMap('G'), MODES.bfs).found;
+
+function drawIdea(which) {
+  const n = which === 'bfs' ? BFS_G : which === 'ucs' ? UCS_G : null;
+  const edges = pathEdges(n), states = pathStates(n);
+  drawMap($('#ideaSvg'), cityMap('G'), {
+    edge: (a, b) => edges.has(edgeKey(a, b)) ? (which === 'bfs' ? 'e-bfs' : 'e-path') : 'e',
+    node: s => states.has(s) ? (which === 'bfs' ? 'st-bad' : 'st-path') : 'st-new',
+  });
+  $('#ideaText').innerHTML = which === 'bfs'
+    ? `<b>BFS:</b> ${pathOf(BFS_G)} · <b>${BFS_G.depth} roads</b> · ${BFS_G.g} km. The fewest roads, but a long trip!`
+    : which === 'ucs'
+      ? `<b>UCS:</b> ${pathOf(UCS_G)} · ${UCS_G.depth} roads · <b>${UCS_G.g} km</b>. One more road, but ${BFS_G.g - UCS_G.g} km shorter.`
+      : 'S = start, G = goal (green ring). The number on a road is its length in km.';
+}
+$$('[data-idea]').forEach(b => b.onclick = () => {
+  $$('[data-idea]').forEach(x => x.classList.toggle('on', x === b));
+  drawIdea(b.dataset.idea);
+});
+
+// the priority queue toy: the nodes come in this order
+const PQ_IN = [['A', 10], ['B', 12], ['S', 20], ['C', 15], ['D', 22], ['D', 20], ['E', 16], ['F', 17]];
+let pq = [], pqNext = 0;
+function drawPq(msg) {
+  $('#pq').innerHTML = pq.length
+    ? '<span class="lbl">cheapest →</span>' + pq.map(([s, g], i) => `<span class="chip ${i === 0 ? 'q top' : 'q'}">${s}<sub>${g}</sub></span>`).join('')
+    : '<span class="muted">empty</span>';
+  $('#pqMsg').innerHTML = msg;
+  $('#pqAdd').disabled = pqNext >= PQ_IN.length;
+  $('#pqTake').disabled = pq.length === 0;
+}
+$('#pqAdd').onclick = () => {
+  const item = PQ_IN[pqNext++];
+  let i = pq.findIndex(x => x[1] > item[1]);
+  if (i < 0) i = pq.length;
+  pq.splice(i, 0, item);
+  drawPq(`Added <b>${item[0]}<sub>${item[1]}</sub></b>. It went to place ${i + 1}, not to the end.`
+    + (item[0] === 'D' && pq.filter(x => x[0] === 'D').length > 1 ? ' Look: D is in the queue <b>two times</b>, with two costs.' : ''));
+};
+$('#pqTake').onclick = () => {
+  const [s, g] = pq.shift();
+  drawPq(`Took <b>${s}<sub>${g}</sub></b>: the cheapest one. A normal queue would take the oldest one.`);
+};
+$('#pqReset').onclick = () => { pq = []; pqNext = 0; drawPq('The number is g, the cost. Press "Add a node".'); };
+
+/* ================= 2. watch it run ================= */
+let mode = 'graph', goalCity = 'G', run, timer = null;
+const problemNow = () => cityMap(goalCity);
+function restart() { stopPlay(); run = newRun(problemNow(), MODES[mode]); drawRun(); }
+
+function drawRun() {
+  const R = run, o = R.opt;
+  // for every state: how many copies are in the frontier, and the smallest g
+  const inF = {};
+  for (const n of R.front) {
+    const i = inF[n.s] || (inF[n.s] = { k: 0, g: n.g, fresh: false });
+    i.k++; i.g = Math.min(i.g, n.g);
+    if (R.newIds.has(n.id)) i.fresh = true;
+  }
+  const chainNode = R.found || (R.done ? null : R.current);
+  const edges = pathEdges(chainNode), onPath = R.found ? pathStates(R.found) : new Set();
+  drawMap($('#board'), R.prob, {
+    edge: (a, b) => edges.has(edgeKey(a, b)) ? (R.found ? 'e-path' : 'e-cur') : 'e',
+    node: s => {
+      if (onPath.has(s)) return 'st-path';
+      if (R.skipped && R.skipped.s === s && !inF[s]) return 'st-skip';
+      if (R.current && R.current.s === s && R.phase === 'expand') return 'st-cur';
+      if (inF[s]) return inF[s].fresh ? 'st-just' : 'st-q';
+      if (s in R.gAt) return 'st-ex';
+      return 'st-new';
+    },
+    g: s => R.found && onPath.has(s) ? [pathGOf(R.found, s), false] : inF[s] ? [inF[s].g, false] : s in R.gAt ? [R.gAt[s], true] : null,
+    badge: s => inF[s] ? inF[s].k : 0,
+  });
+  $('#hint').textContent = 'Click a city to make it the goal.';
+
+  const head = R.steps === 0 ? 'Start' : `Step ${R.steps}`;
+  $('#msg').innerHTML = `<span class="stepno">${head}${R.done ? ' · finished' : ''}</span>${R.msg}`;
+
+  $('#frontTitle').innerHTML = o.queue ? 'Frontier: a queue <span class="side muted">· oldest first · small number = g</span>'
+    : 'Frontier: a priority queue <span class="side muted">· cheapest first · small number = g</span>';
+  $('#frontStrip').innerHTML = R.front.length
+    ? `<span class="end">${o.queue ? 'oldest' : 'cheapest'} →</span>` + R.front.map((n, i) =>
+        `<span class="chip ${R.newIds.has(n.id) ? 'new' : 'q'}${i === 0 ? ' top' : ''}">${n.s}<sub>${n.g}</sub></span>`).join('')
+    : '<span class="muted">empty</span>';
+
+  if (o.graph) {
+    $('#seenTitle').textContent = 'Explored (expanded)';
+    const all = [...R.seen];
+    $('#seen').innerHTML = all.length ? all.map(s => `<span class="chip ex">${s}<sub>${R.gAt[s]}</sub></span>`).join('') : '<span class="muted">empty</span>';
+  } else {
+    $('#seenTitle').textContent = 'Explored';
+    $('#seen').innerHTML = '<span class="muted">Tree search remembers nothing. The same city can be expanded again.</span>';
+  }
+
+  const cost = R.found ? R.found.g : R.current ? R.current.g : 0;
+  $('#stats').innerHTML = [
+    [R.expanded, 'expanded'], [R.generated, 'generated'], [R.front.length, 'in the frontier'], [cost, R.found ? 'path cost' : 'g of current']
+  ].map(([v, t]) => `<div class="stat"><b>${v}</b><span>${t}</span></div>`).join('');
+
+  const key = mode === 'bfs' ? 'bfs' : 'ucs';
+  $('#code').innerHTML = codeHtml(CODE[key], R.line, mode === 'tree' ? ['exset', 'skip', 'addex'] : [], key !== 'ucs');
+  $('#codeNote').textContent = key === 'ucs' ? '· graphSearch = ' + o.graph : '· ' + o.name;
+
+  const start = Math.max(0, R.log.length - 14);
+  $('#log').innerHTML = R.log.slice(start).map((m, i) => `<li><b>${start + i + 1}.</b> ${m}</li>`).reverse().join('');
+
+  $('#bBack').disabled = R.steps === 0;
+  $('#bStep').disabled = $('#bEnd').disabled = R.done;
+}
+// the g of a state on the found path
+function pathGOf(n, s) { for (; n; n = n.parent) if (n.s === s) return n.g; return ''; }
+
+function doStep() { step(run); drawRun(); if (run.done) stopPlay(); }
+function doBack() {
+  if (run.steps === 0) return;
+  stopPlay();
+  const k = run.steps - 1;
+  run = newRun(problemNow(), MODES[mode]);
+  while (run.steps < k && step(run));
+  drawRun();
+}
+function stopPlay() { clearInterval(timer); timer = null; $('#bPlay').textContent = 'Play'; }
+function startPlay() {
+  if (run.done) restart();
+  clearInterval(timer);
+  timer = setInterval(doStep, 1000 / +$('#speed').value);
+  $('#bPlay').textContent = 'Pause';
+}
+
+$('#bStep').onclick = () => { stopPlay(); doStep(); };
+$('#bBack').onclick = doBack;
+$('#bReset').onclick = restart;
+$('#bPlay').onclick = () => timer ? stopPlay() : startPlay();
+$('#bEnd').onclick = () => { stopPlay(); while (step(run)); drawRun(); };
+$('#speed').oninput = () => { if (timer) startPlay(); };
+document.addEventListener('keydown', e => {
+  if (tab !== 1 || e.target.closest('input')) return;
+  if (e.key === 'ArrowRight') { stopPlay(); doStep(); }
+  if (e.key === 'ArrowLeft') doBack();
+});
+$$('[data-mode]').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  $$('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+  restart();
+});
+$('#board').onclick = e => {
+  const g = e.target.closest('[data-s]');
+  if (g && g.dataset.s !== 'S') { goalCity = g.dataset.s; restart(); }
+};
+
+/* ================= 3. pseudo code + traces ================= */
+$('#stdCode').innerHTML = codeHtml(CODE.ucs);
+
+function traceTable(goal) {
+  const R = runToEnd(cityMap(goal), MODES.graph);
+  const head = '<tr><th class="r">#</th><th>Take</th><th>What happens</th><th>Frontier after (cheapest first)</th></tr>';
+  const what = r => r.result === 'skip' ? `<span class="no">skip</span> (${r.take.s} is explored)`
+    : r.result === 'goal' ? `<span class="yes">goal! return</span> · cost ${r.take.g}`
+    : 'expand, add ' + r.added.map(c => `${c.s}<sub>${c.g}</sub>`).join(' ');
+  return head + R.rows.map((r, i) => `<tr><td class="r">${i + 1}</td><td><b>${nn(r.take)}</b></td><td>${what(r)}</td>`
+    + `<td class="mono">${r.result === 'goal' ? '' : r.front.map(nn).join(' ') || '<span class="muted">empty</span>'}</td></tr>`).join('')
+    + `<tr><td></td><td colspan="3">Path: <b>${pathOf(R.found)}</b> · cost <b>${R.found.g}</b> · `
+    + `expanded ${R.expanded}, generated ${R.generated}</td></tr>`;
+}
+$('#traceG').innerHTML = traceTable('G');
+$('#traceD').innerHTML = traceTable('D');
+$('#showTraceD').onclick = () => $('#traceDWrap').classList.toggle('hidden');
+
+/* ================= 4. is UCS good? (the ring) ================= */
+const DIST = runToEnd(cityMap('none'), MODES.graph).gAt;  // the cheapest cost to every city
+function drawRing() {
+  const X = +$('#ringIn').value;
+  $('#ringOut').textContent = X;
+  const inside = Object.keys(DIST).filter(s => DIST[s] <= X).sort((a, b) => DIST[a] - DIST[b]);
+  drawMap($('#ringSvg'), cityMap('G'), {
+    node: s => DIST[s] <= X ? (s === 'G' ? 'st-path' : 'st-ex') : 'st-new',
+    g: s => DIST[s] <= X ? [DIST[s], true] : null,
+  });
+  const far = inside.filter(s => ['B', 'D', 'E'].includes(s));
+  $('#ringText').innerHTML = `Expanded with cost ≤ ${X}: <b>${inside.map(s => `${s}<sub>${DIST[s]}</sub>`).join(' ')}</b>.`
+    + (DIST.G <= X ? ' <span class="yes">G is inside: UCS has found the goal.</span>' : '')
+    + (far.length && DIST.G > X ? ` Look at ${far.join(', ')}: UCS also goes there, but the best path does not.` : '');
+}
+$('#ringIn').oninput = drawRing;
+
+/* ================= 5. java code ================= */
+function hlJava(src) {
+  const re = /(\/\/.*$|\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|\b(package|import|public|private|protected|class|extends|implements|return|new|for|while|if|else|continue|static|final|void|boolean|int|double|null|true|false|super)\b|\b([A-Z][A-Za-z0-9]*)\b|\b(\d+(?:\.\d+)?)\b/gm;
+  let out = '', last = 0, m;
+  while ((m = re.exec(src))) {
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : m[4] ? 'ty' : 'num';
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(src.slice(last));
+}
+// lines that start with "+" are added, lines that start with "-" are removed
+function hlDiff(src) {
+  return src.split('\n').map(l => l.startsWith('+') ? `<span class="add">${hlJava(l.slice(1))}</span>`
+    : l.startsWith('-') ? `<span class="del">${hlJava(l.slice(1))}</span>`
+    : hlJava(l) + '\n').join('');
+}
+
+const JAVA_UCS = `package sa2026.algorithms;
+
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.PriorityQueue;
+import java.util.Set;
+
+import sa2026.core.IAction;
+import sa2026.core.Node;
+import sa2026.core.Problem;
+import sa2026.core.SearchAlgorithm;
+import sa2026.core.State;
+
+/**
+ * Uniform-Cost Search (UCS).
+ *
+ * UCS always expands the CHEAPEST node first: the node with the smallest
+ * path cost g(n) (the real cost from the start to the node).
+ * The frontier is a PriorityQueue: poll() always gives the node with the smallest cost.
+ *
+ * The code is the same as BFS. Only the frontier is different:
+ *   BFS: a Queue          -> takes the OLDEST node    (fewest steps)
+ *   UCS: a PriorityQueue  -> takes the CHEAPEST node  (smallest cost)
+ *
+ * Tree search:  we do not remember anything, so a state can come back many times.
+ * Graph search: we remember the explored states and do not expand them again.
+ *
+ * UCS is optimal when every action costs more than 0.
+ * If all the actions cost the same, UCS expands the nodes like BFS.
+ */
+public class UCS extends SearchAlgorithm {
+
+    // tree search
+    public UCS() {
+        super(false);
+    }
+
+    // true = graph search, false = tree search
+    public UCS(boolean useGraphSearch) {
+        super(useGraphSearch);
+    }
+
+    @Override
+    public Node search(Problem p) {
+        resetCounters();
+
+        // PriorityQueue uses Node.compareTo(): the node with the smallest totalCost comes first.
+        // For UCS, totalCost = pathCost = g(n) (see the Node constructor).
+        PriorityQueue<Node> frontier = new PriorityQueue<>();
+        Set<State> explored = new HashSet<>(); // HashSet: contains() is fast
+        int visitingOrder = 0;
+
+        Node startNode = new Node(p.getInitialState());
+        frontier.add(startNode);
+        generatedNodes++; // the start node is a generated node too
+
+        while (!frontier.isEmpty()) {
+            // take the cheapest node (the smallest path cost)
+            Node currentNode = frontier.poll();
+
+            // graph search: the same state can be in the queue more than once
+            // (with different costs). The cheapest copy comes out first,
+            // so skip the other copies if we expanded this state before.
+            if (useGraphSearch && explored.contains(currentNode.getState())) {
+                continue;
+            }
+            currentNode.setVisitingOrder(++visitingOrder);
+
+            // goal test when we take the node out of the queue.
+            // In UCS this is VERY important: a goal we only generated
+            // may still have a cheaper path that we did not find yet.
+            if (p.isGoal(currentNode.getState())) {
+                return currentNode;
+            }
+
+            if (useGraphSearch) {
+                explored.add(currentNode.getState());
+            }
+
+            // expand: apply every action and add the children to the priority queue
+            nodesActuallyExpanded++;
+            for (IAction action : p.getActions()) {
+                Collection<State> nextStates = action.apply(currentNode.getState());
+                for (State s : nextStates) {
+                    double pathCost = currentNode.getPathCost()
+                            + p.getActionCost(currentNode.getState(), action, s);
+                    Node child = new Node(s, currentNode, action, pathCost);
+                    frontier.add(child); // the queue puts it in the right place (by cost)
+                    generatedNodes++;
+                }
+            }
+        }
+
+        // the queue is empty and we did not find a goal
+        return null;
+    }
+}`;
+
+const JAVA_FROM_BFS = `-import java.util.LinkedList;
+-import java.util.Queue;
++import java.util.PriorityQueue;
+    ...
+-        Queue<Node> frontier = new LinkedList<>();
++        PriorityQueue<Node> frontier = new PriorityQueue<>();
+    ...
+         Node currentNode = frontier.poll();   // the same line, but now: the cheapest
+    ...
+         frontier.add(child);                  // the same line, but now: in its place by cost`;
+
+$('#javaUcs').innerHTML = hlJava(JAVA_UCS);
+$('#javaFromBfs').innerHTML = hlDiff(JAVA_FROM_BFS);
+
+/* ================= 6. student task ================= */
+$('#taskCode').innerHTML = codeHtml(CODE.task);
+$('#taskHintBtn').onclick = () => $('#taskHint').classList.toggle('hidden');
+
+/* ================= start ================= */
+drawIdea('none');
+$('#pqReset').onclick();
+drawRing();
+let saved = 0;
+try { saved = +localStorage.getItem('ucs-tab') || 0; } catch (e) {}
+restart();
+setTab(saved);
+</script>
+</body>
+</html>
