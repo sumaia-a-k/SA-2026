@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Structure and Main</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --core:#0b7f91; --core-bg:#e1f5f7;
+  --prob:#2b8a3e; --prob-bg:#dcf3e2;
+  --algo:#6741d9; --algo-bg:#eee8fd;
+  --main:#d9480f; --main-bg:#fff0e6;
+  --warn:#d9480f; --warn-bg:#fff0e6; --bad:#e03131; --ok:#2b8a3e;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --str:#2b8a3e; --num:#c2410c;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --core:#66d9e8; --core-bg:#10323a; --prob:#6fdc85; --prob-bg:#163522;
+    --algo:#b197fc; --algo-bg:#2a2146; --main:#ffa463; --main-bg:#3a2414;
+    --warn:#ffa463; --warn-bg:#3a2414; --bad:#ff8787; --ok:#6fdc85;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --str:#8ce99a; --num:#ffa94d;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --core:#66d9e8; --core-bg:#10323a; --prob:#6fdc85; --prob-bg:#163522;
+  --algo:#b197fc; --algo-bg:#2a2146; --main:#ffa463; --main-bg:#3a2414;
+  --warn:#ffa463; --warn-bg:#3a2414; --bad:#ff8787; --ok:#6fdc85;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --str:#8ce99a; --num:#ffa94d;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-size: 13px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 40px; }
+.top { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 14px 0 10px; border-bottom: 1px solid var(--line); }
+.top .row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; }
+.top h1 { margin: 0; font-size: 22px; }
+.top p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button, select, input {
+  font: inherit; font-size: 14px; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font-size: 13px; color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; margin-top: 18px; }
+h2 { margin: 0 0 6px; font-size: 20px; }
+h2 .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); font-size: 14px; margin-right: 6px; vertical-align: 2px; }
+h3 { margin: 16px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+p { margin: 6px 0; }
+.muted { color: var(--muted); }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .two { grid-template-columns: minmax(0, 1fr); } .wrap { padding: 0 16px 32px; } .card { padding: 14px 16px; } }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.kw { color: var(--kw); font-weight: 600; } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .str { color: var(--str); } .num { color: var(--num); }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 14px; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 14px; }
+.okbox { background: var(--prob-bg); border-left: 4px solid var(--prob); border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+.tablewrap { overflow-x: auto; }
+
+/* 1. the big picture */
+.layers { display: grid; gap: 10px; }
+.layer { border: 2px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
+.layer > .title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.layer.core { border-color: var(--core); } .layer.core > .title { color: var(--core); }
+.layer.prob { border-color: var(--prob); } .layer.prob > .title { color: var(--prob); }
+.layer.algo { border-color: var(--algo); } .layer.algo > .title { color: var(--algo); }
+.layer.main { border-color: var(--main); } .layer.main > .title { color: var(--main); }
+.mid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+@media (max-width: 860px) { .mid { grid-template-columns: minmax(0, 1fr); } }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { cursor: pointer; border-radius: 8px; padding: 5px 10px; font: 600 13px ui-monospace, Consolas, monospace; border: 2px solid transparent; }
+.chip.core { background: var(--core-bg); color: var(--core); }
+.chip.prob { background: var(--prob-bg); color: var(--prob); }
+.chip.algo { background: var(--algo-bg); color: var(--algo); }
+.chip.main { background: var(--main-bg); color: var(--main); }
+.chip.sel { border-color: currentColor; }
+.chip small { font-weight: 400; opacity: .8; }
+.arrowtxt { text-align: center; font-size: 13px; color: var(--muted); }
+.family { border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; margin-bottom: 6px; }
+.family .fname { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+#info { position: sticky; top: 96px; }
+#info h3:first-child { margin-top: 0; }
+.kind { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 99px; padding: 1px 9px; }
+.kind.core { background: var(--core-bg); color: var(--core); }
+.kind.prob { background: var(--prob-bg); color: var(--prob); }
+.kind.algo { background: var(--algo-bg); color: var(--algo); }
+.kind.main { background: var(--main-bg); color: var(--main); }
+
+/* 2. folders */
+.tree { font: 13px/1.7 ui-monospace, Consolas, monospace; white-space: pre; overflow-x: auto; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.tree .c { color: var(--core); font-weight: 700; } .tree .p { color: var(--prob); font-weight: 700; }
+.tree .a { color: var(--algo); font-weight: 700; } .tree .m { color: var(--main); font-weight: 700; }
+.tree .x { color: var(--muted); }
+
+/* 3. how a search runs */
+.lanes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 8px 0 4px; }
+@media (max-width: 760px) { .lanes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.lane { text-align: center; border-radius: 10px; padding: 10px 6px; font-weight: 700; font-size: 14px; border: 2px solid var(--line); background: var(--surface); opacity: .55; transition: all .15s; }
+.lane small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
+.lane.from { opacity: 1; border-color: var(--main); background: var(--main-bg); }
+.lane.to { opacity: 1; border-color: var(--accent); background: var(--accent-bg); }
+.stepmsg { font-size: 15px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-height: 64px; margin-top: 8px; }
+.stepmsg .no { font-size: 12px; color: var(--muted); display: block; }
+.dots { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.dots button { width: 30px; padding: 4px 0; border-radius: 99px; font-size: 12px; }
+
+/* 4. builder */
+.builder { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .builder { grid-template-columns: minmax(0, 1fr); } }
+.field { margin-bottom: 12px; }
+.field > .lbl { display: block; margin-bottom: 4px; font-weight: 600; color: var(--ink); }
+.field .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.field .opts button { padding: 5px 10px; font-size: 13px; }
+#limitIn { width: 80px; }
+.result { font-size: 14px; border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
+.result.good { background: var(--prob-bg); border-left: 4px solid var(--prob); }
+.result.bad { background: var(--warn-bg); border-left: 4px solid var(--bad); }
+.result.info { background: var(--accent-bg); border-left: 4px solid var(--accent); }
+.codehead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.codehead .muted { font-size: 13px; }
+.mk { background: var(--main-bg); display: inline-block; width: 100%; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="top">
+  <div class="row">
+    <div>
+      <h1>Our Code: the Structure and Main</h1>
+      <p>Intelligent Search Algorithms · Latakia University · How the parts fit together, and how to use them</p>
+    </div>
+    <div class="grp">
+      <span class="lbl">Language</span>
+      <button data-lang="java" class="on">Java</button>
+      <button data-lang="python">Python</button>
+      <button data-lang="cpp">C++</button>
+      <button id="themeBtn" title="Dark / Light">◐</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1. The big picture ============ -->
+<section class="card">
+  <h2><span class="n">1</span>The big picture: 4 parts</h2>
+  <p>The code has <b>4 parts</b>. Click any name to see what it is and what it has.</p>
+  <div class="two" style="margin-top:10px">
+    <div class="layers" id="layers"></div>
+    <div class="card" id="info" style="margin-top:0"></div>
+  </div>
+  <div class="box"><b>The main idea:</b> the algorithms only know the <b>core</b> types (State, IAction, Problem).
+    They do not know the maze or the puzzle. So <b>every algorithm works with every problem</b>, and a new problem needs no change in the algorithms.</div>
+</section>
+
+<!-- ============ 2. The folders ============ -->
+<section class="card">
+  <h2><span class="n">2</span>Where are the files?</h2>
+  <p>The same names in the 3 languages. The colors are the same as in part 1.</p>
+  <div class="two">
+    <div><div class="tree" id="tree"></div></div>
+    <div>
+      <h3>How to run Main</h3>
+      <div id="runInfo"></div>
+      <h3>Two folders you can skip here</h3>
+      <ul>
+        <li><code>incomplete_code/</code>: the student versions (the same classes with TODOs).</li>
+        <li><code>description/</code>: the HTML lesson pages.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. How a search runs ============ -->
+<section class="card">
+  <h2><span class="n">3</span>What happens when we call <code>solve()</code>?</h2>
+  <p>Follow one search step by step. Orange = who calls, blue = who is called.</p>
+  <div class="lanes" id="lanes"></div>
+  <div class="stepmsg" id="stepMsg"></div>
+  <pre id="stepCode"></pre>
+  <div class="grp" style="margin-top:10px">
+    <button id="stPrev">◀ Back</button>
+    <button id="stNext" class="on">Next ▶</button>
+    <div class="dots" id="stDots"></div>
+  </div>
+</section>
+
+<!-- ============ 4. Write your Main ============ -->
+<section class="card">
+  <h2><span class="n">4</span>Write your Main</h2>
+  <p>Choose a problem and an algorithm. The code on the right is a <b>complete Main</b>: copy it into your Main file and run it.</p>
+  <div class="builder">
+    <div>
+      <div class="field"><span class="lbl">1 · Problem</span><div class="opts" id="optProblem"></div></div>
+      <div class="field"><span class="lbl">2 · Algorithm</span><div class="opts" id="optAlgo"></div></div>
+      <div class="field" id="fieldMode"><span class="lbl">3 · Search mode</span><div class="opts" id="optMode"></div></div>
+      <div class="field" id="fieldLimit"><span class="lbl">3 · Depth limit</span>
+        <input type="number" id="limitIn" min="0" max="50" value="10"></div>
+      <div class="field"><span class="lbl">4 · What to print</span><div class="opts" id="optPrint"></div></div>
+      <div id="resultBox"></div>
+    </div>
+    <div>
+      <div class="codehead"><span class="muted" id="fileName"></span><button id="copyBtn">Copy</button></div>
+      <pre id="mainCode"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. What you can use ============ -->
+<section class="card">
+  <h2><span class="n">5</span>After the search: what can you use?</h2>
+  <p><code>solve()</code> gives back the <b>goal node</b>, or <b>nothing</b> if there is no solution
+    (<span id="nullWord"></span>). Always check this before you use it.</p>
+  <div class="two">
+    <div>
+      <h3>From the goal node</h3>
+      <div class="tablewrap"><table id="nodeTable"></table></div>
+    </div>
+    <div>
+      <h3>From the algorithm</h3>
+      <div class="tablewrap"><table id="algoTable"></table></div>
+      <h3>Example: print the moves one by one</h3>
+      <pre id="pathCode"></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. A new problem ============ -->
+<section class="card">
+  <h2><span class="n">6</span>A new problem? Write 3 classes</h2>
+  <p>To add your own problem, write a <b>state</b>, an <b>action</b> and a <b>problem</b>. Then every algorithm can solve it, with no change.</p>
+  <pre id="newCode"></pre>
+  <div class="note"><b>Do not forget</b> <span id="eqWords"></span> in the state. Without them, graph search can not find repeated states.
+    And never change a state after it is made: an action must return a <b>new</b> state.</div>
+</section>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+let lang = 'java';
+try { lang = localStorage.getItem('code-lang') || 'java'; } catch (e) {}
+const L = (o) => o[lang];  // pick the text for the current language
+
+/* ---------- a small code colorer ---------- */
+const KW = {
+  java: 'package|import|public|private|protected|class|interface|extends|implements|return|new|for|while|if|else|static|final|void|boolean|int|double|null|true|false|super|this|abstract',
+  python: 'from|import|def|class|return|if|else|elif|for|while|in|not|and|or|is|None|True|False|self|lambda|pass',
+  cpp: 'include|using|namespace|class|struct|public|private|return|new|for|while|if|else|static|const|void|bool|int|double|auto|nullptr|true|false|override|virtual|std',
+};
+function hl(src, lg = lang) {
+  const com = lg === 'python' ? '#.*$' : '\\/\\/.*$|\\/\\*[\\s\\S]*?\\*\\/';
+  const re = new RegExp(`(${com})|("(?:[^"\\\\]|\\\\.)*")|\\b(${KW[lg]})\\b|\\b([A-Z][A-Za-z0-9]*)\\b|\\b(\\d+(?:\\.\\d+)?)\\b`, 'gm');
+  let out = '', last = 0, m;
+  while ((m = re.exec(src))) {
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : m[4] ? 'ty' : 'num';
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(src.slice(last));
+}
+
+/* =========================================================
+   1. the big picture: every part, with its text in 3 languages
+   ========================================================= */
+const FILES = {  // folder of each part, per language
+  java: { core: 'src/sa2026/core/', algo: 'src/sa2026/algorithms/', maze: 'src/sa2026/problems/maze/',
+          wordladder: 'src/sa2026/problems/wordladder/', npuzzle: 'src/sa2026/problems/npuzzle/', main: 'src/sa2026/' },
+  python: { core: 'python/sa2026/core/', algo: 'python/sa2026/algorithms/', maze: 'python/sa2026/problems/maze/',
+            wordladder: 'python/sa2026/problems/wordladder/', npuzzle: 'python/sa2026/problems/npuzzle/', main: 'python/sa2026/' },
+  cpp: { core: 'cpp/src/sa2026/core/', algo: 'cpp/src/sa2026/algorithms/', maze: 'cpp/src/sa2026/problems/maze/',
+         wordladder: 'cpp/src/sa2026/problems/wordladder/', npuzzle: 'cpp/src/sa2026/problems/npuzzle/', main: 'cpp/src/sa2026/' },
+};
+const snake = s => s.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/([A-Z])([A-Z][a-z])/g, '$1_$2').toLowerCase();
+function fileOf(name, folder) {
+  const dir = FILES[lang][folder];
+  if (lang === 'java') return dir + name + '.java';
+  if (lang === 'python') return dir + (name === 'IAction' ? 'i_action' : name === 'BFS' ? 'bfs' : name === 'DFS' ? 'dfs' : snake(name)) + '.py';
+  return name === 'Main' || name === 'IAction' ? dir + name + (name === 'Main' ? '.cpp' : '.h') : dir + name + '.h + .cpp';
+}
+
+const PARTS = {
+  // ---- core
+  State: { kind: 'core', folder: 'core', what: 'One situation of the problem. Example: where the player is in the maze, or the order of the tiles.',
+    who: 'An <b>interface</b>: every problem writes its own State class.',
+    m: { java: ['boolean isGoal()', 'String toString()', 'boolean equals(Object o)', 'int hashCode()'],
+         python: ['is_goal(self) -> bool', '__str__(self) -> str', '__eq__(self, other) -> bool', '__hash__(self) -> int'],
+         cpp: ['bool isGoal() const', 'std::string toString() const', 'bool equals(const State& other) const', 'std::size_t hashCode() const'] } },
+  IAction: { kind: 'core', folder: 'core', what: 'A move. It takes a state and gives the next states (an empty list if the move is not allowed).',
+    who: 'An <b>interface</b>: every problem writes its own action class.',
+    m: { java: ['Collection<State> apply(State s)', 'String getName()'],
+         python: ['apply(self, s) -> list[State]', 'get_name(self) -> str'],
+         cpp: ['std::vector<StatePtr> apply(const StatePtr& s) const', 'std::string getName() const'] } },
+  Problem: { kind: 'core', folder: 'core', what: 'The whole problem: where we start, what the goal is, the actions, and their cost.',
+    who: 'An <b>abstract class</b>: every problem extends it. <code>solve()</code> is ready, you do not write it.',
+    m: { java: ['State getInitialState()', 'boolean isGoal(State state)', 'List<IAction> getActions()', 'double getActionCost(State s, IAction a, State next)', 'Node solve(SearchAlgorithm algorithm)   // ready'],
+         python: ['get_initial_state(self) -> State', 'is_goal(self, state) -> bool', 'get_actions(self) -> list[IAction]', 'get_action_cost(self, s, a, next_state) -> float', 'solve(self, algorithm) -> Node | None   # ready'],
+         cpp: ['StatePtr getInitialState() const', 'bool isGoal(const StatePtr& state) const', 'std::vector<ActionPtr> getActions() const', 'double getActionCost(s, a, next) const', 'NodePtr solve(SearchAlgorithm& algorithm) const   // ready'] } },
+  Node: { kind: 'core', folder: 'core', what: 'One box of the search tree: a state, plus how we reached it (the parent, the action, the cost, the depth).',
+    who: 'A <b>ready class</b>. The algorithms make the nodes; Main reads the goal node.',
+    m: { java: ['State getState()', 'Node getParent()', 'IAction getAction()', 'double getPathCost()', 'int getDepth()', 'List<Node> getPathFromRoot()'],
+         python: ['node.state', 'node.parent', 'node.action', 'node.path_cost', 'node.depth', 'get_path_from_root(self) -> list[Node]'],
+         cpp: ['StatePtr getState() const', 'NodePtr getParent() const', 'ActionPtr getAction() const', 'double getPathCost() const', 'int getDepth() const', 'std::vector<const Node*> getPathFromRoot() const'] } },
+  SearchAlgorithm: { kind: 'core', folder: 'core', what: 'The parent of all algorithms. It keeps the counters and prints the solution.',
+    who: 'An <b>abstract class</b>: every algorithm extends it and writes <code>search()</code>.',
+    m: { java: ['Node search(Problem p)   // each algorithm writes it', 'int getGeneratedNodes()', 'int getNodesActuallyExpanded()', 'boolean isGraphSearch()', 'void printSolution(Node solution)'],
+         python: ['search(self, p) -> Node | None   # each algorithm writes it', 'generated_nodes', 'nodes_actually_expanded', 'use_graph_search', 'print_solution(self, solution)'],
+         cpp: ['NodePtr search(const Problem& p)   // each algorithm writes it', 'int getGeneratedNodes() const', 'int getNodesActuallyExpanded() const', 'bool isGraphSearch() const', 'void printSolution(const NodePtr& solution) const'] } },
+  // ---- problems
+  Maze: { kind: 'prob', folder: 'maze', family: 'maze', what: 'The map: walls, the start S and the goal G, made from text lines.', who: 'A helper class of the maze problem.' },
+  MazeState: { kind: 'prob', folder: 'maze', family: 'maze', what: 'The player position (row, col).', who: 'Implements <b>State</b>.' },
+  MazeAction: { kind: 'prob', folder: 'maze', family: 'maze', what: 'Move up, down, left or right (4 objects of one class).', who: 'Implements <b>IAction</b>.' },
+  MazeProblem: { kind: 'prob', folder: 'maze', family: 'maze', what: 'The maze problem. This is what Main creates.', who: 'Extends <b>Problem</b>.' },
+  WordDictionary: { kind: 'prob', folder: 'wordladder', family: 'wordladder', what: 'The allowed words.', who: 'A helper class of the word ladder.' },
+  WordLadderState: { kind: 'prob', folder: 'wordladder', family: 'wordladder', what: 'The current word, for example "cat".', who: 'Implements <b>State</b>.' },
+  ChangeLetterAction: { kind: 'prob', folder: 'wordladder', family: 'wordladder', what: 'Change one letter. One action, many next words.', who: 'Implements <b>IAction</b>.' },
+  WordLadderProblem: { kind: 'prob', folder: 'wordladder', family: 'wordladder', what: 'The word ladder problem. This is what Main creates.', who: 'Extends <b>Problem</b>.' },
+  NpuzzleState: { kind: 'prob', folder: 'npuzzle', family: 'npuzzle', what: 'The order of the tiles (0 = the empty cell).', who: 'Implements <b>State</b>.' },
+  MoveEmptyAction: { kind: 'prob', folder: 'npuzzle', family: 'npuzzle', what: 'Move the empty cell up, down, left or right.', who: 'Implements <b>IAction</b>.' },
+  NpuzzleProblem: { kind: 'prob', folder: 'npuzzle', family: 'npuzzle', what: 'The 8-puzzle (or 15-puzzle). This is what Main creates. It has easy(), medium() and hard().', who: 'Extends <b>Problem</b>.' },
+  // ---- algorithms
+  BFS: { kind: 'algo', folder: 'algo', what: 'Breadth-first search: a queue, level by level. Finds the fewest steps.', who: 'Extends <b>SearchAlgorithm</b>. Tree or graph search.' },
+  BFSOptimized: { kind: 'algo', folder: 'algo', what: 'BFS that checks a state when it is added to the queue ("reached").', who: 'Extends <b>SearchAlgorithm</b>. Tree or graph search.' },
+  DFS: { kind: 'algo', folder: 'algo', what: 'Depth-first search: a stack, deep first. Small memory, not optimal.', who: 'Extends <b>SearchAlgorithm</b>. Tree or graph search.' },
+  DFSCycleCheck: { kind: 'algo', folder: 'algo', what: 'DFS tree search that does not go back to a state on its own path.', who: 'Extends <b>SearchAlgorithm</b>.' },
+  DepthLimitedDFS: { kind: 'algo', folder: 'algo', what: 'DFS with a cycle check and a depth limit. Has isCutoff().', who: 'Extends <b>SearchAlgorithm</b>. Needs a limit.' },
+  IterativeDeepening: { kind: 'algo', folder: 'algo', what: 'Runs DepthLimitedDFS with limit 0, 1, 2, ... The answer of BFS with the memory of DFS.', who: 'Extends <b>SearchAlgorithm</b>.' },
+  // ---- main
+  Main: { kind: 'main', folder: 'main', what: 'The start of the program. It creates a problem and an algorithm, calls solve(), and prints the result.', who: 'Uses <b>Problem</b>, <b>SearchAlgorithm</b> and <b>Node</b>. See part 4.' },
+};
+const KIND_NAME = { core: 'core', prob: 'problem', algo: 'algorithm', main: 'main program' };
+let selected = 'Problem';
+
+function chip(name) {
+  const p = PARTS[name];
+  return `<span class="chip ${p.kind}${name === selected ? ' sel' : ''}" data-part="${name}">${name}</span>`;
+}
+function drawLayers() {
+  const fam = (id, title, names) => `<div class="family"><div class="fname">${title}</div><div class="chips">${names.map(chip).join('')}</div></div>`;
+  $('#layers').innerHTML =
+    `<div class="layer main"><div class="title">Main: uses one problem + one algorithm</div><div class="chips">${chip('Main')}</div></div>`
+    + `<div class="arrowtxt">↓ creates a problem and an algorithm, and calls <code>problem.solve(algorithm)</code></div>`
+    + `<div class="mid">`
+    + `<div class="layer prob"><div class="title">Problems</div>`
+    + fam('maze', 'maze', ['Maze', 'MazeState', 'MazeAction', 'MazeProblem'])
+    + fam('wordladder', 'wordladder', ['WordDictionary', 'WordLadderState', 'ChangeLetterAction', 'WordLadderProblem'])
+    + fam('npuzzle', 'npuzzle', ['NpuzzleState', 'MoveEmptyAction', 'NpuzzleProblem']) + `</div>`
+    + `<div class="layer algo"><div class="title">Algorithms</div><div class="chips">`
+    + ['BFS', 'BFSOptimized', 'DFS', 'DFSCycleCheck', 'DepthLimitedDFS', 'IterativeDeepening'].map(chip).join('') + `</div></div>`
+    + `</div>`
+    + `<div class="arrowtxt">↓ problems implement / extend the core types &nbsp;·&nbsp; algorithms extend SearchAlgorithm and use the core types ↓</div>`
+    + `<div class="layer core"><div class="title">Core: the common types (never change them)</div><div class="chips">`
+    + ['State', 'IAction', 'Problem', 'Node', 'SearchAlgorithm'].map(chip).join('') + `</div></div>`;
+}
+function drawInfo() {
+  const p = PARTS[selected];
+  let h = `<h2 style="margin-top:0">${selected} <span class="kind ${p.kind}">${KIND_NAME[p.kind]}</span></h2>`
+    + `<p>${p.what}</p><p>${p.who}</p>`
+    + `<p class="muted" style="font-size:13px">File: <code>${fileOf(selected, p.folder)}</code></p>`;
+  if (p.m) h += `<h3>What it has (${lang === 'cpp' ? 'C++' : lang === 'java' ? 'Java' : 'Python'})</h3><pre>${hl(L(p.m).join('\n'))}</pre>`;
+  if (p.kind === 'prob') {
+    const role = selected.endsWith('State') ? 'State' : selected.endsWith('Action') ? 'IAction' : selected.endsWith('Problem') ? 'Problem' : null;
+    if (role) h += `<p class="muted" style="font-size:13px">It has the methods of <a href="#" data-part="${role}">${role}</a>.</p>`;
+  }
+  $('#info').innerHTML = h;
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-part]');
+  if (!t) return;
+  e.preventDefault();
+  selected = t.dataset.part;
+  drawLayers(); drawInfo();
+});
+
+/* =========================================================
+   2. the folders
+   ========================================================= */
+const TREE = {
+  java: `SA-2026/
+└── src/sa2026/
+    ├── <m>Main.java</m>
+    ├── <c>core/</c>             State, IAction, Problem, Node, SearchAlgorithm  (.java)
+    ├── <a>algorithms/</a>       BFS, BFSOptimized, DFS, DFSCycleCheck,
+    │                    DepthLimitedDFS, IterativeDeepening  (.java)
+    └── <p>problems/</p>
+        ├── <p>maze/</p>         Maze, MazeState, MazeAction, MazeProblem
+        ├── <p>wordladder/</p>   WordDictionary, WordLadderState, ChangeLetterAction, WordLadderProblem
+        └── <p>npuzzle/</p>      NpuzzleState, MoveEmptyAction, NpuzzleProblem`,
+  python: `SA-2026/
+└── python/sa2026/
+    ├── <m>main.py</m>
+    ├── <c>core/</c>             state.py, i_action.py, problem.py, node.py, search_algorithm.py
+    ├── <a>algorithms/</a>       bfs.py, bfs_optimized.py, dfs.py, dfs_cycle_check.py,
+    │                    depth_limited_dfs.py, iterative_deepening.py
+    └── <p>problems/</p>
+        ├── <p>maze/</p>         maze.py, maze_state.py, maze_action.py, maze_problem.py
+        ├── <p>wordladder/</p>   word_dictionary.py, word_ladder_state.py, change_letter_action.py, word_ladder_problem.py
+        └── <p>npuzzle/</p>      npuzzle_state.py, move_empty_action.py, npuzzle_problem.py
+<x># The file names use snake_case. The class names are the same as in Java.</x>`,
+  cpp: `SA-2026/
+└── cpp/src/sa2026/
+    ├── <m>Main.cpp</m>
+    ├── <c>core/</c>             State, IAction, Problem, Node, SearchAlgorithm  (.h + .cpp)
+    ├── <a>algorithms/</a>       BFS, BFSOptimized, DFS, DFSCycleCheck,
+    │                    DepthLimitedDFS, IterativeDeepening  (.h + .cpp)
+    └── <p>problems/</p>
+        ├── <p>maze/</p>         Maze, MazeState, MazeAction, MazeProblem
+        ├── <p>wordladder/</p>   WordDictionary, WordLadderState, ChangeLetterAction, WordLadderProblem
+        └── <p>npuzzle/</p>      NpuzzleState, MoveEmptyAction, NpuzzleProblem
+<x>// Every class has a .h file (what it has) and a .cpp file (the code).</x>`,
+};
+const RUN = {
+  java: `<p>Open a terminal in the <code>SA-2026</code> folder:</p><pre>.\\run.bat      <span class="com"># Windows (PowerShell)</span>\n./run.sh       <span class="com"># Git Bash, macOS, Linux</span></pre><p class="muted">The script compiles all the files and runs Main.</p>`,
+  python: `<p>Open a terminal in the <code>SA-2026/python</code> folder:</p><pre>python -m sa2026.main</pre><p class="muted">No compile step. Use the <code>-m</code> form, so Python finds the <code>sa2026</code> package.</p>`,
+  cpp: `<p>Open a terminal in the <code>SA-2026/cpp</code> folder:</p><pre>.\\run.bat      <span class="com"># Windows (PowerShell)</span>\n./run.sh       <span class="com"># Git Bash, macOS, Linux</span></pre><p class="muted">The script compiles the code and runs Main.cpp.</p>`,
+};
+function drawTree() {
+  $('#tree').innerHTML = esc(TREE[lang])
+    .replace(/&lt;(m|c|a|p|x)&gt;/g, '<span class="$1">').replace(/&lt;\/(m|c|a|p|x)&gt;/g, '</span>');
+  $('#runInfo').innerHTML = RUN[lang];
+}
+
+/* =========================================================
+   3. what happens when we call solve()
+   ========================================================= */
+const LANES = [['main', 'Main', 'your program'], ['problem', 'Problem', 'e.g. MazeProblem'], ['algo', 'Algorithm', 'e.g. BFS'],
+               ['action', 'Action', 'e.g. MazeAction'], ['node', 'Node', 'the search tree']];
+const STEPS = [
+  { from: 'main', to: 'problem', msg: 'Main creates the <b>problem</b>.',
+    code: { java: 'Problem problem = new MazeProblem(maze);', python: 'problem = MazeProblem(maze)', cpp: 'MazeProblem problem(maze);' } },
+  { from: 'main', to: 'algo', msg: 'Main creates the <b>algorithm</b>. Nothing runs yet.',
+    code: { java: 'SearchAlgorithm algorithm = new BFS(true);', python: 'algorithm = BFS(True)', cpp: 'BFS algorithm(true);' } },
+  { from: 'main', to: 'problem', msg: 'Main asks the problem to <b>solve</b> itself with this algorithm.',
+    code: { java: 'Node goal = problem.solve(algorithm);', python: 'goal = problem.solve(algorithm)', cpp: 'NodePtr goal = problem.solve(algorithm);' } },
+  { from: 'problem', to: 'algo', msg: '<code>solve()</code> only gives the problem to the algorithm: it calls <b>search()</b>.',
+    code: { java: '// inside Problem.solve():\nreturn algorithm.search(this);', python: '# inside Problem.solve():\nreturn algorithm.search(self)', cpp: '// inside Problem::solve():\nreturn algorithm.search(*this);' } },
+  { from: 'algo', to: 'problem', msg: 'The algorithm asks for the <b>start state</b> and makes the first node.',
+    code: { java: 'Node startNode = new Node(p.getInitialState());', python: 'start_node = Node(p.get_initial_state())', cpp: 'core::NodePtr startNode = std::make_shared<core::Node>(p.getInitialState());' } },
+  { from: 'algo', to: 'problem', msg: 'It takes a node from the frontier and asks: <b>is it the goal?</b>',
+    code: { java: 'if (p.isGoal(currentNode.getState())) {\n    return currentNode;\n}', python: 'if p.is_goal(current_node.state):\n    return current_node', cpp: 'if (p.isGoal(currentNode->getState())) {\n    return currentNode;\n}' } },
+  { from: 'algo', to: 'action', msg: 'Not the goal: it <b>expands</b> the node. It gets the actions from the problem and applies each one.',
+    code: { java: 'for (IAction action : p.getActions()) {\n    Collection<State> nextStates = action.apply(currentNode.getState());', python: 'for action in p.get_actions():\n    next_states = action.apply(current_node.state)', cpp: 'for (const core::ActionPtr& action : p.getActions()) {\n    std::vector<core::StatePtr> nextStates = action->apply(currentNode->getState());' } },
+  { from: 'algo', to: 'node', msg: 'For each next state it makes a <b>child node</b> (with the parent, the action and the cost) and adds it to the frontier.',
+    code: { java: 'double pathCost = currentNode.getPathCost() + p.getActionCost(currentNode.getState(), action, s);\nNode child = new Node(s, currentNode, action, pathCost);\nfrontier.add(child);', python: 'path_cost = current_node.path_cost + p.get_action_cost(current_node.state, action, s)\nchild = Node(s, current_node, action, path_cost)\nfrontier.append(child)', cpp: 'double pathCost = currentNode->getPathCost() + p.getActionCost(currentNode->getState(), action, s);\ncore::NodePtr child = std::make_shared<core::Node>(s, currentNode, action, pathCost);\nfrontier.push(child);' } },
+  { from: 'algo', to: 'algo', msg: 'Steps 6 to 8 repeat (the loop), until it finds the goal or the frontier is empty.',
+    code: { java: 'while (!frontier.isEmpty()) { ... }', python: 'while frontier:\n    ...', cpp: 'while (!frontier.empty()) { ... }' } },
+  { from: 'algo', to: 'main', msg: 'The algorithm returns the <b>goal node</b> (or nothing). <code>solve()</code> gives it back to Main.',
+    code: { java: 'return currentNode;   // or: return null;', python: 'return current_node   # or: return None', cpp: 'return currentNode;   // or: return nullptr;' } },
+  { from: 'main', to: 'node', msg: 'Main reads the result. The goal node knows its whole path, because every node knows its parent.',
+    code: { java: 'algorithm.printSolution(goal);\nSystem.out.println(goal.getDepth());', python: 'algorithm.print_solution(goal)\nprint(goal.depth)', cpp: 'algorithm.printSolution(goal);\nstd::cout << goal->getDepth() << std::endl;' } },
+];
+let st = 0;
+function drawSteps() {
+  const s = STEPS[st];
+  $('#lanes').innerHTML = LANES.map(([id, name, sub]) =>
+    `<div class="lane ${id === s.from ? 'from' : ''} ${id === s.to && id !== s.from ? 'to' : ''} ${id === s.to && id === s.from ? 'from' : ''}">${name}<small>${sub}</small></div>`).join('');
+  $('#stepMsg').innerHTML = `<span class="no">Step ${st + 1} of ${STEPS.length}</span>${s.msg}`;
+  $('#stepCode').innerHTML = hl(L(s.code));
+  $('#stDots').innerHTML = STEPS.map((x, i) => `<button class="${i === st ? 'on' : ''}" data-st="${i}">${i + 1}</button>`).join('');
+  $('#stPrev').disabled = st === 0;
+  $('#stNext').disabled = st === STEPS.length - 1;
+}
+$('#stPrev').onclick = () => { st--; drawSteps(); };
+$('#stNext').onclick = () => { st++; drawSteps(); };
+$('#stDots').onclick = e => { const b = e.target.closest('[data-st]'); if (b) { st = +b.dataset.st; drawSteps(); } };
+
+/* =========================================================
+   4. write your Main
+   ========================================================= */
+const PROBLEMS = {
+  maze: 'Maze', ladder: 'Word ladder (cat → dog)', easy: '8-puzzle easy', medium: '8-puzzle medium', hard: '8-puzzle hard',
+};
+const ALGOS = {
+  BFS: { mode: true }, BFSOptimized: { mode: true }, DFS: { mode: true },
+  DFSCycleCheck: {}, DepthLimitedDFS: { limit: true }, IterativeDeepening: {},
+};
+const PY_FILE = { BFS: 'bfs', BFSOptimized: 'bfs_optimized', DFS: 'dfs', DFSCycleCheck: 'dfs_cycle_check',
+                  DepthLimitedDFS: 'depth_limited_dfs', IterativeDeepening: 'iterative_deepening' };
+const MAZE = ['S.#....', '.##.##.', '....#..', '.##....', '...#.#G'];
+let bProblem = 'maze', bAlgo = 'BFS', bGraph = true, bPrint = 'full';
+
+// what really happens (tested; the 3 languages give the same numbers)
+const RESULTS = {
+  maze: { BFS_t: [10, 2006], BFS_g: [10, 23], BFSOptimized_t: [10, 2006], BFSOptimized_g: [10, 23], DFS_t: 'never', DFS_g: [10, 11], DFSCycleCheck: [10, 11], DepthLimitedDFS_10: [10, 11], IterativeDeepening: [10, 89] },
+  ladder: { BFS_t: [3, 1191], BFS_g: [3, 112], BFSOptimized_t: [3, 1191], BFSOptimized_g: [3, 112], DFS_t: 'never', DFS_g: [110, 143], DFSCycleCheck: [110, 23521], DepthLimitedDFS_10: [10, 14], IterativeDeepening: [3, 61] },
+  easy: { BFS_t: [2, 15], BFS_g: [2, 12], BFSOptimized_t: [2, 15], BFSOptimized_g: [2, 12], DFS_t: 'never', DFS_g: [2, 2], DFSCycleCheck: [2, 2], DepthLimitedDFS_10: [2, 2], IterativeDeepening: [2, 3] },
+  medium: { BFS_t: [8, 3572], BFS_g: [8, 232], BFSOptimized_t: [8, 3572], BFSOptimized_g: [8, 232], DFS_t: 'never', DFS_g: [41256, 42511], DFSCycleCheck: 'slow', DepthLimitedDFS_10: [8, 171], IterativeDeepening: [8, 258] },
+  hard: { BFS_t: 'slow', BFS_g: [19, 32108], BFSOptimized_t: 'slow', BFSOptimized_g: [19, 32108], DFS_t: 'never', DFS_g: [44411, 45808], DFSCycleCheck: 'slow', DepthLimitedDFS_10: 'none', IterativeDeepening: [19, 149595] },
+};
+
+function opts(el, items, cur, attr) {
+  $(el).innerHTML = Object.entries(items).map(([k, v]) => `<button data-${attr}="${k}" class="${k === cur ? 'on' : ''}">${v}</button>`).join('');
+}
+function genMain() {
+  const algo = ALGOS[bAlgo], limit = Math.max(0, Math.min(50, parseInt($('#limitIn').value) || 0));
+  const isPuzzle = ['easy', 'medium', 'hard'].includes(bProblem);
+  const arg = algo.mode ? (lang === 'python' ? (bGraph ? 'True' : 'False') : String(bGraph)) : algo.limit ? String(limit) : '';
+  const modeCom = algo.mode ? (bGraph ? ' (graph search)' : ' (tree search)') : algo.limit ? ` (depth limit ${limit})` : '';
+  const full = bPrint === 'full';
+
+  if (lang === 'java') {
+    const imp = [`sa2026.algorithms.${bAlgo}`, 'sa2026.core.Node', 'sa2026.core.Problem', 'sa2026.core.SearchAlgorithm'];
+    let make;
+    if (bProblem === 'maze') {
+      imp.push('sa2026.problems.maze.Maze', 'sa2026.problems.maze.MazeProblem');
+      make = `        Maze maze = Maze.fromLines(\n${MAZE.map(r => `                "${r}"`).join(',\n')});\n        Problem problem = new MazeProblem(maze);`;
+    } else if (bProblem === 'ladder') {
+      imp.push('sa2026.problems.wordladder.WordDictionary', 'sa2026.problems.wordladder.WordLadderProblem');
+      make = '        Problem problem = new WordLadderProblem("cat", "dog", WordDictionary.threeLetterWords());';
+    } else {
+      imp.push('sa2026.problems.npuzzle.NpuzzleProblem');
+      make = `        Problem problem = NpuzzleProblem.${bProblem}();`;
+    }
+    const out = full ? '        algorithm.printSolution(goal);'
+      : `        if (goal == null) {\n            System.out.println("No solution found.");\n            return;\n        }\n`
+      + `        System.out.println("Steps: " + goal.getDepth());\n        System.out.println("Cost: " + goal.getPathCost());\n`
+      + `        System.out.println("Expanded: " + algorithm.getNodesActuallyExpanded());\n        System.out.println("Generated: " + algorithm.getGeneratedNodes());`;
+    return { file: 'src/sa2026/Main.java', code: `package sa2026;\n\n${imp.map(i => `import ${i};`).join('\n')}\n\npublic class Main {\n\n    public static void main(String[] args) {\n`
+      + `        // 1. the problem\n${make}\n\n        // 2. the algorithm${modeCom}\n        SearchAlgorithm algorithm = new ${bAlgo}(${arg});\n\n`
+      + `        // 3. solve it\n        Node goal = problem.solve(algorithm);\n\n        // 4. use the result\n${out}\n    }\n}` };
+  }
+
+  if (lang === 'python') {
+    const imp = [`from sa2026.algorithms.${PY_FILE[bAlgo]} import ${bAlgo}`];
+    let make;
+    if (bProblem === 'maze') {
+      imp.push('from sa2026.problems.maze.maze import Maze', 'from sa2026.problems.maze.maze_problem import MazeProblem');
+      make = `    maze = Maze.from_lines(\n${MAZE.map(r => `        "${r}"`).join(',\n')})\n    problem = MazeProblem(maze)`;
+    } else if (bProblem === 'ladder') {
+      imp.push('from sa2026.problems.wordladder.word_dictionary import WordDictionary',
+               'from sa2026.problems.wordladder.word_ladder_problem import WordLadderProblem');
+      make = '    problem = WordLadderProblem("cat", "dog", WordDictionary.three_letter_words())';
+    } else {
+      imp.push('from sa2026.problems.npuzzle.npuzzle_problem import NpuzzleProblem');
+      make = `    problem = NpuzzleProblem.${bProblem}()`;
+    }
+    const out = full ? '    algorithm.print_solution(goal)'
+      : `    if goal is None:\n        print("No solution found.")\n        return\n    print(f"Steps: {goal.depth}")\n    print(f"Cost: {goal.path_cost}")\n`
+      + `    print(f"Expanded: {algorithm.nodes_actually_expanded}")\n    print(f"Generated: {algorithm.generated_nodes}")`;
+    return { file: 'python/sa2026/main.py', code: `${imp.join('\n')}\n\n\ndef main():\n    # 1. the problem\n${make}\n\n    # 2. the algorithm${modeCom}\n    algorithm = ${bAlgo}(${arg})\n\n`
+      + `    # 3. solve it\n    goal = problem.solve(algorithm)\n\n    # 4. use the result\n${out}\n\n\n`
+      + `# run main() only when this file is started, not when another file imports it\nif __name__ == "__main__":\n    main()` };
+  }
+
+  // C++
+  const inc = [`sa2026/algorithms/${bAlgo}.h`, 'sa2026/core/Node.h'];
+  const use = [`sa2026::algorithms::${bAlgo}`, 'sa2026::core::NodePtr'];
+  let make;
+  if (bProblem === 'maze') {
+    inc.push('sa2026/problems/maze/Maze.h', 'sa2026/problems/maze/MazeProblem.h');
+    use.push('sa2026::problems::maze::Maze', 'sa2026::problems::maze::MazeProblem');
+    make = `    MazeProblem problem(Maze::fromLines({\n${MAZE.map(r => `            "${r}"`).join(',\n')}}));`;
+  } else if (bProblem === 'ladder') {
+    inc.push('sa2026/problems/wordladder/WordDictionary.h', 'sa2026/problems/wordladder/WordLadderProblem.h');
+    use.push('sa2026::problems::wordladder::WordDictionary', 'sa2026::problems::wordladder::WordLadderProblem');
+    make = '    WordLadderProblem problem("cat", "dog", WordDictionary::threeLetterWords());';
+  } else {
+    inc.push('sa2026/problems/npuzzle/NpuzzleProblem.h');
+    use.push('sa2026::problems::npuzzle::NpuzzleProblem');
+    make = `    NpuzzleProblem problem = NpuzzleProblem::${bProblem}();`;
+  }
+  const out = full ? '    algorithm.printSolution(goal);'
+    : `    if (goal == nullptr) {\n        std::cout << "No solution found." << std::endl;\n        return 0;\n    }\n`
+    + `    std::cout << "Steps: " << goal->getDepth() << std::endl;\n    std::cout << "Cost: " << goal->getPathCost() << std::endl;\n`
+    + `    std::cout << "Expanded: " << algorithm.getNodesActuallyExpanded() << std::endl;\n    std::cout << "Generated: " << algorithm.getGeneratedNodes() << std::endl;`;
+  const head = (full ? '' : '#include <iostream>\n\n') + inc.map(i => `#include "${i}"`).join('\n');
+  return { file: 'cpp/src/sa2026/Main.cpp', code: `${head}\n\n// "using" lets us write ${bAlgo} instead of sa2026::algorithms::${bAlgo}\n${use.map(u => `using ${u};`).join('\n')}\n\nint main() {\n`
+    + `    // 1. the problem\n${make}\n\n    // 2. the algorithm${modeCom}\n    ${bAlgo} algorithm${arg ? `(${arg})` : ''};\n\n`
+    + `    // 3. solve it\n    NodePtr goal = problem.solve(algorithm);\n\n    // 4. use the result\n${out}\n    return 0;\n}` };
+}
+
+function drawBuilder() {
+  opts('#optProblem', PROBLEMS, bProblem, 'bp');
+  opts('#optAlgo', Object.fromEntries(Object.keys(ALGOS).map(k => [k, k])), bAlgo, 'ba');
+  opts('#optMode', { g: 'Graph search', t: 'Tree search' }, bGraph ? 'g' : 't', 'bm');
+  opts('#optPrint', { full: 'All the steps (printSolution)', short: 'Only the numbers' }, bPrint, 'bo');
+  const algo = ALGOS[bAlgo];
+  $('#fieldMode').style.display = algo.mode ? '' : 'none';
+  $('#fieldLimit').style.display = algo.limit ? '' : 'none';
+
+  const { file, code } = genMain();
+  $('#fileName').innerHTML = `File: <code>${file}</code>`;
+  $('#mainCode').innerHTML = hl(code);
+
+  // what will happen?
+  const full = bPrint === 'full';
+  const key = algo.mode ? `${bAlgo}_${bGraph ? 'g' : 't'}` : algo.limit ? `${bAlgo}_${$('#limitIn').value}` : bAlgo;
+  let r = RESULTS[bProblem][key];
+  const shortest = RESULTS[bProblem].BFS_g[0];
+  const lim = parseInt($('#limitIn').value) || 0;
+  if (algo.limit && lim < shortest) r = 'none';  // the goal is deeper than the limit
+  let h;
+  if (r === 'never') h = `<div class="result bad"><b>It never stops!</b> All our problems have cycles (A → B → A ...), and DFS tree search goes around a cycle forever.
+    Use graph search, DFSCycleCheck, DepthLimitedDFS or IterativeDeepening.</div>`;
+  else if (r === 'slow') h = `<div class="result bad"><b>Too slow:</b> this does not finish in a normal time (or the memory runs out).
+    ${bAlgo === 'DFSCycleCheck' ? 'The 8-puzzle has a huge number of different paths, and the cycle check does not stop repeats on different paths.' : 'Tree search makes the same boards again and again: about 3<sup>19</sup> nodes.'}
+    Try graph search or IterativeDeepening.</div>`;
+  else if (r === 'none') h = `<div class="result info"><b>No solution found</b> with this limit: the nearest goal is ${shortest} moves deep.
+    Try a limit of ${shortest} or more, or IterativeDeepening.</div>`;
+  else if (r) {
+    h = `<div class="result good"><b>You will see:</b> a path of <b>${r[0].toLocaleString()}</b> steps, <b>${r[1].toLocaleString()}</b> nodes expanded.</div>`;
+    if (r[0] > 1000 && full) h += `<div class="result bad"><b>Careful:</b> printSolution() prints every one of the ${r[0].toLocaleString()} boards! Choose "Only the numbers".</div>`;
+    if (r[0] > 1000) h += `<div class="result info">DFS is not optimal: the shortest path has only ${RESULTS[bProblem].BFS_g[0]} steps.</div>`;
+  } else h = `<div class="result info">It finds a path with ${lim} steps or fewer (the shortest has ${shortest}). Run it to see the numbers.</div>`;
+  $('#resultBox').innerHTML = h;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-bp],[data-ba],[data-bm],[data-bo]');
+  if (!b) return;
+  if (b.dataset.bp) bProblem = b.dataset.bp;
+  if (b.dataset.ba) bAlgo = b.dataset.ba;
+  if (b.dataset.bm) bGraph = b.dataset.bm === 'g';
+  if (b.dataset.bo) bPrint = b.dataset.bo;
+  drawBuilder();
+});
+$('#limitIn').oninput = drawBuilder;
+$('#copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(genMain().code); $('#copyBtn').textContent = 'Copied ✓'; }
+  catch (e) { $('#copyBtn').textContent = 'Select the code and copy it'; }
+  setTimeout(() => $('#copyBtn').textContent = 'Copy', 1500);
+};
+
+/* =========================================================
+   5. what you can use after the search
+   ========================================================= */
+const USE_NODE = [
+  ['the number of steps', { java: 'goal.getDepth()', python: 'goal.depth', cpp: 'goal->getDepth()' }],
+  ['the total cost', { java: 'goal.getPathCost()', python: 'goal.path_cost', cpp: 'goal->getPathCost()' }],
+  ['the goal state', { java: 'goal.getState()', python: 'goal.state', cpp: 'goal->getState()' }],
+  ['the last action', { java: 'goal.getAction().getName()', python: 'goal.action.get_name()', cpp: 'goal->getAction()->getName()' }],
+  ['the node before', { java: 'goal.getParent()', python: 'goal.parent', cpp: 'goal->getParent()' }],
+  ['the whole path, start first', { java: 'goal.getPathFromRoot()', python: 'goal.get_path_from_root()', cpp: 'goal->getPathFromRoot()' }],
+];
+const USE_ALGO = [
+  ['print every step and the numbers', { java: 'algorithm.printSolution(goal)', python: 'algorithm.print_solution(goal)', cpp: 'algorithm.printSolution(goal)' }],
+  ['nodes expanded', { java: 'algorithm.getNodesActuallyExpanded()', python: 'algorithm.nodes_actually_expanded', cpp: 'algorithm.getNodesActuallyExpanded()' }],
+  ['nodes generated', { java: 'algorithm.getGeneratedNodes()', python: 'algorithm.generated_nodes', cpp: 'algorithm.getGeneratedNodes()' }],
+  ['graph search or tree search?', { java: 'algorithm.isGraphSearch()', python: 'algorithm.use_graph_search', cpp: 'algorithm.isGraphSearch()' }],
+  ['DLS only: did a node stop at the limit?', { java: 'dls.isCutoff()', python: 'dls.is_cutoff()', cpp: 'dls.isCutoff()' }],
+];
+const PATH_CODE = {
+  java: `for (Node node : goal.getPathFromRoot()) {
+    if (node.getAction() != null) {          // the start node has no action
+        System.out.println(node.getAction().getName());
+    }
+}`,
+  python: `for node in goal.get_path_from_root():
+    if node.action is not None:             # the start node has no action
+        print(node.action.get_name())`,
+  cpp: `for (const Node* node : goal->getPathFromRoot()) {
+    if (node->getAction() != nullptr) {      // the start node has no action
+        std::cout << node->getAction()->getName() << std::endl;
+    }
+}`,
+};
+function drawUse() {
+  const rows = list => '<tr><th>To get</th><th>Write</th></tr>' + list.map(([t, c]) => `<tr><td>${t}</td><td><code>${esc(L(c))}</code></td></tr>`).join('');
+  $('#nodeTable').innerHTML = rows(USE_NODE);
+  $('#algoTable').innerHTML = rows(USE_ALGO);
+  $('#pathCode').innerHTML = hl(PATH_CODE[lang]);
+  $('#nullWord').innerHTML = `<code>${L({ java: 'null', python: 'None', cpp: 'nullptr' })}</code>`;
+}
+
+/* =========================================================
+   6. a new problem
+   ========================================================= */
+const NEW_CODE = {
+  java: `// 1. the state: one situation of your problem
+public class MyState implements State {
+    public boolean isGoal() { ... }
+    public String toString() { ... }
+    public boolean equals(Object o) { ... }
+    public int hashCode() { ... }
+}
+
+// 2. an action: from one state to the next states
+public class MyAction implements IAction {
+    public Collection<State> apply(State s) { ... }   // empty list = not allowed
+    public String getName() { ... }
+}
+
+// 3. the problem: start, goal, actions and cost
+public class MyProblem extends Problem {
+    public State getInitialState() { ... }
+    public boolean isGoal(State state) { ... }
+    public List<IAction> getActions() { ... }
+    public double getActionCost(State s, IAction a, State next) { ... }
+}
+
+// in Main: nothing new to learn
+Node goal = new MyProblem().solve(new BFS(true));`,
+  python: `# 1. the state: one situation of your problem
+class MyState(State):
+    def is_goal(self) -> bool: ...
+    def __str__(self) -> str: ...
+    def __eq__(self, other) -> bool: ...
+    def __hash__(self) -> int: ...
+
+
+# 2. an action: from one state to the next states
+class MyAction(IAction):
+    def apply(self, s) -> list[State]: ...   # [] = not allowed
+    def get_name(self) -> str: ...
+
+
+# 3. the problem: start, goal, actions and cost
+class MyProblem(Problem):
+    def get_initial_state(self) -> State: ...
+    def is_goal(self, state) -> bool: ...
+    def get_actions(self) -> list[IAction]: ...
+    def get_action_cost(self, s, a, next_state) -> float: ...
+
+
+# in main: nothing new to learn
+goal = MyProblem().solve(BFS(True))`,
+  cpp: `// 1. the state: one situation of your problem
+class MyState : public core::State {
+public:
+    bool isGoal() const override;
+    std::string toString() const override;
+    bool equals(const core::State& other) const override;
+    std::size_t hashCode() const override;
+};
+
+// 2. an action: from one state to the next states
+class MyAction : public core::IAction {
+public:
+    std::vector<core::StatePtr> apply(const core::StatePtr& s) const override;  // {} = not allowed
+    std::string getName() const override;
+};
+
+// 3. the problem: start, goal, actions and cost
+class MyProblem : public core::Problem {
+public:
+    core::StatePtr getInitialState() const override;
+    bool isGoal(const core::StatePtr& state) const override;
+    std::vector<core::ActionPtr> getActions() const override;
+    double getActionCost(const core::StatePtr& s, const core::ActionPtr& a,
+                         const core::StatePtr& next) const override;
+};
+
+// in main: nothing new to learn
+MyProblem problem;
+BFS algorithm(true);
+NodePtr goal = problem.solve(algorithm);`,
+};
+function drawNew() {
+  $('#newCode').innerHTML = hl(NEW_CODE[lang]);
+  $('#eqWords').innerHTML = L({ java: '<code>equals()</code> and <code>hashCode()</code>', python: '<code>__eq__()</code> and <code>__hash__()</code>', cpp: '<code>equals()</code> and <code>hashCode()</code>' });
+}
+
+/* ---------- language switch and start ---------- */
+function drawAll() {
+  $$('[data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === lang));
+  drawLayers(); drawInfo(); drawTree(); drawSteps(); drawBuilder(); drawUse(); drawNew();
+}
+$$('[data-lang]').forEach(b => b.onclick = () => {
+  lang = b.dataset.lang;
+  try { localStorage.setItem('code-lang', lang); } catch (e) {}
+  drawAll();
+});
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+drawAll();
+</script>
+</body>
+</html>
