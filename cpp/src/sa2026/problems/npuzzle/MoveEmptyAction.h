@@ -15,7 +15,7 @@ namespace sa2026::problems::npuzzle {
  *
  * Like MazeAction: one class, and four objects with different directions (see NpuzzleProblem):
  *   ActionPtr up = std::make_shared<MoveEmptyAction>("Move empty up", -1, 0);
- * (The 2025 code had four classes, MoveEmptyTileUp, ..., with almost the same code.)
+ * (Better than four classes, MoveEmptyUp, ..., with almost the same code.)
  */
 class MoveEmptyAction : public core::IAction {
 public:

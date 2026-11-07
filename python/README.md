@@ -40,10 +40,12 @@ After every change, just run the command again.
 | Run the main program | `.\run.bat` or `./run.sh` | `python -m sa2026.main` |
 | Maze demo | `java -cp out sa2026.problems.maze.MazeDemo` | `python -m sa2026.problems.maze.maze_demo` |
 | Word ladder demo | `java -cp out sa2026.problems.wordladder.WordLadderDemo` | `python -m sa2026.problems.wordladder.word_ladder_demo` |
+| City map demo | `java -cp out sa2026.problems.citymap.CityMapDemo` | `python -m sa2026.problems.citymap.city_map_demo` |
 | Maze demo (student version) | `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` | `python -m sa2026.problems.incomplete_code.maze.maze_demo` |
 | Word ladder demo (student version) | `java -cp out sa2026.problems.incomplete_code.wordladder.WordLadderDemo` | `python -m sa2026.problems.incomplete_code.wordladder.word_ladder_demo` |
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `python -m sa2026.algorithms.incomplete_code.bfs_demo` |
 | Check your DFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` | `python -m sa2026.algorithms.incomplete_code.dfs_demo` |
+| Check your UCS (student version) | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` | `python -m sa2026.algorithms.incomplete_code.ucs_demo` |
 
 The rule is simple: take the Java class name, write the file name in `snake_case`, and don't add `.py`.
 
@@ -89,14 +91,18 @@ python/
     │   ├── dfs_cycle_check.py      DFSCycleCheck.java
     │   ├── depth_limited_dfs.py    DepthLimitedDFS.java
     │   ├── iterative_deepening.py  IterativeDeepening.java
+    │   ├── ucs.py                  UCS.java
     │   └── incomplete_code/        the student versions: write the body of search()
     │       ├── bfs.py, bfs_optimized.py
     │       ├── bfs_demo.py         checks your BFS with the finished one (BFSDemo.java)
     │       ├── dfs.py, dfs_cycle_check.py, depth_limited_dfs.py, iterative_deepening.py
-    │       └── dfs_demo.py         checks your DFS versions with the finished ones (DFSDemo.java)
+    │       ├── dfs_demo.py         checks your DFS versions with the finished ones (DFSDemo.java)
+    │       ├── ucs.py
+    │       └── ucs_demo.py         checks your UCS with the finished one (UCSDemo.java)
     └── problems/
         ├── maze/                   maze.py, maze_state.py, maze_action.py, maze_problem.py, maze_demo.py
         ├── wordladder/             word_dictionary.py, word_ladder_state.py, change_letter_action.py, ...
+        ├── citymap/                city_map.py, city_state.py, drive_action.py, city_map_problem.py, city_map_demo.py
         └── incomplete_code/        the student versions, with the same TODO steps as Java
             ├── maze/
             └── wordladder/
@@ -126,6 +132,7 @@ Python has its own style. So the names are a little different, but the meaning i
 | `List` / `ArrayList` | `list` | |
 | `HashSet` | `set` | |
 | `Queue` / `LinkedList` | `deque` | from the `collections` module |
+| `PriorityQueue` | a `list` + `heapq.heappush()` / `heapq.heappop()` | from the `heapq` module, uses `__lt__()` |
 | `IllegalArgumentException` | `ValueError` | |
 | `UnsupportedOperationException` | `NotImplementedError` | |
 
@@ -138,6 +145,7 @@ The HTML lesson pages show the Java code:
 [Word ladder](../src/sa2026/problems/description/wordladder.html),
 [BFS](../src/sa2026/algorithms/description/bfs.html),
 [DFS](../src/sa2026/algorithms/description/dfs.html),
+[UCS](../src/sa2026/algorithms/description/ucs.html),
 [N-puzzle](../src/sa2026/problems/description/npuzzle.html).
 
 The ideas are the same in Python. Use the table above to find the Python name.

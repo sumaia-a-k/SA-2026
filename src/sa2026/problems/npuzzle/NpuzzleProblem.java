@@ -15,9 +15,9 @@ import sa2026.core.State;
  * Actions:       move the empty cell up, down, left, right.
  * Cost:          every move costs 1.
  *
- * There is no heuristic yet. We add it in a later session (the 2025 code had the Hamming distance).
+ * There is no heuristic yet. We add it in a later session (for example the Hamming distance).
  *
- * What we fixed from the 2025 code:
+ * Checks on the start board:
  *  - The start board is checked: it must be n x n, have every number 0 .. n*n-1 once,
  *    and it must be solvable. (Collections.shuffle makes a board with NO solution half of the time,
  *    and then the search looks at every reachable state before it says "no solution".)

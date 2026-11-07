@@ -40,7 +40,7 @@ class NpuzzleProblem(Problem):
         #         The order of this list is the order the algorithms try the actions.
         self._actions: list[IAction] = []
 
-    # the three tests from the 2025 code
+    # the three tests: easy, medium, hard
     @staticmethod
     def easy() -> "NpuzzleProblem":
         return NpuzzleProblem(1, 2, 3, 4, 0, 5, 7, 8, 6)   # 2 moves

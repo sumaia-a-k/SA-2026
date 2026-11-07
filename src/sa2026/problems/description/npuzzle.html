@@ -156,7 +156,7 @@ td.small { font-size: 13px; color: var(--muted); }
     <li>The <b>goal</b>: the numbers in order, 1, 2, 3, ... and the empty cell at the <b>end</b> (bottom right).</li>
     <li>Every move costs <b>1</b>.</li>
   </ul>
-  <p>Example (the "easy" test from last year's code). The coloured tile is the one that moved:</p>
+  <p>Example (the "easy" test, <code>easy()</code> in our code). The coloured tile is the one that moved:</p>
   <div class="example" id="example"></div>
   <p>Your job: write the <b>state</b>, the <b>actions</b> and the <b>problem</b> in Java.
      Then our search algorithms (BFS, DFS, IDS, ...) can solve it with no change.</p>
@@ -173,7 +173,7 @@ td.small { font-size: 13px; color: var(--muted); }
     <span class="lbl">Start</span>
     <span id="presets"></span>
     <button id="shuffleBtn" title="Random moves from the goal">Shuffle (20 random moves)</button>
-    <button id="randomBtn" title="Like the 2025 code: Collections.shuffle">Random tiles (2025 way)</button>
+    <button id="randomBtn" title="Put the tiles in a random order, like Collections.shuffle">Random tiles</button>
   </div>
   <div class="play">
     <div>
@@ -260,14 +260,14 @@ td.small { font-size: 13px; color: var(--muted); }
   <p class="hint">Branching factor b: the empty cell in a corner has 2 moves, on a side 3 moves, in the middle 4 moves.</p>
   <div class="box"><b>For our algorithms:</b> BFS can solve the 8-puzzle (181,440 states fit in memory),
     but the 15-puzzle has about 10 trillion states. That is too much for BFS.
-    For it we will need a <b>heuristic</b> and A*. The 2025 code already had one: the number of tiles in the wrong place (Hamming distance).</div>
+    For it we will need a <b>heuristic</b> and A*. A simple one: the number of tiles in the wrong place (Hamming distance).</div>
 </section>
 
 <section class="card">
   <h2>Can every board be solved? No!</h2>
-  <p>Only <b>half</b> of all orders of the tiles can reach the goal. The 2025 code makes a random board with
-    <code>Collections.shuffle(tiles)</code>, so half of the time the puzzle has <b>no solution</b>, and the search
-    explores every reachable state before it can say "failure". Try "Random tiles (2025 way)" above.</p>
+  <p>Only <b>half</b> of all orders of the tiles can reach the goal. If we make a random board with
+    <code>Collections.shuffle(tiles)</code>, half of the time the puzzle has <b>no solution</b>, and the search
+    explores every reachable state before it can say "failure". Try "Random tiles" above.</p>
   <p class="hint">Everything below uses the board from "Try it yourself". Load an example, or move with the arrows here.</p>
   <div class="setup">
     <span class="lbl">Examples</span>
@@ -331,7 +331,7 @@ td.small { font-size: 13px; color: var(--muted); }
   <h2>Check yourself</h2>
   <details><summary>1. From the goal state, how many next states are there?</summary><p>Only <b>2</b>. The empty cell is in a corner: only "up" and "left" work. The other 2 actions give an empty list.</p></details>
   <details><summary>2. Is the size n part of the state?</summary><p>No. It is the same for every state. But the code can read it from the list: n = √(list size).</p></details>
-  <details><summary>3. How many moves does the "medium" test of the 2025 code need?</summary><p id="ans3"></p></details>
+  <details><summary>3. How many moves does the <code>medium()</code> test need?</summary><p id="ans3"></p></details>
   <details><summary>4. Can <code>[1, 2, 3, 4, 5, 6, 8, 7, 0]</code> be solved? (only 7 and 8 are swapped)</summary><p>No. It has <b>1</b> inversion (8 before 7), an odd number. You can not swap two tiles with legal moves.</p></details>
   <details><summary>5. What goes wrong if <code>apply()</code> swaps the tiles in the old state, not in a copy?</summary><p>The parent node now has the new board too. The path from the start is wrong, and a state in the explored set changes its hashCode, so the set can not find it any more.</p></details>
   <details><summary>6. What must <code>equals()</code> and <code>hashCode()</code> of the state use?</summary><p>The list of tiles. Two states are the same if their lists are the same. Without them, graph search can not find repeated states.</p></details>
@@ -343,7 +343,7 @@ td.small { font-size: 13px; color: var(--muted); }
 <script>
 const $ = id => document.getElementById(id);
 
-// the 3 tests from the 2025 code (NpuzzleProblem.java)
+// the 3 tests from our code: easy(), medium(), hard() in NpuzzleProblem.java
 const PRESETS = {
   3: [['Easy', [1, 2, 3, 4, 0, 5, 7, 8, 6]], ['Medium', [4, 1, 2, 5, 8, 3, 7, 6, 0]], ['Hard', [1, 8, 3, 2, 6, 4, 7, 0, 5]]],
   4: [['Easy', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 11, 13, 14, 15, 12]],
@@ -489,7 +489,7 @@ $('presets').onclick = e => {
   const b = e.target.closest('[data-p]');
   if (!b) return;
   const [name, s] = PRESETS[N][+b.dataset.p];
-  newStart(s, `The "${name}" start` + (N === 3 ? ' (from the 2025 code).' : '.'));
+  newStart(s, `The "${name}" start` + (N === 3 ? ` (<code>${name.toLowerCase()}()</code> in our code).` : '.'));
 };
 function useSize(n) {
   N = n;
@@ -513,8 +513,8 @@ $('randomBtn').onclick = () => {
   const s = goalOf(N);
   for (let i = s.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [s[i], s[j]] = [s[j], s[i]]; }
   newStart(s, solvable(s)
-    ? 'Random tiles, like <code>Collections.shuffle</code> in the 2025 code. This time you are lucky: it <b>can</b> be solved.'
-    : 'Random tiles, like <code>Collections.shuffle</code> in the 2025 code. This board can <b>never</b> be solved! Look at "Can every board be solved?" below.',
+    ? 'Random tiles, like <code>Collections.shuffle</code>. This time you are lucky: it <b>can</b> be solved.'
+    : 'Random tiles, like <code>Collections.shuffle</code>. This board can <b>never</b> be solved! Look at "Can every board be solved?" below.',
     solvable(s) ? '' : 'bad');
 };
 $('board').onclick = e => {

@@ -47,10 +47,12 @@ So the script builds and runs **one program each time**. You give the program na
 | Run the main program | `.\run.bat` | `.\run.bat` |
 | Maze demo | `java -cp out sa2026.problems.maze.MazeDemo` | `.\run.bat sa2026.problems.maze.MazeDemo` |
 | Word ladder demo | `java -cp out sa2026.problems.wordladder.WordLadderDemo` | `.\run.bat sa2026.problems.wordladder.WordLadderDemo` |
+| City map demo | `java -cp out sa2026.problems.citymap.CityMapDemo` | `.\run.bat sa2026.problems.citymap.CityMapDemo` |
 | Maze demo (student version) | `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` | `.\run.bat sa2026.problems.incomplete_code.maze.MazeDemo` |
 | Word ladder demo (student version) | `java -cp out sa2026.problems.incomplete_code.wordladder.WordLadderDemo` | `.\run.bat sa2026.problems.incomplete_code.wordladder.WordLadderDemo` |
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.BFSDemo` |
 | Check your DFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.DFSDemo` |
+| Check your UCS (student version) | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.UCSDemo` |
 
 In Git Bash, Linux or macOS, write `./run.sh` instead of `.\run.bat`.
 
@@ -124,14 +126,18 @@ cpp/
     │   ├── DFSCycleCheck.h, .cpp       DFSCycleCheck.java
     │   ├── DepthLimitedDFS.h, .cpp     DepthLimitedDFS.java
     │   ├── IterativeDeepening.h, .cpp  IterativeDeepening.java
+    │   ├── UCS.h, UCS.cpp              UCS.java
     │   └── incomplete_code/            the student versions: write the body of search()
     │       ├── BFS, BFSOptimized (.h + .cpp)
     │       ├── BFSDemo.cpp             checks your BFS with the finished one (BFSDemo.java)
     │       ├── DFS, DFSCycleCheck, DepthLimitedDFS, IterativeDeepening (.h + .cpp)
-    │       └── DFSDemo.cpp             checks your DFS versions with the finished ones (DFSDemo.java)
+    │       ├── DFSDemo.cpp             checks your DFS versions with the finished ones (DFSDemo.java)
+    │       ├── UCS (.h + .cpp)
+    │       └── UCSDemo.cpp             checks your UCS with the finished one (UCSDemo.java)
     └── problems/
         ├── maze/                       Maze, MazeState, MazeAction, MazeProblem (.h + .cpp), MazeDemo.cpp
         ├── wordladder/                 WordDictionary, WordLadderState, ChangeLetterAction, ... , WordLadderDemo.cpp
+        ├── citymap/                    CityMap, CityState, DriveAction, CityMapProblem (.h + .cpp), CityMapDemo.cpp
         └── incomplete_code/            the student versions, with the same TODO steps as Java
             ├── maze/
             └── wordladder/
@@ -162,6 +168,7 @@ C++ has no single naming style, so we kept the Java names.
 | `HashSet<State>` | `core::StateSet` | a hash set of states, see `core/State.h` |
 | `Queue<Node>` / `LinkedList` | `std::queue<NodePtr>` | `push()` adds at the end, `front()` reads the first, `pop()` removes it |
 | `Deque<Node>` / `ArrayDeque` used as a stack | `std::stack<NodePtr>` | `push()` puts on the top, `top()` reads the top, `pop()` removes it |
+| `PriorityQueue<Node>` | `std::priority_queue<NodePtr, std::vector<NodePtr>, CheaperFirst>` | `top()` is the BIGGEST item, so the rule `CheaperFirst` (in `UCS.h`) is turned around |
 | `System.out.printf(...)` | `std::printf(...)` | the same `%d`, `%s` codes |
 | `(MazeState) s` | `dynamic_cast<const MazeState&>(*s)` | |
 | `o instanceof MazeState` | `dynamic_cast<const MazeState*>(&o) != nullptr` | |
@@ -180,6 +187,7 @@ The HTML lesson pages show the Java code:
 [Word ladder](../src/sa2026/problems/description/wordladder.html),
 [BFS](../src/sa2026/algorithms/description/bfs.html),
 [DFS](../src/sa2026/algorithms/description/dfs.html),
+[UCS](../src/sa2026/algorithms/description/ucs.html),
 [N-puzzle](../src/sa2026/problems/description/npuzzle.html).
 
 The ideas are the same in C++. Use the table above to find the C++ way.
