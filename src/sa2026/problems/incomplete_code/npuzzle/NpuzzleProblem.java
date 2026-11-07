@@ -46,7 +46,7 @@ public class NpuzzleProblem extends Problem {
         //         The order of this list is the order the algorithms try the actions.
     }
 
-    // the three tests from the 2025 code
+    // the three tests: easy, medium, hard
     public static NpuzzleProblem easy() {
         return new NpuzzleProblem(1, 2, 3, 4, 0, 5, 7, 8, 6);   // 2 moves
     }

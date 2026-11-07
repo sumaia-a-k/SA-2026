@@ -10,7 +10,7 @@ class MoveEmptyAction(IAction):
 
     Like MazeAction: one class, and four objects with different directions (see NpuzzleProblem):
       up = MoveEmptyAction("Move empty up", -1, 0)
-    (The 2025 code had four classes, MoveEmptyTileUp, ..., with almost the same code.)
+    (Better than four classes, MoveEmptyUp, ..., with almost the same code.)
     """
 
     def __init__(self, name: str, row_change: int, col_change: int):

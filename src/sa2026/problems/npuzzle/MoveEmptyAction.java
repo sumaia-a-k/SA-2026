@@ -13,7 +13,7 @@ import sa2026.core.State;
  *
  * Like MazeAction: one class, and four objects with different directions (see NpuzzleProblem):
  *   IAction up = new MoveEmptyAction("Move empty up", -1, 0);
- * (The 2025 code had four classes, MoveEmptyTileUp, ..., with almost the same code.)
+ * (Better than four classes, MoveEmptyUp, ..., with almost the same code.)
  */
 public class MoveEmptyAction implements IAction {
 

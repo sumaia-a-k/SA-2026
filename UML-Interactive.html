@@ -260,8 +260,8 @@ const ALGS = [
     complete:'No', optimal:'No: it can get stuck on a local peak', usesH:'Yes, to compare neighbours', memory:'Very low: O(1)',
     lead:'Hill climbing is a local search. It keeps only one state and always moves to a better neighbour. It stops when no neighbour is better.',
     analogy:'Like climbing a mountain in fog: you always step uphill, but you may stop on a small hill, not the highest peak.',
-    code:'// Idea (not in the 2025 code yet)\nState current = p.getInitialState();\nwhile (true) {\n    State best = bestNeighbour(current);\n    if (h(best) >= h(current)) return current;  // no better neighbour\n    current = best;\n}',
-    note:'This class was in the old diagram, but it is not in the 2025 code yet. It is a good candidate for 2026.' },
+    code:'// Idea (not in our code yet)\nState current = p.getInitialState();\nwhile (true) {\n    State best = bestNeighbour(current);\n    if (h(best) >= h(current)) return current;  // no better neighbour\n    current = best;\n}',
+    note:'This class is not in our code yet. We plan to add it later in the course.' },
 ];
 ALGS.forEach((a, i) => { a.x = 38 + i * 148; a.y = 610; a.w = 136; a.h = 58; });
 
