@@ -8,9 +8,12 @@
 #include "sa2026/algorithms/DFSCycleCheck.h"
 #include "sa2026/algorithms/DepthLimitedDFS.h"
 #include "sa2026/algorithms/IterativeDeepening.h"
+#include "sa2026/algorithms/UCS.h"
 #include "sa2026/core/Node.h"
 #include "sa2026/core/Problem.h"
 #include "sa2026/core/SearchAlgorithm.h"
+#include "sa2026/problems/citymap/CityMap.h"
+#include "sa2026/problems/citymap/CityMapProblem.h"
 #include "sa2026/problems/maze/Maze.h"
 #include "sa2026/problems/maze/MazeProblem.h"
 
@@ -21,9 +24,12 @@ using sa2026::algorithms::DepthLimitedDFS;
 using sa2026::algorithms::DFS;
 using sa2026::algorithms::DFSCycleCheck;
 using sa2026::algorithms::IterativeDeepening;
+using sa2026::algorithms::UCS;
 using sa2026::core::NodePtr;
 using sa2026::core::Problem;
 using sa2026::core::SearchAlgorithm;
+using sa2026::problems::citymap::CityMap;
+using sa2026::problems::citymap::CityMapProblem;
 using sa2026::problems::maze::Maze;
 using sa2026::problems::maze::MazePtr;
 using sa2026::problems::maze::MazeProblem;
@@ -31,6 +37,7 @@ using sa2026::problems::maze::MazeProblem;
 /*
  * The start point of the program.
  * We solve the maze with BFS, then we compare the BFS versions and the DFS versions.
+ * At the end we compare BFS and UCS on a city map where the roads have different lengths.
  *
  * How to run (inside the SA-2026/cpp folder):
  *   .\run.bat   (Windows)   or   ./run.sh   (Git Bash, macOS, Linux)
@@ -43,6 +50,15 @@ static void compare(const std::string& name, SearchAlgorithm& algorithm, const P
     int steps = (goal == nullptr) ? -1 : goal->getDepth();
     // std::printf works like System.out.printf in Java. c_str() gives the text in the old C form.
     std::printf("%-24s %5d %9d %10d\n", name.c_str(), steps,
+                algorithm.getNodesActuallyExpanded(), algorithm.getGeneratedNodes());
+}
+
+// the same as compare(), with the path cost too (%6.1f = a number with 1 digit after the point)
+static void compareCost(const std::string& name, SearchAlgorithm& algorithm, const Problem& problem) {
+    NodePtr goal = problem.solve(algorithm);
+    int steps = (goal == nullptr) ? -1 : goal->getDepth();
+    double cost = (goal == nullptr) ? -1 : goal->getPathCost();
+    std::printf("%-24s %5d %6.1f %9d %10d\n", name.c_str(), steps, cost,
                 algorithm.getNodesActuallyExpanded(), algorithm.getGeneratedNodes());
 }
 
@@ -85,5 +101,20 @@ int main() {
     compare("DLS, limit 10", dls10, problem);
     compare("DLS, limit 9", dls9, problem);
     compare("IDS", ids, problem);
+
+    // 4. a city map: the roads have different lengths, so fewer steps is not always cheaper
+    std::cout << "\n=== City map S -> G: BFS vs UCS ===" << std::endl;
+    CityMapProblem cityMap("S", "G", CityMap::example());
+    std::cout << "Version                  Steps   Cost  Expanded  Generated" << std::endl;
+    BFS bfsOnMap(true);
+    UCS ucsGraph(true);
+    UCS ucsTree(false);
+    compareCost("BFS, graph search", bfsOnMap, cityMap);
+    compareCost("UCS, graph search", ucsGraph, cityMap);
+    compareCost("UCS, tree search", ucsTree, cityMap);
+
+    std::cout << "\n=== UCS, graph search: the path ===" << std::endl;
+    UCS ucs(true);
+    ucs.printSolution(cityMap.solve(ucs));
     return 0;
 }
