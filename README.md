@@ -109,8 +109,10 @@ search for `TODO` in the files and follow the steps. The same tasks are in the P
 | `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `BFS` and `BFSOptimized`. Everything else is ready. | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` |
 | `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `DFS`, `DFSCycleCheck`, `DepthLimitedDFS` and `IterativeDeepening` (and `isOnPath()`). | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` |
 | `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `UCS`. | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` |
+| `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `Greedy`. | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` |
+| `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `AStar`. | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` |
 
-`BFSDemo` runs your BFS and the finished BFS on the same problems. `DFSDemo` does the same for the DFS versions, and `UCSDemo` for UCS.
+`BFSDemo` runs your BFS and the finished BFS on the same problems. `DFSDemo` does the same for the DFS versions, `UCSDemo` for UCS, `GreedyDemo` for Greedy and `AStarDemo` for A*.
 For each check it prints `OK`, or `NOT YET` with what is still different (for example `generated nodes = 49, it should be 50`).
 If it does not stop, your search never ends: stop it with `Ctrl+C` and look at your loop.
 
