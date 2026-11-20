@@ -3,6 +3,7 @@ package sa2026.problems.maze;
 import java.util.ArrayList;
 import java.util.List;
 
+import sa2026.core.HeuristicFunction;
 import sa2026.core.IAction;
 import sa2026.core.Problem;
 import sa2026.core.State;
@@ -14,13 +15,13 @@ import sa2026.core.State;
  * Goal:          the player is on 'G'.
  * Actions:       move up, down, left, right (one cell, not into a wall).
  * Cost:          every move costs 1.
- *
- * There is no heuristic yet. We add it in a later session.
+ * Heuristic:     the Manhattan distance to the goal (see ManhattanDistance).
  */
 public class MazeProblem extends Problem {
 
     private final State initialState;
     private final List<IAction> actions = new ArrayList<>();
+    private final HeuristicFunction heuristic = new ManhattanDistance();
 
     public MazeProblem(Maze maze) {
         MazeState.setMaze(maze); // all states share this one maze
@@ -52,5 +53,11 @@ public class MazeProblem extends Problem {
     @Override
     public double getActionCost(State s, IAction a, State next) {
         return 1;
+    }
+
+    // used by Greedy and A*
+    @Override
+    public HeuristicFunction getHeuristicFunction() {
+        return heuristic;
     }
 }
