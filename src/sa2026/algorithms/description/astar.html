@@ -356,7 +356,7 @@ a { color: var(--accent); }
             <tr><td><b>consistent</b><br><span class="muted">(so also admissible)</span></td>
               <td>complete <span class="yes">✓</span><br>optimal <span class="yes">✓</span></td>
               <td>complete <span class="yes">✓</span><br>optimal <span class="yes">✓</span></td></tr>
-            <tr><td><b>admissible</b>, not consistent<br><span class="muted">(the small map)</span></td>
+            <tr><td><b>admissible</b>, not consistent<br><span class="muted">(the small map, see step 5)</span></td>
               <td>complete <span class="yes">✓</span><br>optimal <span class="yes">✓</span></td>
               <td>complete <span class="yes">✓</span><br>optimal <span class="no">✗ maybe not</span></td></tr>
             <tr><td><b>not admissible</b><br><span class="muted">(too big at A)</span></td>
@@ -427,6 +427,60 @@ a { color: var(--accent); }
               <div class="okbox ans hidden" id="q3"><b id="q3txt"></b></div></li>
           </ol>
           <p class="muted">You finished the 3 lessons. Now go back to the table "Why do we care?" in <a href="heuristics.html">heuristics.html</a> (step 4). Does it make sense now?</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================= 5. Admissible is not enough ================= -->
+  <section data-tab="4" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Admissible is not enough for graph search</h2>
+        <p class="lead">Step 4 says: with graph search, an admissible h that is <b>not consistent</b> may give a path that is
+          <b>not the cheapest</b>. Here is a small example.</p>
+        <svg id="trapSvg" class="board" aria-label="The small map: S, B, A, G"></svg>
+        <p class="muted" style="text-align:center">Under each city: <b>h | h*</b> (the guess | the real cost to G)</p>
+        <div class="tablewrap">
+          <table>
+            <tr><th>Test</th><th>Result</th><th>Why</th></tr>
+            <tr><td>Admissible?</td><td class="yes">Yes</td><td>every h ≤ h*: 4 ≤ 7, 5 ≤ 6, 0 ≤ 5, 0 ≤ 0</td></tr>
+            <tr class="badrow"><td>Consistent?</td><td class="no">No</td><td>from B to A the road is 1 km, but the guess drops from 5 to 0</td></tr>
+          </table>
+        </div>
+        <div class="okbox"><b>The cheapest path:</b> S → B → A → G = 1 + 1 + 5 = <b>7 km</b>.</div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>A* graph search, step by step</h2>
+          <p>The small number is <b>f = g + h</b>. The frontier is written smallest f first.</p>
+          <div class="tablewrap"><table id="trapGraph"></table></div>
+          <div class="badbox"><b>Result: S → A → G = 9 km.</b> Not the cheapest (7 km)!</div>
+          <h3>What went wrong?</h3>
+          <ol>
+            <li>A* takes A first by the <b>long</b> road S → A (g = 4). A is now <b>explored</b>.</li>
+            <li>Later it finds A by the <b>short</b> road S → B → A (g = 2).</li>
+            <li>But A is explored, so graph search <b>skips</b> this cheap copy (the red row). The cheap way to A is lost.</li>
+          </ol>
+          <div class="note"><b>Why did the cheap copy come too late?</b> Look at f on the path S → B → A: 4 → 6 → <b>2</b>.
+            f goes <b>down</b>, because the guess drops by 5 on a road of 1 km.
+            With a consistent h, f never goes down on a path, so the cheapest copy of a city always comes out of the queue first.</div>
+        </div>
+        <div class="card">
+          <h2>And tree search?</h2>
+          <p>Tree search does not skip anything. It expands A <b>again</b> with g = 2, and finds S → B → A → G = <b>7 km</b>. <span class="yes">Optimal.</span>
+            That is why tree search needs only an <b>admissible</b> h.</p>
+          <button data-show="trapTreeWrap" data-label="Show the tree search trace">Show the tree search trace</button>
+          <div class="tablewrap hidden" id="trapTreeWrap"><table id="trapTree"></table></div>
+          <h3>How to fix graph search</h3>
+          <ul>
+            <li>use a <b>consistent</b> heuristic (the best fix), or</li>
+            <li>use tree search (but it can expand the same city many times), or</li>
+            <li>"re-open": when a cheaper path to an explored city is found, put it back in the queue (our code does not do this).</li>
+          </ul>
+          <p class="muted">Try it yourself: step 2, "small map", graph search and then tree search.</p>
         </div>
       </div>
     </div>
@@ -908,10 +962,25 @@ const TW = runToEnd(cityMap(twice), { algo: 'astar', graph: true });
 $('#q3txt').parentNode.innerHTML = `h(A) = 16, but h*(A) = 8, so it is <b>not admissible</b>. A* expands only ${TW.expanded} cities `
   + `(GPS guess: ${RUNS.astar.expanded}), but it returns ${pathOf(TW.found)}: <b>${TW.found.g} km</b>, not 18. Faster, but not the cheapest.`;
 
+/* ================= 5. admissible is not enough ================= */
+(function drawTrap() {
+  const m = smallMap();
+  drawMap($('#trapSvg'), m, {
+    edge: (a, b) => edgeKey(a, b) === 'AB' ? 'e-bad' : 'e',
+    under: s => [`${m.h[s]} | ${m.hStar[s]}`, 'both'],
+  });
+  $('#trapGraph').innerHTML = traceTable(runToEnd(m, { algo: 'astar', graph: true }));
+  $('#trapTree').innerHTML = traceTable(runToEnd(smallMap(), { algo: 'astar', graph: false }));
+  // mark the row where the cheap copy of A is skipped
+  $$('#trapGraph tr').forEach(tr => {
+    if (tr.textContent.includes('skip') && tr.cells[1] && tr.cells[1].textContent.startsWith('A')) tr.classList.add('badrow');
+  });
+})();
+
 /* ================= start ================= */
 drawIdea('none');
 restart();
-setupTabs(['The idea', 'Watch it run', 'Pseudo code', 'Is A* good?'], 'astar-tab', t => { if (t !== RUN_TAB) stopPlay(); });
+setupTabs(['The idea', 'Watch it run', 'Pseudo code', 'Is A* good?', 'Admissible is not enough'], 'astar-tab', t => { if (t !== RUN_TAB) stopPlay(); });
 </script>
 </body>
 </html>
