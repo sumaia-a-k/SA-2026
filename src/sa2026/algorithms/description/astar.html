@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A* Step by Step</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --q:#3b5bdb; --q-bg:#e8edfd;           /* in the frontier */
+  --ex:#7b8494; --ex-bg:#e3e7ee;         /* expanded */
+  --cur:#d9480f; --cur-bg:#fff0e6;       /* current node */
+  --goal:#2b8a3e; --goal-bg:#dcf3e2;     /* goal and final path */
+  --ok:#2b8a3e; --bad:#e03131; --bad-bg:#ffe3e3; --warn:#d9480f; --warn-bg:#fff0e6;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --num:#c2410c; --str:#2b8a3e;
+  --new-bg:#fff3bf;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+    --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+    --new-bg:#4a3f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+  --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+  --new-bg:#4a3f10;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 24px 32px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 22px; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 14px; }
+.steps button { border-radius: 99px; padding: 5px 12px 5px 6px; display: inline-flex; align-items: center; gap: 7px; }
+.steps button .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--accent-bg); color: var(--accent);
+}
+.steps button.on .n { background: var(--surface); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.stack > * + * { margin-top: 18px; }
+h2 { margin: 0 0 8px; font-size: 24px; }
+h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+h3:first-child { margin-top: 0; }
+h3 .side { text-transform: none; letter-spacing: 0; font-weight: 400; }
+p { margin: 6px 0; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note b:first-child { color: var(--warn); }
+.okbox { background: var(--goal-bg); border-left: 4px solid var(--goal); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.badbox { background: var(--bad-bg); border-left: 4px solid var(--bad); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.kw { color: var(--kw); font-weight: 600; } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); } .str { color: var(--str); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+.navrow { display: flex; justify-content: space-between; margin-top: 18px; }
+td code { font-size: 12.5px; }
+
+/* pseudo code */
+.pseudo { padding: 8px 0; }
+.pseudo .ln { display: block; padding: 1px 14px 1px 10px; border-left: 4px solid transparent; white-space: pre; }
+.pseudo .ln.hl { background: var(--new-bg); border-left-color: var(--warn); }
+.pseudo .ln.off { opacity: .4; }
+.pseudo .ln.new { box-shadow: inset 3px 0 0 var(--goal); }
+.pseudo .ln.chg { background: var(--goal-bg); }
+.pseudo .star { color: var(--goal); font-weight: 700; }
+.diff .add { display: block; background: var(--goal-bg); margin: 0 -14px; padding: 0 14px; }
+.diff .del { display: block; background: var(--bad-bg); margin: 0 -14px; padding: 0 14px; text-decoration: line-through; opacity: .75; }
+
+/* run tab */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; margin-bottom: 18px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font-size: 13px; color: var(--muted); }
+#speed { width: 90px; vertical-align: middle; }
+svg { display: block; width: 100%; height: auto; user-select: none; }
+.board { max-height: 440px; }
+.hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 2px solid; }
+.msg { font-size: 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-height: 72px; }
+.msg .stepno { font-size: 12px; color: var(--muted); display: block; }
+.qstrip { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 34px; }
+.qstrip .end { font-size: 12px; color: var(--muted); }
+.chip { display: inline-flex; align-items: baseline; gap: 1px; padding: 3px 8px; border-radius: 7px; font: 13px ui-monospace, Consolas, monospace;
+  border: 1.5px solid var(--line); background: var(--surface); }
+.chip sub { font-size: 10px; color: var(--muted); }
+.chip.q { background: var(--q-bg); border-color: var(--q); }
+.chip.new { background: var(--new-bg); border-color: var(--warn); }
+.chip.ex { background: var(--ex-bg); border-color: var(--ex); }
+.chip.top { box-shadow: 0 0 0 2px var(--cur); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.stat { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+#log { margin: 4px 0 0; padding-left: 0; list-style: none; font-size: 13px; color: var(--muted); max-height: 170px; overflow: auto; }
+#log li { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+#log li b { color: var(--ink); }
+
+/* drawing */
+.e { stroke: var(--line); stroke-width: 3; }
+.e-cur { stroke: var(--cur); stroke-width: 5; }
+.e-path { stroke: var(--goal); stroke-width: 7; }
+.e-bfs { stroke: var(--bad); stroke-width: 5; stroke-dasharray: 9 6; }
+.wbox { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.wtxt { font-size: 12px; font-weight: 700; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.nd { stroke-width: 3; }
+.st-new { fill: var(--surface); stroke: var(--line); }
+.st-q { fill: var(--q-bg); stroke: var(--q); }
+.st-ex { fill: var(--ex-bg); stroke: var(--ex); }
+.st-cur { fill: var(--cur-bg); stroke: var(--cur); stroke-width: 4; }
+.st-path { fill: var(--goal-bg); stroke: var(--goal); stroke-width: 4; }
+.st-just { fill: var(--new-bg); stroke: var(--warn); }
+.st-skip { fill: var(--surface); stroke: var(--bad); stroke-dasharray: 3 3; }
+.st-bad { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 4; }
+.goalring { fill: none; stroke: var(--goal); stroke-width: 2; }
+.nlbl { font-weight: 700; font-size: 16px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.glbl { font-size: 12px; font-weight: 700; fill: var(--accent); text-anchor: middle; }
+.glbl.ex { fill: var(--muted); }
+.badge { fill: var(--q); }
+.badgetxt { fill: var(--surface); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.clickable { cursor: pointer; }
+
+/* idea tab */
+.pq { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 44px; padding: 8px 10px;
+  border: 2px dashed var(--line); border-radius: 12px; margin: 8px 0; }
+.pq .chip { font-size: 15px; padding: 5px 10px; }
+.slider { display: flex; gap: 10px; align-items: center; margin: 4px 0; }
+.slider input { flex: 1; max-width: 300px; }
+.slider b { min-width: 28px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding: 14px 16px 28px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { padding: 14px 16px; }
+}
+
+
+/* informed search */
+.hlbl { font-size: 12px; font-weight: 700; fill: var(--warn); text-anchor: middle; dominant-baseline: central;
+  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.hlbl.real { fill: var(--goal); }
+.hlbl.bad { fill: var(--bad); }
+.hlbl.both { fill: var(--ink); }
+.e-bad { stroke: var(--bad); stroke-width: 5; stroke-dasharray: 9 6; }
+.hval { color: var(--warn); font-weight: 700; }
+.fval { color: var(--accent); font-weight: 700; }
+.gval { color: var(--goal); font-weight: 700; }
+.formula { font-size: 20px; text-align: center; margin: 12px 0; font-weight: 700; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 13px; font-weight: 700; }
+.tag.yes { background: var(--goal-bg); } .tag.no { background: var(--bad-bg); }
+tr.badrow td { background: var(--bad-bg); }
+.ans { margin-top: 6px; }
+ol.tasks > li { margin-bottom: 12px; }
+a { color: var(--accent); }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>A* Search</h1>
+      <p>Intelligent Search Algorithms · Latakia University · Lesson 3 of 3: Heuristics → Greedy → <b>A*</b></p>
+    </div>
+    <button id="themeBtn">Dark / Light</button>
+  </header>
+
+  <nav class="steps" id="tabs"></nav>
+
+  <!-- ================= 1. The idea ================= -->
+  <section data-tab="0">
+    <div class="grid">
+      <div class="card">
+        <h2>The idea</h2>
+        <p class="lead">UCS uses only the <b>cost so far</b> (g). Greedy uses only the <b>guess</b> (h).
+          A* uses <b>both</b>.</p>
+        <div class="formula">f(n) = <span class="gval">g(n)</span> + <span class="hval">h(n)</span></div>
+        <table>
+          <tr><td><b class="gval">g(n)</b></td><td>the real cost from the start to n (we already paid it)</td></tr>
+          <tr><td><b class="hval">h(n)</b></td><td>a guess of the cost from n to the goal</td></tr>
+          <tr><td><b class="fval">f(n)</b></td><td>a guess of the cost of the <b>whole trip</b> from S to G that goes through n</td></tr>
+        </table>
+        <div class="box"><b>A* in one sentence:</b> always expand the node with the smallest <b>f = g + h</b>:
+          the node that is on the cheapest-looking <b>whole</b> trip.</div>
+        <p><b>Real life:</b> "I already drove 10 km (g). The GPS says about 8 km are left (h).
+          So this trip is about <b>18 km</b> (f)."</p>
+        <p class="muted">Not sure about admissible and consistent?
+          Read lesson 1 again: <a href="heuristics.html">heuristics.html</a>. This lesson needs them a lot.</p>
+
+        <h3>The first choice, at S</h3>
+        <div class="tablewrap">
+          <table>
+            <tr><th>Child</th><th class="r">g</th><th class="r">h</th><th class="r">f = g + h</th></tr>
+            <tr><td><b>A</b></td><td class="r">10</td><td class="r">8</td><td class="r">18</td></tr>
+            <tr><td><b>B</b></td><td class="r">12</td><td class="r">4</td><td class="r">16</td></tr>
+            <tr><td colspan="4">UCS takes <b>A</b> (g 10 &lt; 12) · Greedy takes <b>B</b> (h 4 &lt; 8) · A* takes <b>B</b> (f 16 &lt; 18)</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>The city map. Orange = the guess h to G (km)</h3>
+        <div class="grp" style="margin-bottom:8px">
+          <button data-idea="none" class="on">Only the map</button>
+          <button data-idea="ucs">UCS</button>
+          <button data-idea="greedy">Greedy</button>
+          <button data-idea="astar">A*</button>
+        </div>
+        <svg id="ideaSvg" class="board" aria-label="The city map with the guesses"></svg>
+        <p id="ideaText"></p>
+        <div class="tablewrap"><table id="ideaTable"></table></div>
+        <p class="muted">A* finds the same cheapest path as UCS, but it expands fewer cities, because the guess pulls it toward G.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. Watch it run ================= -->
+  <section data-tab="1" class="hidden">
+    <div class="card toolbar">
+      <div class="grp"><span class="lbl">Map</span>
+        <button data-map="city" class="on">city map</button>
+        <button data-map="small">small map</button>
+      </div>
+      <div class="grp"><span class="lbl">Guess</span>
+        <button data-h="gps" class="on">GPS guess</button>
+        <button data-h="zero">h = 0</button>
+        <button data-h="perfect">perfect h*</button>
+        <button data-h="big">too big at A</button>
+      </div>
+      <div class="grp"><span class="lbl">Version</span>
+        <button data-mode="graph" class="on">graph search</button>
+        <button data-mode="tree">tree search</button>
+      </div>
+      <div class="grp">
+        <button id="bReset" title="Start again">⏮ Reset</button>
+        <button id="bBack" title="Left arrow">◀ Back</button>
+        <button id="bStep" class="on" title="Right arrow">Step ▶</button>
+        <button id="bPlay">Play</button>
+        <button id="bEnd">Finish ⏭</button>
+        <label class="lbl">Speed <input type="range" id="speed" min="1" max="10" value="2"></label>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <svg id="board" class="board" aria-label="Search board"></svg>
+        <div class="legend">
+          <span><i style="background:var(--surface);border-color:var(--line)"></i>not seen yet</span>
+          <span><i style="background:var(--q-bg);border-color:var(--q)"></i>in the frontier</span>
+          <span><i style="background:var(--new-bg);border-color:var(--warn)"></i>just added</span>
+          <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>current node</span>
+          <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>expanded</span>
+          <span><i style="background:var(--goal-bg);border-color:var(--goal)"></i>solution path</span>
+          <span><i style="background:var(--surface);border-color:var(--bad);border-style:dashed"></i>skipped copy</span>
+        </div>
+        <p class="muted" style="margin-top:10px" id="boardNote"></p>
+      </div>
+
+      <div class="card">
+        <div class="msg" id="msg"></div>
+        <h3 id="frontTitle">Frontier</h3>
+        <div class="qstrip" id="frontStrip"></div>
+        <h3 id="seenTitle">Explored</h3>
+        <div class="qstrip" id="seen"></div>
+        <div class="stats" id="stats"></div>
+        <h3>Pseudo code <span class="side muted" id="codeNote"></span></h3>
+        <pre class="pseudo" id="code"></pre>
+        <h3>History</h3>
+        <ol id="log"></ol>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ================= 3. Pseudo code ================= -->
+  <section data-tab="2" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Pseudo code</h2>
+        <p>It is the UCS code again. Only the <b>green</b> lines change: the queue sorts by <b>f = g + h</b>.</p>
+        <pre class="pseudo" id="stdCode"></pre>
+        <h3>Line by line</h3>
+        <table>
+          <tr><td><b>removeBest()</b></td><td>Take the node with the <b>smallest f</b> (the first one in the priority queue).</td></tr>
+          <tr><td><b>isGoal</b></td><td>Test the node when we <b>take it out</b>, like UCS. A goal in the queue may still have a cheaper path.</td></tr>
+          <tr><td><b>child.f</b></td><td>g of the child (real) + h of the child (guess).</td></tr>
+        </table>
+        <div class="box"><b>Two special cases:</b> h = 0 → f = g → A* <b>is</b> UCS.
+          Only h (no g) → it is Greedy.</div>
+      </div>
+
+      <div class="card">
+        <h2>Trace by hand</h2>
+        <p>The city map, the <b>GPS guess</b>, <b>graph search</b>. The small number is <b>f</b>. The frontier is written smallest f first.</p>
+        <div class="tablewrap"><table id="traceA"></table></div>
+        <p class="muted" style="margin-top:12px">Your turn: the <b>small map</b> (step 2): roads S–A 4, S–B 1, B–A 1, A–G 5;
+          guess h(S) = 4, h(B) = 5, h(A) = 0, h(G) = 0. Run A* <b>graph search</b>. Is the answer the cheapest?
+          Then run <b>tree search</b>. Then check.</p>
+        <button data-show="traceBWrap" data-label="Show the traces">Show the traces</button>
+        <div class="hidden" id="traceBWrap">
+          <h3>Graph search</h3>
+          <div class="tablewrap"><table id="traceB"></table></div>
+          <h3>Tree search</h3>
+          <div class="tablewrap"><table id="traceC"></table></div>
+          <div class="note"><b>Why?</b> Graph search expands A first by the long road (g = 4). Later it finds A by the short road S → B → A (g = 2),
+            but A is already explored, so this copy is <b>skipped</b>. The guess is admissible, but not consistent.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4. Is A* good? ================= -->
+  <section data-tab="3" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Is A* good?</h2>
+        <p>The answer <b>depends on the guess h</b> and on <b>tree or graph search</b>.</p>
+        <div class="tablewrap">
+          <table>
+            <tr><th>The guess h is…</th><th>Tree search</th><th>Graph search</th></tr>
+            <tr><td><b>consistent</b><br><span class="muted">(so also admissible)</span></td>
+              <td>complete <span class="yes">✓</span><br>optimal <span class="yes">✓</span></td>
+              <td>complete <span class="yes">✓</span><br>optimal <span class="yes">✓</span></td></tr>
+            <tr><td><b>admissible</b>, not consistent<br><span class="muted">(the small map, see step 5)</span></td>
+              <td>complete <span class="yes">✓</span><br>optimal <span class="yes">✓</span></td>
+              <td>complete <span class="yes">✓</span><br>optimal <span class="no">✗ maybe not</span></td></tr>
+            <tr><td><b>not admissible</b><br><span class="muted">(too big at A)</span></td>
+              <td>complete <span class="yes">✓</span><br>optimal <span class="no">✗ maybe not</span></td>
+              <td>complete <span class="yes">✓</span><br>optimal <span class="no">✗ maybe not</span></td></tr>
+          </table>
+        </div>
+        <p class="muted">Complete: always yes, if b is finite and every cost ≥ ε &gt; 0 (like UCS).</p>
+        <div class="box"><b>Remember:</b> tree search needs an <b>admissible</b> h. Graph search needs a <b>consistent</b> h.<br>
+          Consistent ⇒ admissible, so a consistent h is good for both.</div>
+        <div class="note"><b>A common mistake:</b> "tree search needs consistent, graph search needs admissible". <b>No!</b>
+          It is the other way. Graph search <b>skips</b> a city that it already expanded. If it came the first time by an expensive road,
+          the cheap road is lost. Only the <b>stronger</b> test (consistent) makes sure the first time is the cheapest time.
+          Tree search never skips, so admissible is enough.</div>
+        <p class="muted">Some books use a graph search that puts an explored city back in the queue when a cheaper path to it is found
+          ("re-opening"). With re-opening, admissible is enough. Our code does not re-open.</p>
+        <h3>Time and space</h3>
+        <p>Worst case: exponential, like UCS: O(b<sup>d</sup>). A* keeps <b>all</b> nodes in memory,
+          so memory is its biggest problem. A better h means fewer nodes:</p>
+        <div class="tablewrap"><table id="hTable"></table></div>
+        <p class="muted">If h<sub>2</sub>(n) ≥ h<sub>1</sub>(n) for every n, and both are admissible, h<sub>2</sub> is better: A* expands fewer (or the same) nodes.
+          Example: in the 8-puzzle, Manhattan distance is better than misplaced tiles.</p>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>Why does it work?</h2>
+          <p><b>Admissible:</b> on the cheapest path, f = g + h is never more than the real cost C*.
+            So a node on the cheapest path always comes out of the queue <b>before</b> a goal with a bigger cost.</p>
+          <p><b>Consistent:</b> along any path, f <b>never goes down</b>. On our cheapest path:</p>
+          <div class="qstrip"><span class="chip q">S<sub>0+14=14</sub></span>→<span class="chip q">A<sub>10+8=18</sub></span>→<span class="chip q">C<sub>15+3=18</sub></span>→<span class="chip q">F<sub>17+1=18</sub></span>→<span class="chip q">G<sub>18+0=18</sub></span></div>
+          <p>So A* takes nodes in order of f, and the <b>first</b> time it takes a city, it came by the cheapest path.
+            That is why graph search can skip the next copies safely.</p>
+          <p class="muted">Why f never goes down: f(child) = g + c + h(child) ≥ g + h(node) = f(node), because consistent means h(node) ≤ c + h(child).</p>
+        </div>
+        <div class="card">
+          <h2>What if h is too big?</h2>
+          <p>Guess "too big at A": h(A) = 15, but the real cost is 8. A* thinks the trip through A costs 10 + 15 = 25.
+            The path through B and E costs 21 &lt; 25, so A* returns it. <span class="no">21 km, not 18.</span></p>
+          <p>Try it in step 2.</p>
+        </div>
+        <div class="card">
+          <h2>All the informed searches</h2>
+          <div class="tablewrap">
+            <table>
+              <tr><th></th><th>UCS</th><th>Greedy</th><th>A*</th></tr>
+              <tr><td>Sort by</td><td>g</td><td>h</td><td>g + h</td></tr>
+              <tr><td>Complete?</td><td class="yes">Yes¹</td><td class="no">graph search only²</td><td class="yes">Yes¹</td></tr>
+              <tr><td>Optimal?</td><td class="yes">Yes¹</td><td class="no">No</td><td class="yes">Yes³</td></tr>
+              <tr><td>Speed</td><td>slow (no guess)</td><td>often fast</td><td>fast with a good h</td></tr>
+            </table>
+          </div>
+          <p class="muted">¹ b finite, every cost ≥ ε &gt; 0. ² finite number of states. ³ tree search: h admissible; graph search: h consistent.</p>
+          <p class="muted">UCS is not informed, but we put it here to compare: it is A* with h = 0.</p>
+        </div>
+        <div class="card">
+          <h2>Check yourself</h2>
+          <ol class="tasks">
+            <li>h = 0 for every city. Which algorithm is A* now?
+              <br><button data-show="q1">Show the answer</button>
+              <div class="okbox ans hidden" id="q1">f = g + 0 = g, so A* is <b>UCS</b>. Optimal, but no help from a guess.</div></li>
+            <li>Your guess is admissible but not consistent, and you use graph search. Is the answer always the cheapest?
+              <br><button data-show="q2">Show the answer</button>
+              <div class="okbox ans hidden" id="q2">Not always. The small map: graph search returns 9, the cheapest is 7.
+                Use tree search, or a consistent guess.</div></li>
+            <li>What happens if we take the GPS guess and multiply it by 2?
+              <br><button data-show="q3">Show the answer</button>
+              <div class="okbox ans hidden" id="q3"><b id="q3txt"></b></div></li>
+          </ol>
+          <p class="muted">You finished the 3 lessons. Now go back to the table "Why do we care?" in <a href="heuristics.html">heuristics.html</a> (step 4). Does it make sense now?</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================= 5. Admissible is not enough ================= -->
+  <section data-tab="4" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Admissible is not enough for graph search</h2>
+        <p class="lead">Step 4 says: with graph search, an admissible h that is <b>not consistent</b> may give a path that is
+          <b>not the cheapest</b>. Here is a small example.</p>
+        <svg id="trapSvg" class="board" aria-label="The small map: S, B, A, G"></svg>
+        <p class="muted" style="text-align:center">Under each city: <b>h | h*</b> (the guess | the real cost to G)</p>
+        <div class="tablewrap">
+          <table>
+            <tr><th>Test</th><th>Result</th><th>Why</th></tr>
+            <tr><td>Admissible?</td><td class="yes">Yes</td><td>every h ≤ h*: 4 ≤ 7, 5 ≤ 6, 0 ≤ 5, 0 ≤ 0</td></tr>
+            <tr class="badrow"><td>Consistent?</td><td class="no">No</td><td>from B to A the road is 1 km, but the guess drops from 5 to 0</td></tr>
+          </table>
+        </div>
+        <div class="okbox"><b>The cheapest path:</b> S → B → A → G = 1 + 1 + 5 = <b>7 km</b>.</div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>A* graph search, step by step</h2>
+          <p>The small number is <b>f = g + h</b>. The frontier is written smallest f first.</p>
+          <div class="tablewrap"><table id="trapGraph"></table></div>
+          <div class="badbox"><b>Result: S → A → G = 9 km.</b> Not the cheapest (7 km)!</div>
+          <h3>What went wrong?</h3>
+          <ol>
+            <li>A* takes A first by the <b>long</b> road S → A (g = 4). A is now <b>explored</b>.</li>
+            <li>Later it finds A by the <b>short</b> road S → B → A (g = 2).</li>
+            <li>But A is explored, so graph search <b>skips</b> this cheap copy (the red row). The cheap way to A is lost.</li>
+          </ol>
+          <div class="note"><b>Why did the cheap copy come too late?</b> Look at f on the path S → B → A: 4 → 6 → <b>2</b>.
+            f goes <b>down</b>, because the guess drops by 5 on a road of 1 km.
+            With a consistent h, f never goes down on a path, so the cheapest copy of a city always comes out of the queue first.</div>
+        </div>
+        <div class="card">
+          <h2>And tree search?</h2>
+          <p>Tree search does not skip anything. It expands A <b>again</b> with g = 2, and finds S → B → A → G = <b>7 km</b>. <span class="yes">Optimal.</span>
+            That is why tree search needs only an <b>admissible</b> h.</p>
+          <button data-show="trapTreeWrap" data-label="Show the tree search trace">Show the tree search trace</button>
+          <div class="tablewrap hidden" id="trapTreeWrap"><table id="trapTree"></table></div>
+          <h3>How to fix graph search</h3>
+          <ul>
+            <li>use a <b>consistent</b> heuristic (the best fix), or</li>
+            <li>use tree search (but it can expand the same city many times), or</li>
+            <li>"re-open": when a cheaper path to an explored city is found, put it back in the queue (our code does not do this).</li>
+          </ul>
+          <p class="muted">Try it yourself: step 2, "small map", graph search and then tree search.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="navrow">
+    <button id="prevBtn">← Back</button>
+    <button id="nextBtn" class="on">Next →</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ================= the maps ================= */
+// The city map is the same as in BFS, DFS and UCS (CityMap.example()). The goal is always G.
+const CITY_POS = { S:[200,36], A:[110,112], B:[290,112], C:[45,192], D:[200,192], E:[355,192], F:[110,266], G:[290,266] };
+const CITY_ROADS = [['S','A',10],['S','B',12],['A','C',5],['A','D',12],['B','D',8],['B','E',4],['C','F',2],['D','G',11],['E','G',5],['F','G',1]];
+const CITY_VIEW = '0 -20 400 346';
+
+// A small map with a guess that is admissible but NOT consistent (look at the road B–A).
+const SMALL_POS = { S:[50,150], B:[170,55], A:[290,150], G:[410,150] };
+const SMALL_ROADS = [['S','A',4],['S','B',1],['A','B',1],['A','G',5]];
+const SMALL_VIEW = '0 10 460 190';
+const SMALL_H = { S:4, A:0, B:5, G:0 };
+
+function makeMap(pos, roads, h, view) {
+  const adj = {};
+  for (const k in pos) adj[k] = {};
+  for (const [a, b, w] of roads) { adj[a][b] = w; adj[b][a] = w; }
+  return { pos, roads, start: 'S', goal: 'G', h, view,
+    hStar: realCost(adj, 'G'),
+    next: s => Object.keys(adj[s]).sort(),  // neighbors in ABC order (like the TreeMap in CityMap.java)
+    cost: (a, b) => adj[a][b] };
+}
+
+// h*(n) = the REAL cheapest cost from n to the goal (Dijkstra, from the goal backwards)
+function realCost(adj, goal) {
+  const d = { [goal]: 0 }, done = new Set();
+  for (;;) {
+    let u = null;
+    for (const k in d) if (!done.has(k) && (u === null || d[k] < d[u])) u = k;
+    if (u === null) return d;
+    done.add(u);
+    for (const v in adj[u]) if (!(v in d) || d[u] + adj[u][v] < d[v]) d[v] = d[u] + adj[u][v];
+  }
+}
+
+// the guesses (h) for the city map, goal G
+const H_CITY = {
+  gps:  { S:14, A:8, B:4, C:3, D:9, E:3, F:1, G:0 },    // admissible and consistent
+  zero: { S:0, A:0, B:0, C:0, D:0, E:0, F:0, G:0 },
+  big:  { S:14, A:15, B:4, C:3, D:9, E:3, F:1, G:0 },   // too big at A: NOT admissible
+  drop: { S:14, A:8, B:4, C:0, D:9, E:3, F:1, G:0 },    // admissible, NOT consistent (road A–C)
+  bad:  { S:9, A:2, B:6, C:1, D:7, E:5, F:6, G:0 },     // a misleading guess (not admissible)
+};
+H_CITY.perfect = makeMap(CITY_POS, CITY_ROADS, H_CITY.zero, CITY_VIEW).hStar;  // h = h*
+const H_NAMES = {
+  gps: 'GPS guess', zero: 'h = 0', big: 'too big at A', drop: 'drops too fast', bad: 'misleading guess', perfect: 'perfect h = h*',
+};
+const cityMap = h => makeMap(CITY_POS, CITY_ROADS, h, CITY_VIEW);
+const smallMap = () => makeMap(SMALL_POS, SMALL_ROADS, SMALL_H, SMALL_VIEW);
+
+/* ================= check a heuristic ================= */
+// admissible: h(n) <= h*(n) for every node
+const overNodes = m => Object.keys(m.pos).filter(s => m.h[s] > m.hStar[s]);
+// consistent: on every road, h can not drop by more than the road cost: |h(a) - h(b)| <= c
+const badRoads = m => m.roads.filter(([a, b, c]) => Math.abs(m.h[a] - m.h[b]) > c);
+
+/* ================= drawing a map ================= */
+const edgeKey = (a, b) => a < b ? a + b : b + a;
+// look: { node: s => class, edge: (a, b) => class, top: s => [text, grey], badge: s => count,
+//         under: s => [text, class] (default: h=...) }
+function drawMap(svg, prob, look = {}) {
+  svg.setAttribute('viewBox', prob.view);
+  const P = prob.pos;
+  let lines = '', weights = '', nodes = '';
+  for (const [a, b, w] of prob.roads) {
+    const cls = (look.edge && look.edge(a, b)) || 'e';
+    lines += `<line class="${cls}" x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}"/>`;
+    const mx = (P[a][0] + P[b][0]) / 2, my = (P[a][1] + P[b][1]) / 2;
+    const bw = String(w).length > 1 ? 24 : 18;
+    weights += `<rect class="wbox" x="${mx - bw / 2}" y="${my - 9}" width="${bw}" height="18" rx="5"/><text class="wtxt" x="${mx}" y="${my}">${w}</text>`;
+  }
+  for (const s in P) {
+    const [x, y] = P[s];
+    const top = look.top ? look.top(s) : null;
+    const k = look.badge ? look.badge(s) : 0;
+    const under = look.under ? look.under(s) : [`h=${prob.h[s]}`, ''];
+    nodes += `<g class="clickable" data-s="${s}">`
+      + `<circle class="nd ${(look.node && look.node(s)) || 'st-new'}" cx="${x}" cy="${y}" r="20"/>`
+      + (s === prob.goal ? `<circle class="goalring" cx="${x}" cy="${y}" r="26"/>` : '')
+      + `<text class="nlbl" x="${x}" y="${y}">${s}</text>`
+      + (top ? `<text class="glbl${top[1] ? ' ex' : ''}" x="${x}" y="${y - 30}">${top[0]}</text>` : '')
+      + (under ? `<text class="hlbl ${under[1]}" x="${x}" y="${y + 37}">${under[0]}</text>` : '')
+      + (k > 1 ? `<circle class="badge" cx="${x + 18}" cy="${y + 18}" r="9"/><text class="badgetxt" x="${x + 18}" y="${y + 18}">×${k}</text>` : '')
+      + `</g>`;
+  }
+  svg.innerHTML = lines + weights + nodes;
+}
+
+/* ================= tabs, theme, answers ================= */
+let tab = 0;
+function setupTabs(names, key, onChange) {
+  $('#tabs').innerHTML = names.map((t, i) => `<button data-i="${i}"><span class="n">${i + 1}</span>${t}</button>`).join('');
+  const set = i => {
+    tab = Math.max(0, Math.min(names.length - 1, i));
+    $$('#tabs button').forEach((b, j) => b.classList.toggle('on', j === tab));
+    $$('section[data-tab]').forEach(s => s.classList.toggle('hidden', +s.dataset.tab !== tab));
+    $('#prevBtn').disabled = tab === 0;
+    $('#nextBtn').disabled = tab === names.length - 1;
+    if (onChange) onChange(tab);
+    try { localStorage.setItem(key, tab); } catch (e) {}
+  };
+  $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) set(+b.dataset.i); };
+  $('#prevBtn').onclick = () => { set(tab - 1); scrollTo(0, 0); };
+  $('#nextBtn').onclick = () => { set(tab + 1); scrollTo(0, 0); };
+  let saved = 0;
+  try { saved = +localStorage.getItem(key) || 0; } catch (e) {}
+  set(saved);
+}
+
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+
+// <button data-show="x">Show answer</button> opens/closes the element with id x
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-show]');
+  if (!b) return;
+  const box = document.getElementById(b.dataset.show);
+  box.classList.toggle('hidden');
+  b.textContent = box.classList.contains('hidden') ? (b.dataset.label || 'Show the answer') : 'Hide';
+});
+
+// buttons in a group: only one is "on"
+function oneOf(sel, fn) {
+  $$(sel).forEach(b => b.onclick = () => {
+    $$(sel).forEach(x => x.classList.toggle('on', x === b));
+    fn(b);
+  });
+}
+
+/* ENGINE START */
+/* ================= best-first search: one engine, three algorithms ================= */
+// The only difference: the number f that the priority queue sorts by.
+const ALGOS = {
+  ucs:    { name: 'UCS',    by: 'g', f: (g, h) => g },
+  greedy: { name: 'Greedy', by: 'h', f: (g, h) => h },
+  astar:  { name: 'A*',     by: 'f', f: (g, h) => g + h },
+};
+const LIMIT = 400;
+
+function newRun(prob, opt) {   // opt = { algo: 'astar' | 'greedy' | 'ucs', graph: true | false }
+  const R = { prob, opt, A: ALGOS[opt.algo], front: [], seen: new Set(), fAt: {}, current: null, phase: 'pop',
+    expanded: 0, generated: 0, steps: 0, done: false, found: null, skipped: null, stopped: false,
+    ids: 0, newIds: new Set(), log: [], rows: [], line: [], msg: '' };
+  const root = makeNode(R, prob.start, null);
+  R.front.push(root);
+  R.generated = 1;
+  R.newIds.add(root.id);
+  R.line = opt.graph ? ['init', 'exset'] : ['init'];
+  R.msg = `Put the start node <b>${prob.start}</b> in the priority queue: ${calc(R, root)}.`;
+  return R;
+}
+
+function makeNode(R, s, parent) {
+  const g = parent ? parent.g + R.prob.cost(parent.s, s) : 0, h = R.prob.h[s];
+  return { id: R.ids++, s, parent, g, h, f: R.A.f(g, h), depth: parent ? parent.depth + 1 : 0 };
+}
+
+// the number we sort by, and how we got it
+function calc(R, n) {
+  if (R.A.by === 'g') return `g = <b>${n.g}</b>`;
+  if (R.A.by === 'h') return `h = <b>${n.h}</b>`;
+  return `f = ${n.g} + ${n.h} = <b>${n.f}</b>`;
+}
+
+// put the node in its place by f (after the nodes with the same f)
+function addToFrontier(R, n) {
+  let i = R.front.findIndex(x => x.f > n.f);
+  if (i < 0) i = R.front.length;
+  R.front.splice(i, 0, n);
+}
+
+const nn = n => `${n.s}<sub>${n.f}</sub>`;
+const pathOf = n => { const p = []; for (; n; n = n.parent) p.unshift(n.s); return p.join(' → '); };
+
+function step(R) {
+  if (R.done) return false;
+  if (R.steps >= LIMIT) {
+    R.done = R.stopped = true; R.current = null;
+    R.msg = `Stopped after ${LIMIT} steps. Tree search goes around a loop again and again. It <b>never</b> takes G.`;
+    R.log.push('stopped: a loop');
+    return false;
+  }
+  R.steps++;
+  R.newIds = new Set();
+  R.skipped = null;
+  const P = R.prob, by = R.A.by;
+
+  if (R.phase === 'pop') {
+    if (R.front.length === 0) {
+      R.done = true; R.current = null; R.line = ['loop', 'fail'];
+      R.msg = 'The frontier is empty. There is <b>no solution</b>.';
+      R.log.push('frontier empty → no solution');
+      return true;
+    }
+    const n = R.front.shift();
+    R.current = n;
+    const take = `Take the node with the smallest ${by}: <b>${n.s}</b> (${calc(R, n)})`;
+    if (R.opt.graph && R.seen.has(n.s)) {
+      R.skipped = n; R.line = ['pop', 'skip'];
+      R.msg = `${take}. But ${n.s} is already explored. <b>Skip this copy.</b>`;
+      R.log.push(`take ${nn(n)} → skip, already explored`);
+      R.rows.push({ take: n, result: 'skip', added: [], front: R.front.slice() });
+      return true;
+    }
+    if (n.s === P.goal) {
+      R.found = n; R.done = true; R.line = ['pop', 'goal'];
+      R.msg = `${take}. It is the goal! <b>Return it.</b><br>Path: ${pathOf(n)} · cost <b>${n.g}</b>`
+        + (n.g > P.hStar[P.start] ? ` · <span class="no">not the cheapest (${P.hStar[P.start]})</span>` : ' · <span class="yes">the cheapest</span>');
+      R.log.push(`take ${nn(n)} → goal! cost ${n.g}`);
+      R.rows.push({ take: n, result: 'goal', added: [], front: R.front.slice() });
+      return true;
+    }
+    R.line = R.opt.graph ? ['pop', 'skip', 'goal'] : ['pop', 'goal'];
+    R.msg = `${take}. It is not the goal. Now we expand it.`;
+    R.phase = 'expand';
+    return true;
+  }
+
+  // expand the current node
+  const n = R.current;
+  if (R.opt.graph) R.seen.add(n.s);
+  if (!(n.s in R.fAt)) R.fAt[n.s] = n.f;
+  R.expanded++;
+  const added = [];
+  for (const t of P.next(n.s)) {
+    const c = makeNode(R, t, n);
+    R.generated++;
+    addToFrontier(R, c);
+    R.newIds.add(c.id);
+    added.push(c);
+  }
+  R.line = (R.opt.graph ? ['addex'] : []).concat(['for', 'child', 'fval', 'push']);
+  R.msg = `Expand <b>${n.s}</b>: ` + added.map(c => `${c.s}: ${calc(R, c)}`).join(' · ') + '. Each child goes to its <b>place by ' + by + '</b>.';
+  R.log.push(`expand ${n.s} → add ${added.map(nn).join(' ')}`);
+  R.rows.push({ take: n, result: 'expand', added, front: R.front.slice() });
+  R.phase = 'pop';
+  return true;
+}
+
+function runToEnd(prob, opt) {
+  const R = newRun(prob, opt);
+  while (step(R));
+  return R;
+}
+/* ENGINE END */
+
+/* ================= pseudo code ================= */
+// [key, indent, text, mark]  (mark 'chg' = this line is different from UCS)
+function codeLines(algo) {
+  const by = { ucs: 'g', greedy: 'h', astar: 'f = g + h' }[algo];
+  const name = { ucs: 'UCS', greedy: 'GreedyBestFirst', astar: 'AStar' }[algo];
+  const fLine = {
+    ucs:    'child.f ← child.g                <c># the real cost only</c>',
+    greedy: 'child.f ← h(child)               <c># the guess only</c>',
+    astar:  'child.f ← child.g + h(child)     <c># real cost + guess</c>',
+  }[algo];
+  return [
+    ['fn',    0, `<k>function</k> ${name}(problem, graphSearch):`],
+    ['init',  1, `frontier ← a priority queue (by ${by}) with the start node`, 'chg'],
+    ['exset', 1, 'explored ← an empty set'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeBest()       <c># the smallest f</c>'],
+    ['skip',  2, '<k>if</k> graphSearch <k>and</k> node.state <k>in</k> explored: <k>continue</k>'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['addex', 2, '<k>if</k> graphSearch: explored.add(node.state)'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['child', 3, 'child.g ← node.g + cost(node, child)' + (algo === 'greedy' ? '  <c># for the final cost</c>' : '')],
+    ['fval',  3, fLine, 'chg'],
+    ['push',  3, 'frontier.add(child)              <c># in its place by f</c>'],
+    ['fail',  1, '<k>return</k> failure'],
+  ];
+}
+
+function codeHtml(lines, hl = [], off = [], marks = true) {
+  return lines.map(([k, ind, t, mark]) => {
+    const txt = '    '.repeat(ind) + t
+      .replace(/<k>/g, '<span class="kw">').replace(/<\/k>/g, '</span>')
+      .replace(/<c>/g, '<span class="com">').replace(/<\/c>/g, '</span>');
+    const m = marks ? mark : '';
+    const cls = ['ln', hl.includes(k) ? 'hl' : '', off.includes(k) ? 'off' : '', m === 'chg' ? 'chg' : ''].join(' ');
+    return `<span class="${cls}">${txt || ' '}</span>`;
+  }).join('');
+}
+
+function pathEdges(n) {
+  const set = new Set();
+  for (; n && n.parent; n = n.parent) set.add(edgeKey(n.s, n.parent.s));
+  return set;
+}
+const pathStates = n => { const set = new Set(); for (; n; n = n.parent) set.add(n.s); return set; };
+
+// draw a found path on a small map (used in the "idea" tabs)
+function drawPath(svg, prob, n, bad) {
+  const edges = pathEdges(n), states = pathStates(n);
+  drawMap(svg, prob, {
+    edge: (a, b) => edges.has(edgeKey(a, b)) ? (bad ? 'e-bad' : 'e-path') : 'e',
+    node: s => states.has(s) ? (bad ? 'st-bad' : 'st-path') : 'st-new',
+  });
+}
+
+/* ================= a trace table ================= */
+function traceTable(R) {
+  const head = `<tr><th class="r">#</th><th>Take</th><th>What happens</th><th>Frontier after (smallest ${R.A.by} first)</th></tr>`;
+  const what = r => r.result === 'skip' ? `<span class="no">skip</span> (${r.take.s} is explored)`
+    : r.result === 'goal' ? `<span class="yes">goal! return</span> · cost ${r.take.g}`
+    : 'expand, add ' + r.added.map(nn).join(' ');
+  return head + R.rows.map((r, i) => `<tr><td class="r">${i + 1}</td><td><b>${nn(r.take)}</b></td><td>${what(r)}</td>`
+    + `<td class="mono">${r.result === 'goal' ? '' : r.front.map(nn).join(' ') || '<span class="muted">empty</span>'}</td></tr>`).join('')
+    + (R.found ? `<tr><td></td><td colspan="3">Path: <b>${pathOf(R.found)}</b> · cost <b>${R.found.g}</b> · `
+      + `expanded ${R.expanded}, generated ${R.generated}</td></tr>` : '');
+}
+
+/* ================= the "watch it run" tab ================= */
+// The page gives: runProblem() and runOpt(), and calls restart() when they change.
+let run, timer = null;
+function restart() { stopPlay(); run = newRun(runProblem(), runOpt()); drawRun(); }
+
+function drawRun() {
+  const R = run, by = R.A.by;
+  // for every state: how many copies are in the frontier, and the smallest f
+  const inF = {};
+  for (const n of R.front) {
+    const i = inF[n.s] || (inF[n.s] = { k: 0, f: n.f, fresh: false });
+    i.k++; i.f = Math.min(i.f, n.f);
+    if (R.newIds.has(n.id)) i.fresh = true;
+  }
+  const chainNode = R.found || (R.done ? null : R.current);
+  const edges = pathEdges(chainNode), onPath = R.found ? pathStates(R.found) : new Set();
+  drawMap($('#board'), R.prob, {
+    edge: (a, b) => edges.has(edgeKey(a, b)) ? (R.found ? 'e-path' : 'e-cur') : 'e',
+    node: s => {
+      if (onPath.has(s)) return 'st-path';
+      if (R.skipped && R.skipped.s === s && !inF[s]) return 'st-skip';
+      if (R.current && R.current.s === s && R.phase === 'expand') return 'st-cur';
+      if (inF[s]) return inF[s].fresh ? 'st-just' : 'st-q';
+      if (s in R.fAt) return 'st-ex';
+      return 'st-new';
+    },
+    // UCS: show g above the city, A*: show f. Greedy: h is already under the city.
+    top: s => by === 'h' ? null : inF[s] ? [`${by}=${inF[s].f}`, false] : s in R.fAt ? [`${by}=${R.fAt[s]}`, true] : null,
+    badge: s => inF[s] ? inF[s].k : 0,
+  });
+
+  const head = R.steps === 0 ? 'Start' : `Step ${R.steps}`;
+  $('#msg').innerHTML = `<span class="stepno">${head}${R.done ? ' · finished' : ''}</span>${R.msg}`;
+
+  $('#frontTitle').innerHTML = `Frontier: a priority queue <span class="side muted">· smallest ${by} first · small number = ${by}</span>`;
+  const show = R.front.slice(0, 24);
+  $('#frontStrip').innerHTML = R.front.length
+    ? `<span class="end">best →</span>` + show.map((n, i) =>
+        `<span class="chip ${R.newIds.has(n.id) ? 'new' : 'q'}${i === 0 ? ' top' : ''}">${nn(n)}</span>`).join('')
+      + (R.front.length > show.length ? `<span class="end">… +${R.front.length - show.length} more</span>` : '')
+    : '<span class="muted">empty</span>';
+
+  if (R.opt.graph) {
+    $('#seenTitle').textContent = 'Explored (expanded)';
+    const all = [...R.seen];
+    $('#seen').innerHTML = all.length ? all.map(s => `<span class="chip ex">${s}</span>`).join('') : '<span class="muted">empty</span>';
+  } else {
+    $('#seenTitle').textContent = 'Explored';
+    $('#seen').innerHTML = '<span class="muted">Tree search remembers nothing. The same city can be expanded again.</span>';
+  }
+
+  $('#stats').innerHTML = [
+    [R.expanded, 'expanded'], [R.generated, 'generated'], [R.front.length, 'in the frontier'],
+    [R.found ? R.found.g : '–', 'path cost'],
+  ].map(([v, t]) => `<div class="stat"><b>${v}</b><span>${t}</span></div>`).join('');
+
+  $('#code').innerHTML = codeHtml(codeLines(R.opt.algo), R.line, R.opt.graph ? [] : ['exset', 'skip', 'addex'], false);
+  $('#codeNote').textContent = '· graphSearch = ' + R.opt.graph;
+
+  const start = Math.max(0, R.log.length - 14);
+  $('#log').innerHTML = R.log.slice(start).map((m, i) => `<li><b>${start + i + 1}.</b> ${m}</li>`).reverse().join('');
+
+  $('#bBack').disabled = R.steps === 0;
+  $('#bStep').disabled = $('#bEnd').disabled = R.done;
+}
+
+function doStep() { step(run); drawRun(); if (run.done) stopPlay(); }
+function doBack() {
+  if (run.steps === 0) return;
+  stopPlay();
+  const k = run.steps - 1;
+  run = newRun(runProblem(), runOpt());
+  while (run.steps < k && step(run));
+  drawRun();
+}
+function stopPlay() { clearInterval(timer); timer = null; $('#bPlay').textContent = 'Play'; }
+function startPlay() {
+  if (run.done) restart();
+  clearInterval(timer);
+  timer = setInterval(doStep, 1000 / +$('#speed').value);
+  $('#bPlay').textContent = 'Pause';
+}
+$('#bStep').onclick = () => { stopPlay(); doStep(); };
+$('#bBack').onclick = doBack;
+$('#bReset').onclick = restart;
+$('#bPlay').onclick = () => timer ? stopPlay() : startPlay();
+$('#bEnd').onclick = () => { stopPlay(); while (step(run)); drawRun(); };
+$('#speed').oninput = () => { if (timer) startPlay(); };
+document.addEventListener('keydown', e => {
+  if (tab !== RUN_TAB || e.target.closest('input')) return;
+  if (e.key === 'ArrowRight') { stopPlay(); doStep(); }
+  if (e.key === 'ArrowLeft') doBack();
+});
+
+
+const RUN_TAB = 1;
+
+/* ================= 1. the idea ================= */
+const RUNS = {};
+for (const algo of ['ucs', 'greedy', 'astar']) RUNS[algo] = runToEnd(cityMap(H_CITY.gps), { algo, graph: true });
+
+function drawIdea(which) {
+  const m = cityMap(H_CITY.gps);
+  if (which === 'none') drawMap($('#ideaSvg'), m);
+  else drawPath($('#ideaSvg'), m, RUNS[which].found, RUNS[which].found.g > m.hStar.S);
+  const R = RUNS[which];
+  $('#ideaText').innerHTML = which === 'none'
+    ? 'S = start, G = goal (green ring). Black number on a road = its length. Orange number = the guess h.'
+    : `<b>${R.A.name}:</b> ${pathOf(R.found)} · <b>${R.found.g} km</b> · ${R.expanded} cities expanded.`;
+}
+oneOf('[data-idea]', b => drawIdea(b.dataset.idea));
+$('#ideaTable').innerHTML = '<tr><th></th><th>Path</th><th class="r">km</th><th class="r">expanded</th></tr>'
+  + ['ucs', 'greedy', 'astar'].map(a => { const R = RUNS[a];
+    return `<tr><td><b>${R.A.name}</b></td><td>${pathOf(R.found)}</td><td class="r ${R.found.g > 18 ? 'no' : 'yes'}">${R.found.g}</td><td class="r">${R.expanded}</td></tr>`; }).join('');
+
+/* ================= 2. watch it run ================= */
+let mode = 'graph', hName = 'gps', mapName = 'city';
+const runProblem = () => mapName === 'small' ? smallMap() : cityMap(H_CITY[hName]);
+const runOpt = () => ({ algo: 'astar', graph: mode === 'graph' });
+oneOf('[data-mode]', b => { mode = b.dataset.mode; restart(); });
+oneOf('[data-h]', b => { hName = b.dataset.h; restart(); });
+oneOf('[data-map]', b => {
+  mapName = b.dataset.map;
+  $$('[data-h]').forEach(x => x.disabled = mapName === 'small');
+  $('#boardNote').innerHTML = BOARD_NOTE + (mapName === 'small'
+    ? '<br>Small map: the guess is admissible, but <b>not consistent</b> on the road B – A. Compare graph search and tree search!' : '');
+  restart();
+});
+const BOARD_NOTE = '<span class="hval">Orange</span> under a city = <b>h</b> (the guess). '
+  + '<span class="fval">Blue</span> above a city = <b>f = g + h</b> of its best copy in the frontier (grey = when we expanded it). ×2 = two copies.';
+$('#boardNote').innerHTML = BOARD_NOTE;
+
+/* ================= 3. pseudo code + traces ================= */
+$('#stdCode').innerHTML = codeHtml(codeLines('astar'));
+$('#traceA').innerHTML = traceTable(RUNS.astar);
+$('#traceB').innerHTML = traceTable(runToEnd(smallMap(), { algo: 'astar', graph: true }));
+$('#traceC').innerHTML = traceTable(runToEnd(smallMap(), { algo: 'astar', graph: false }));
+
+/* ================= 4. is it good? ================= */
+$('#hTable').innerHTML = '<tr><th>Guess (city map, graph search)</th><th class="r">expanded</th><th class="r">km</th></tr>'
+  + ['zero', 'gps', 'perfect', 'big'].map(k => {
+    const R = runToEnd(cityMap(H_CITY[k]), { algo: 'astar', graph: true });
+    return `<tr><td>${H_NAMES[k]}${k === 'zero' ? ' (= UCS)' : k === 'big' ? ' (not admissible)' : ''}</td>`
+      + `<td class="r">${R.expanded}</td><td class="r ${R.found.g > 18 ? 'no' : 'yes'}">${R.found.g}</td></tr>`;
+  }).join('');
+
+const twice = {}; for (const s in H_CITY.gps) twice[s] = 2 * H_CITY.gps[s];
+const TW = runToEnd(cityMap(twice), { algo: 'astar', graph: true });
+$('#q3txt').parentNode.innerHTML = `h(A) = 16, but h*(A) = 8, so it is <b>not admissible</b>. A* expands only ${TW.expanded} cities `
+  + `(GPS guess: ${RUNS.astar.expanded}), but it returns ${pathOf(TW.found)}: <b>${TW.found.g} km</b>, not 18. Faster, but not the cheapest.`;
+
+/* ================= 5. admissible is not enough ================= */
+(function drawTrap() {
+  const m = smallMap();
+  drawMap($('#trapSvg'), m, {
+    edge: (a, b) => edgeKey(a, b) === 'AB' ? 'e-bad' : 'e',
+    under: s => [`${m.h[s]} | ${m.hStar[s]}`, 'both'],
+  });
+  $('#trapGraph').innerHTML = traceTable(runToEnd(m, { algo: 'astar', graph: true }));
+  $('#trapTree').innerHTML = traceTable(runToEnd(smallMap(), { algo: 'astar', graph: false }));
+  // mark the row where the cheap copy of A is skipped
+  $$('#trapGraph tr').forEach(tr => {
+    if (tr.textContent.includes('skip') && tr.cells[1] && tr.cells[1].textContent.startsWith('A')) tr.classList.add('badrow');
+  });
+})();
+
+/* ================= start ================= */
+drawIdea('none');
+restart();
+setupTabs(['The idea', 'Watch it run', 'Pseudo code', 'Is A* good?', 'Admissible is not enough'], 'astar-tab', t => { if (t !== RUN_TAB) stopPlay(); });
+</script>
+</body>
+</html>

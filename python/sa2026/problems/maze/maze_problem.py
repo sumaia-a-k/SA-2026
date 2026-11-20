@@ -1,6 +1,8 @@
+from sa2026.core.heuristic_function import HeuristicFunction
 from sa2026.core.i_action import IAction
 from sa2026.core.problem import Problem
 from sa2026.core.state import State
+from sa2026.problems.maze.manhattan_distance import ManhattanDistance
 from sa2026.problems.maze.maze import Maze
 from sa2026.problems.maze.maze_action import MazeAction
 from sa2026.problems.maze.maze_state import MazeState
@@ -14,8 +16,7 @@ class MazeProblem(Problem):
     Goal:          the player is on 'G'.
     Actions:       move up, down, left, right (one cell, not into a wall).
     Cost:          every move costs 1.
-
-    There is no heuristic yet. We add it in a later session.
+    Heuristic:     the Manhattan distance to the goal (see ManhattanDistance).
     """
 
     def __init__(self, maze: Maze):
@@ -24,6 +25,7 @@ class MazeProblem(Problem):
         # so MazeState.maze points to the same original Maze object.
         MazeState.maze = maze
         self._initial_state = MazeState(maze.start_row, maze.start_col)
+        self._heuristic = ManhattanDistance()
 
         # the order of this list is the order the algorithms try the actions
         self._actions: list[IAction] = [
@@ -45,3 +47,7 @@ class MazeProblem(Problem):
     # every step costs the same
     def get_action_cost(self, s: State, a: IAction, next_state: State) -> float:
         return 1
+
+    # used by Greedy and A*
+    def get_heuristic_function(self) -> HeuristicFunction:
+        return self._heuristic

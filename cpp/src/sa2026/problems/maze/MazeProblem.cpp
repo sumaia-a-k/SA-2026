@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "sa2026/problems/maze/ManhattanDistance.h"
 #include "sa2026/problems/maze/MazeAction.h"
 #include "sa2026/problems/maze/MazeState.h"
 
@@ -10,6 +11,7 @@ namespace sa2026::problems::maze {
 MazeProblem::MazeProblem(const MazePtr& maze) {
     MazeState::setMaze(maze);  // all states share this one maze
     initialState = std::make_shared<MazeState>(maze->getStartRow(), maze->getStartCol());
+    heuristic = std::make_shared<ManhattanDistance>();
 
     // the order of this vector is the order the algorithms try the actions
     actions.push_back(std::make_shared<MazeAction>("Move up", -1, 0));
@@ -34,6 +36,10 @@ std::vector<core::ActionPtr> MazeProblem::getActions() const {
 double MazeProblem::getActionCost(const core::StatePtr& s, const core::ActionPtr& a,
                                   const core::StatePtr& next) const {
     return 1;
+}
+
+std::shared_ptr<const core::HeuristicFunction> MazeProblem::getHeuristicFunction() const {
+    return heuristic;
 }
 
 }  // namespace sa2026::problems::maze

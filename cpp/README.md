@@ -53,6 +53,8 @@ So the script builds and runs **one program each time**. You give the program na
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.BFSDemo` |
 | Check your DFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.DFSDemo` |
 | Check your UCS (student version) | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.UCSDemo` |
+| Check your Greedy (student version) | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` | `.\run.bat sa2026.algorithms.incomplete_code.GreedyDemo` |
+| Check your A* (student version) | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` | `.\run.bat sa2026.algorithms.incomplete_code.AStarDemo` |
 
 In Git Bash, Linux or macOS, write `./run.sh` instead of `.\run.bat`.
 
@@ -127,17 +129,26 @@ cpp/
     │   ├── DepthLimitedDFS.h, .cpp     DepthLimitedDFS.java
     │   ├── IterativeDeepening.h, .cpp  IterativeDeepening.java
     │   ├── UCS.h, UCS.cpp              UCS.java
+    │   ├── Greedy.h, Greedy.cpp        Greedy.java
+    │   ├── AStar.h, AStar.cpp          AStar.java
     │   └── incomplete_code/            the student versions: write the body of search()
     │       ├── BFS, BFSOptimized (.h + .cpp)
     │       ├── BFSDemo.cpp             checks your BFS with the finished one (BFSDemo.java)
     │       ├── DFS, DFSCycleCheck, DepthLimitedDFS, IterativeDeepening (.h + .cpp)
     │       ├── DFSDemo.cpp             checks your DFS versions with the finished ones (DFSDemo.java)
     │       ├── UCS (.h + .cpp)
-    │       └── UCSDemo.cpp             checks your UCS with the finished one (UCSDemo.java)
+    │       ├── UCSDemo.cpp             checks your UCS with the finished one (UCSDemo.java)
+    │       ├── Greedy, AStar (.h + .cpp)
+    │       ├── GreedyDemo.cpp          checks your Greedy with the finished one (GreedyDemo.java)
+    │       └── AStarDemo.cpp           checks your A* with the finished one (AStarDemo.java)
     └── problems/
-        ├── maze/                       Maze, MazeState, MazeAction, MazeProblem (.h + .cpp), MazeDemo.cpp
+        ├── maze/                       Maze, MazeState, MazeAction, MazeProblem (.h + .cpp), MazeDemo.cpp,
+        │                               ManhattanDistance (.h + .cpp, the heuristic)
+        ├── npuzzle/                    NpuzzleState, MoveEmptyAction, NpuzzleProblem (.h + .cpp), NpuzzleDemo.cpp,
+        │                               MisplacedTiles, ManhattanDistance (.h + .cpp, the heuristics h1 and h2)
         ├── wordladder/                 WordDictionary, WordLadderState, ChangeLetterAction, ... , WordLadderDemo.cpp
-        ├── citymap/                    CityMap, CityState, DriveAction, CityMapProblem (.h + .cpp), CityMapDemo.cpp
+        ├── citymap/                    CityMap, CityState, DriveAction, CityMapProblem (.h + .cpp), CityMapDemo.cpp,
+        │                               CityHeuristic (.h + .cpp, the heuristic: a table of guesses)
         └── incomplete_code/            the student versions, with the same TODO steps as Java
             ├── maze/
             └── wordladder/
@@ -188,6 +199,9 @@ The HTML lesson pages show the Java code:
 [BFS](../src/sa2026/algorithms/description/bfs.html),
 [DFS](../src/sa2026/algorithms/description/dfs.html),
 [UCS](../src/sa2026/algorithms/description/ucs.html),
+[Heuristics](../src/sa2026/algorithms/description/heuristics.html),
+[Greedy](../src/sa2026/algorithms/description/greedy.html),
+[A*](../src/sa2026/algorithms/description/astar.html),
 [N-puzzle](../src/sa2026/problems/description/npuzzle.html).
 
 The ideas are the same in C++. Use the table above to find the C++ way.

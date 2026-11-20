@@ -46,6 +46,8 @@ After every change, just run the command again.
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `python -m sa2026.algorithms.incomplete_code.bfs_demo` |
 | Check your DFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.DFSDemo` | `python -m sa2026.algorithms.incomplete_code.dfs_demo` |
 | Check your UCS (student version) | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` | `python -m sa2026.algorithms.incomplete_code.ucs_demo` |
+| Check your Greedy (student version) | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` | `python -m sa2026.algorithms.incomplete_code.greedy_demo` |
+| Check your A* (student version) | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` | `python -m sa2026.algorithms.incomplete_code.a_star_demo` |
 
 The rule is simple: take the Java class name, write the file name in `snake_case`, and don't add `.py`.
 
@@ -92,17 +94,26 @@ python/
     │   ├── depth_limited_dfs.py    DepthLimitedDFS.java
     │   ├── iterative_deepening.py  IterativeDeepening.java
     │   ├── ucs.py                  UCS.java
+    │   ├── greedy.py               Greedy.java
+    │   ├── a_star.py               AStar.java
     │   └── incomplete_code/        the student versions: write the body of search()
     │       ├── bfs.py, bfs_optimized.py
     │       ├── bfs_demo.py         checks your BFS with the finished one (BFSDemo.java)
     │       ├── dfs.py, dfs_cycle_check.py, depth_limited_dfs.py, iterative_deepening.py
     │       ├── dfs_demo.py         checks your DFS versions with the finished ones (DFSDemo.java)
     │       ├── ucs.py
-    │       └── ucs_demo.py         checks your UCS with the finished one (UCSDemo.java)
+    │       ├── ucs_demo.py         checks your UCS with the finished one (UCSDemo.java)
+    │       ├── greedy.py, a_star.py
+    │       ├── greedy_demo.py      checks your Greedy with the finished one (GreedyDemo.java)
+    │       └── a_star_demo.py      checks your A* with the finished one (AStarDemo.java)
     └── problems/
-        ├── maze/                   maze.py, maze_state.py, maze_action.py, maze_problem.py, maze_demo.py
+        ├── maze/                   maze.py, maze_state.py, maze_action.py, maze_problem.py, maze_demo.py,
+        │                           manhattan_distance.py (the heuristic)
+        ├── npuzzle/                npuzzle_state.py, move_empty_action.py, npuzzle_problem.py, npuzzle_demo.py,
+        │                           misplaced_tiles.py, manhattan_distance.py (the heuristics h1 and h2)
         ├── wordladder/             word_dictionary.py, word_ladder_state.py, change_letter_action.py, ...
-        ├── citymap/                city_map.py, city_state.py, drive_action.py, city_map_problem.py, city_map_demo.py
+        ├── citymap/                city_map.py, city_state.py, drive_action.py, city_map_problem.py, city_map_demo.py,
+        │                           city_heuristic.py (the heuristic: a table of guesses)
         └── incomplete_code/        the student versions, with the same TODO steps as Java
             ├── maze/
             └── wordladder/
@@ -146,6 +157,9 @@ The HTML lesson pages show the Java code:
 [BFS](../src/sa2026/algorithms/description/bfs.html),
 [DFS](../src/sa2026/algorithms/description/dfs.html),
 [UCS](../src/sa2026/algorithms/description/ucs.html),
+[Heuristics](../src/sa2026/algorithms/description/heuristics.html),
+[Greedy](../src/sa2026/algorithms/description/greedy.html),
+[A*](../src/sa2026/algorithms/description/astar.html),
 [N-puzzle](../src/sa2026/problems/description/npuzzle.html).
 
 The ideas are the same in Python. Use the table above to find the Python name.

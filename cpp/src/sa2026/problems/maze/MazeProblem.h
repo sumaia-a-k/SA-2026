@@ -1,7 +1,9 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
+#include "sa2026/core/HeuristicFunction.h"
 #include "sa2026/core/IAction.h"
 #include "sa2026/core/Problem.h"
 #include "sa2026/core/State.h"
@@ -16,8 +18,7 @@ namespace sa2026::problems::maze {
  * Goal:          the player is on 'G'.
  * Actions:       move up, down, left, right (one cell, not into a wall).
  * Cost:          every move costs 1.
- *
- * There is no heuristic yet. We add it in a later session.
+ * Heuristic:     the Manhattan distance to the goal (see ManhattanDistance).
  */
 class MazeProblem : public core::Problem {
 public:
@@ -30,9 +31,13 @@ public:
     double getActionCost(const core::StatePtr& s, const core::ActionPtr& a,
                          const core::StatePtr& next) const override;
 
+    // used by Greedy and A*
+    std::shared_ptr<const core::HeuristicFunction> getHeuristicFunction() const override;
+
 private:
     core::StatePtr initialState;
     std::vector<core::ActionPtr> actions;
+    std::shared_ptr<const core::HeuristicFunction> heuristic;
 };
 
 }  // namespace sa2026::problems::maze
