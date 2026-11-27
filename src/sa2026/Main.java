@@ -9,12 +9,15 @@ import sa2026.algorithms.DFSCycleCheck;
 import sa2026.algorithms.DepthLimitedDFS;
 import sa2026.algorithms.IterativeDeepening;
 import sa2026.algorithms.UCS;
+import sa2026.algorithms.AStar;
+import sa2026.algorithms.Greedy;
 import sa2026.core.Node;
 import sa2026.core.Problem;
 import sa2026.core.SearchAlgorithm;
 import sa2026.problems.wordladder.WordDictionary;
 import sa2026.problems.wordladder.WordLadderProblem;
 import sa2026.problems.npuzzle.NpuzzleProblem;
+import sa2026.problems.citymap.CityHeuristic;
 import sa2026.problems.citymap.CityMap;
 import sa2026.problems.citymap.CityMapProblem;
 import sa2026.problems.maze.Maze;
@@ -23,7 +26,8 @@ import sa2026.problems.maze.MazeProblem;
 /**
  * The start point of the program.
  * We solve the maze with BFS, then we compare the BFS versions and the DFS versions.
- * At the end we compare BFS and UCS on a city map where the roads have different lengths.
+ * Then we compare BFS and UCS on a city map where the roads have different lengths.
+ * At the end we compare UCS, Greedy and A* (they use a heuristic).
  */
 public class Main {
 
@@ -34,11 +38,11 @@ public class Main {
                 "....#..",
                 ".##....",
                 "...#.#G");
-       //Problem problem = new MazeProblem(maze);
+       Problem problem = new MazeProblem(maze);
 
         
         // Problem problem = new WordLadderProblem("cat", "dog", WordDictionary.threeLetterWords());
-      Problem problem = NpuzzleProblem.medium();
+    //   Problem problem = NpuzzleProblem.medium();
         // 1. solve the maze with BFS (graph search) and print every step
         System.out.println("=== BFS, graph search ===");
         SearchAlgorithm algorithm = new BFS(true);
@@ -61,18 +65,35 @@ public class Main {
         compare("DLS, limit 10", new DepthLimitedDFS(10), problem);
         compare("DLS, limit 9", new DepthLimitedDFS(9), problem);
         compare("IDS", new IterativeDeepening(), problem);
-
+        // 4. the UCS , Greedy and A star
+        System.out.println("\n=== UCS A star Greedy ===");
+        System.out.println("Version                  Steps  Expanded  Generated");
+        compare("UCS Graph", new UCS(true), problem);
+        compare("UCS Tree", new UCS(), problem);
+        compare("A star Graph", new AStar(true), problem);
+        compare("A star Tree", new AStar(false), problem);
+        compare("Greedy Graph", new Greedy(true), problem);
+        compare("Greedy Tree", new Greedy(false), problem);
         // 4. a city map: the roads have different lengths, so fewer steps is not always cheaper
-        System.out.println("\n=== City map S -> G: BFS vs UCS ===");
-        Problem cityMap = new CityMapProblem("S", "G", CityMap.example());
-        System.out.println("Version                  Steps   Cost  Expanded  Generated");
-        compareCost("BFS, graph search", new BFS(true), cityMap);
-        compareCost("UCS, graph search", new UCS(true), cityMap);
-        compareCost("UCS, tree search", new UCS(false), cityMap);
+        // System.out.println("\n=== City map S -> G: BFS vs UCS ===");
+        // Problem cityMap = new CityMapProblem("S", "G", CityMap.example());
+        // System.out.println("Version                  Steps   Cost  Expanded  Generated");
+        // compareCost("BFS, graph search", new BFS(true), cityMap);
+        // compareCost("UCS, graph search", new UCS(true), cityMap);
+        // compareCost("UCS, tree search", new UCS(false), cityMap);
 
-        System.out.println("\n=== UCS, graph search: the path ===");
-        SearchAlgorithm ucs = new UCS(true);
-        ucs.printSolution(cityMap.solve(ucs));
+        // System.out.println("\n=== UCS, graph search: the path ===");
+        // SearchAlgorithm ucs = new UCS(true);
+        // ucs.printSolution(cityMap.solve(ucs));
+
+        // // 5. the same city map with a heuristic: the GPS guess of the lesson pages
+        // System.out.println("\n=== City map S -> G: UCS vs Greedy vs A* (GPS guess) ===");
+        // Problem cityMapH = new CityMapProblem("S", "G", CityMap.example(), CityHeuristic.gpsGuessToG());
+        // System.out.println("Version                  Steps   Cost  Expanded  Generated");
+        // compareCost("UCS, graph search", new UCS(true), cityMapH);
+        // compareCost("Greedy, graph search", new Greedy(true), cityMapH);
+        // compareCost("A*, graph search", new AStar(true), cityMapH);
+        // compareCost("A*, tree search", new AStar(false), cityMapH);
     }
 
     // solves the problem and prints one line of numbers
