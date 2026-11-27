@@ -55,6 +55,7 @@ So the script builds and runs **one program each time**. You give the program na
 | Check your UCS (student version) | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.UCSDemo` |
 | Check your Greedy (student version) | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` | `.\run.bat sa2026.algorithms.incomplete_code.GreedyDemo` |
 | Check your A* (student version) | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` | `.\run.bat sa2026.algorithms.incomplete_code.AStarDemo` |
+| Check your Beam Search (student version) | `java -cp out sa2026.algorithms.incomplete_code.BeamDemo` | `.\run.bat sa2026.algorithms.incomplete_code.BeamDemo` |
 
 In Git Bash, Linux or macOS, write `./run.sh` instead of `.\run.bat`.
 
@@ -131,6 +132,7 @@ cpp/
     │   ├── UCS.h, UCS.cpp              UCS.java
     │   ├── Greedy.h, Greedy.cpp        Greedy.java
     │   ├── AStar.h, AStar.cpp          AStar.java
+    │   ├── BeamSearch.h, .cpp          BeamSearch.java
     │   └── incomplete_code/            the student versions: write the body of search()
     │       ├── BFS, BFSOptimized (.h + .cpp)
     │       ├── BFSDemo.cpp             checks your BFS with the finished one (BFSDemo.java)
@@ -140,7 +142,9 @@ cpp/
     │       ├── UCSDemo.cpp             checks your UCS with the finished one (UCSDemo.java)
     │       ├── Greedy, AStar (.h + .cpp)
     │       ├── GreedyDemo.cpp          checks your Greedy with the finished one (GreedyDemo.java)
-    │       └── AStarDemo.cpp           checks your A* with the finished one (AStarDemo.java)
+    │       ├── AStarDemo.cpp           checks your A* with the finished one (AStarDemo.java)
+    │       ├── BeamSearch (.h + .cpp)
+    │       └── BeamDemo.cpp            checks your Beam Search with the finished one (BeamDemo.java)
     └── problems/
         ├── maze/                       Maze, MazeState, MazeAction, MazeProblem (.h + .cpp), MazeDemo.cpp,
         │                               ManhattanDistance (.h + .cpp, the heuristic)

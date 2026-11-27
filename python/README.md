@@ -48,6 +48,7 @@ After every change, just run the command again.
 | Check your UCS (student version) | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` | `python -m sa2026.algorithms.incomplete_code.ucs_demo` |
 | Check your Greedy (student version) | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` | `python -m sa2026.algorithms.incomplete_code.greedy_demo` |
 | Check your A* (student version) | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` | `python -m sa2026.algorithms.incomplete_code.a_star_demo` |
+| Check your Beam Search (student version) | `java -cp out sa2026.algorithms.incomplete_code.BeamDemo` | `python -m sa2026.algorithms.incomplete_code.beam_demo` |
 
 The rule is simple: take the Java class name, write the file name in `snake_case`, and don't add `.py`.
 
@@ -96,6 +97,7 @@ python/
     │   ├── ucs.py                  UCS.java
     │   ├── greedy.py               Greedy.java
     │   ├── a_star.py               AStar.java
+    │   ├── beam_search.py          BeamSearch.java
     │   └── incomplete_code/        the student versions: write the body of search()
     │       ├── bfs.py, bfs_optimized.py
     │       ├── bfs_demo.py         checks your BFS with the finished one (BFSDemo.java)
@@ -105,7 +107,9 @@ python/
     │       ├── ucs_demo.py         checks your UCS with the finished one (UCSDemo.java)
     │       ├── greedy.py, a_star.py
     │       ├── greedy_demo.py      checks your Greedy with the finished one (GreedyDemo.java)
-    │       └── a_star_demo.py      checks your A* with the finished one (AStarDemo.java)
+    │       ├── a_star_demo.py      checks your A* with the finished one (AStarDemo.java)
+    │       ├── beam_search.py
+    │       └── beam_demo.py        checks your Beam Search with the finished one (BeamDemo.java)
     └── problems/
         ├── maze/                   maze.py, maze_state.py, maze_action.py, maze_problem.py, maze_demo.py,
         │                           manhattan_distance.py (the heuristic)
