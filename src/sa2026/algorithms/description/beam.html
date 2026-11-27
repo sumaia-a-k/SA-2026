@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beam Search</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --q:#3b5bdb; --q-bg:#e8edfd;           /* in the frontier */
+  --ex:#7b8494; --ex-bg:#e3e7ee;         /* expanded */
+  --cur:#d9480f; --cur-bg:#fff0e6;       /* current node */
+  --goal:#2b8a3e; --goal-bg:#dcf3e2;     /* goal and final path */
+  --ok:#2b8a3e; --bad:#e03131; --bad-bg:#ffe3e3; --warn:#d9480f; --warn-bg:#fff0e6;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --num:#c2410c; --str:#2b8a3e;
+  --new-bg:#fff3bf;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+    --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+    --new-bg:#4a3f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+  --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+  --new-bg:#4a3f10;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 24px 32px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 22px; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 14px; }
+.steps button { border-radius: 99px; padding: 5px 12px 5px 6px; display: inline-flex; align-items: center; gap: 7px; }
+.steps button .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--accent-bg); color: var(--accent);
+}
+.steps button.on .n { background: var(--surface); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.stack > * + * { margin-top: 18px; }
+h2 { margin: 0 0 8px; font-size: 24px; }
+h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+h3:first-child { margin-top: 0; }
+h3 .side { text-transform: none; letter-spacing: 0; font-weight: 400; }
+p { margin: 6px 0; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note b:first-child { color: var(--warn); }
+.okbox { background: var(--goal-bg); border-left: 4px solid var(--goal); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.badbox { background: var(--bad-bg); border-left: 4px solid var(--bad); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.kw { color: var(--kw); font-weight: 600; } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); } .str { color: var(--str); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+.navrow { display: flex; justify-content: space-between; margin-top: 18px; }
+td code { font-size: 12.5px; }
+
+/* pseudo code */
+.pseudo { padding: 8px 0; }
+.pseudo .ln { display: block; padding: 1px 14px 1px 10px; border-left: 4px solid transparent; white-space: pre; }
+.pseudo .ln.hl { background: var(--new-bg); border-left-color: var(--warn); }
+.pseudo .ln.off { opacity: .4; }
+.pseudo .ln.new { box-shadow: inset 3px 0 0 var(--goal); }
+.pseudo .ln.chg { background: var(--goal-bg); }
+.pseudo .star { color: var(--goal); font-weight: 700; }
+.diff .add { display: block; background: var(--goal-bg); margin: 0 -14px; padding: 0 14px; }
+.diff .del { display: block; background: var(--bad-bg); margin: 0 -14px; padding: 0 14px; text-decoration: line-through; opacity: .75; }
+
+/* run tab */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; margin-bottom: 18px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font-size: 13px; color: var(--muted); }
+#speed { width: 90px; vertical-align: middle; }
+svg { display: block; width: 100%; height: auto; user-select: none; }
+.board { max-height: 440px; }
+.hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 2px solid; }
+.msg { font-size: 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-height: 72px; }
+.msg .stepno { font-size: 12px; color: var(--muted); display: block; }
+.qstrip { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 34px; }
+.qstrip .end { font-size: 12px; color: var(--muted); }
+.chip { display: inline-flex; align-items: baseline; gap: 1px; padding: 3px 8px; border-radius: 7px; font: 13px ui-monospace, Consolas, monospace;
+  border: 1.5px solid var(--line); background: var(--surface); }
+.chip sub { font-size: 10px; color: var(--muted); }
+.chip.q { background: var(--q-bg); border-color: var(--q); }
+.chip.new { background: var(--new-bg); border-color: var(--warn); }
+.chip.ex { background: var(--ex-bg); border-color: var(--ex); }
+.chip.top { box-shadow: 0 0 0 2px var(--cur); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.stat { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+#log { margin: 4px 0 0; padding-left: 0; list-style: none; font-size: 13px; color: var(--muted); max-height: 170px; overflow: auto; }
+#log li { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+#log li b { color: var(--ink); }
+
+/* drawing */
+.e { stroke: var(--line); stroke-width: 3; }
+.e-cur { stroke: var(--cur); stroke-width: 5; }
+.e-path { stroke: var(--goal); stroke-width: 7; }
+.e-bfs { stroke: var(--bad); stroke-width: 5; stroke-dasharray: 9 6; }
+.wbox { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.wtxt { font-size: 12px; font-weight: 700; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.nd { stroke-width: 3; }
+.st-new { fill: var(--surface); stroke: var(--line); }
+.st-q { fill: var(--q-bg); stroke: var(--q); }
+.st-ex { fill: var(--ex-bg); stroke: var(--ex); }
+.st-cur { fill: var(--cur-bg); stroke: var(--cur); stroke-width: 4; }
+.st-path { fill: var(--goal-bg); stroke: var(--goal); stroke-width: 4; }
+.st-just { fill: var(--new-bg); stroke: var(--warn); }
+.st-skip { fill: var(--surface); stroke: var(--bad); stroke-dasharray: 3 3; }
+.st-bad { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 4; }
+.goalring { fill: none; stroke: var(--goal); stroke-width: 2; }
+.nlbl { font-weight: 700; font-size: 16px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.glbl { font-size: 12px; font-weight: 700; fill: var(--accent); text-anchor: middle; }
+.glbl.ex { fill: var(--muted); }
+.badge { fill: var(--q); }
+.badgetxt { fill: var(--surface); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.clickable { cursor: pointer; }
+
+/* idea tab */
+.pq { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 44px; padding: 8px 10px;
+  border: 2px dashed var(--line); border-radius: 12px; margin: 8px 0; }
+.pq .chip { font-size: 15px; padding: 5px 10px; }
+.slider { display: flex; gap: 10px; align-items: center; margin: 4px 0; }
+.slider input { flex: 1; max-width: 300px; }
+.slider b { min-width: 28px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding: 14px 16px 28px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { padding: 14px 16px; }
+}
+
+
+/* informed search */
+.hlbl { font-size: 12px; font-weight: 700; fill: var(--warn); text-anchor: middle; dominant-baseline: central;
+  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.hlbl.real { fill: var(--goal); }
+.hlbl.bad { fill: var(--bad); }
+.hlbl.both { fill: var(--ink); }
+.e-bad { stroke: var(--bad); stroke-width: 5; stroke-dasharray: 9 6; }
+.hval { color: var(--warn); font-weight: 700; }
+.fval { color: var(--accent); font-weight: 700; }
+.gval { color: var(--goal); font-weight: 700; }
+.formula { font-size: 20px; text-align: center; margin: 12px 0; font-weight: 700; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 13px; font-weight: 700; }
+.tag.yes { background: var(--goal-bg); } .tag.no { background: var(--bad-bg); }
+tr.badrow td { background: var(--bad-bg); }
+.ans { margin-top: 6px; }
+ol.tasks > li { margin-bottom: 12px; }
+a { color: var(--accent); }
+
+/* beam search: nodes that we throw away */
+.st-drop { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 3; stroke-dasharray: 5 4; }
+.chip.drop { background: var(--bad-bg); border-color: var(--bad); text-decoration: line-through; }
+.stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 900px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Beam Search</h1>
+      <p>Intelligent Search Algorithms · Latakia University · Informed search: after Greedy and A*</p>
+    </div>
+    <button id="themeBtn">Dark / Light</button>
+  </header>
+
+  <nav class="steps" id="tabs"></nav>
+
+  <!-- ================= 1. The idea ================= -->
+  <section data-tab="0">
+    <div class="grid">
+      <div class="card">
+        <h2>The idea</h2>
+        <p class="lead">A small waiting room has only <b>k</b> chairs. A new person comes, but the room is full.
+          So the person with the <b>worst</b> number must leave, and never comes back.</p>
+        <div class="box"><b>Beam Search in one sentence:</b> it is Greedy, but the frontier can keep only <b>k</b> nodes.
+          After each expansion, we look at the <b>whole</b> frontier (old nodes and new children together),
+          keep the <b>k</b> nodes with the smallest <b>h</b>, and <b>throw away</b> the rest.</div>
+        <div class="formula">f(n) = <span class="hval">h(n)</span> &nbsp;·&nbsp; at most <b>k</b> nodes in the frontier</div>
+        <p><b>k</b> is called the <b>beam width</b>. We choose it before the search starts.</p>
+
+        <h3>Why?</h3>
+        <p>Greedy keeps <b>every</b> node it makes. On a big problem (the 8-puzzle, a real map) the frontier
+          becomes huge and fills the memory. Beam Search keeps the frontier small.</p>
+        <div class="note"><b>The price:</b> a node that we throw away is gone. If the way to the goal was there, we lose it.</div>
+        <p><b>Where is it used?</b> When there are too many ways to keep them all. For example, machine translation
+          and speech recognition: the program keeps only the <b>k</b> best sentences so far, not all of them.</p>
+        <p class="muted">Not sure about h or Greedy? Read <a href="heuristics.html">heuristics.html</a>
+          and <a href="greedy.html">greedy.html</a>.</p>
+      </div>
+
+      <div class="card">
+        <h3>The city map. Orange = the guess h to G (km). Graph search.</h3>
+        <div class="grp" style="margin-bottom:8px"><span class="lbl">Beam width</span>
+          <button data-ik="1">k = 1</button>
+          <button data-ik="2" class="on">k = 2</button>
+          <button data-ik="3">k = 3</button>
+          <button data-ik="0">no limit (= Greedy)</button>
+        </div>
+        <div class="grp" style="margin-bottom:8px"><span class="lbl">Guess</span>
+          <button data-ih="gps" class="on">GPS guess</button>
+          <button data-ih="bad">misleading guess</button>
+        </div>
+        <svg id="ideaSvg" class="board" aria-label="The city map with the result of Beam Search"></svg>
+        <p id="ideaText"></p>
+        <div class="box"><b>Before you click:</b> take the misleading guess and k = 1.
+          Start at S and keep only <b>1</b> node each time. Where do you get stuck?</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. Watch it run ================= -->
+  <section data-tab="1" class="hidden">
+    <div class="card toolbar">
+      <div class="grp"><span class="lbl">Beam width</span>
+        <button data-k="1">k = 1</button>
+        <button data-k="2" class="on">k = 2</button>
+        <button data-k="3">k = 3</button>
+      </div>
+      <div class="grp"><span class="lbl">Version</span>
+        <button data-mode="graph" class="on">graph search</button>
+        <button data-mode="tree">tree search</button>
+      </div>
+      <div class="grp"><span class="lbl">Guess</span>
+        <button data-h="gps" class="on">GPS guess</button>
+        <button data-h="bad">misleading guess</button>
+      </div>
+      <div class="grp">
+        <button id="bReset" title="Start again">⏮ Reset</button>
+        <button id="bBack" title="Left arrow">◀ Back</button>
+        <button id="bStep" class="on" title="Right arrow">Step ▶</button>
+        <button id="bPlay">Play</button>
+        <button id="bEnd">Finish ⏭</button>
+        <label class="lbl">Speed <input type="range" id="speed" min="1" max="10" value="2"></label>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <svg id="board" class="board" aria-label="Search board"></svg>
+        <div class="legend">
+          <span><i style="background:var(--surface);border-color:var(--line)"></i>not seen yet</span>
+          <span><i style="background:var(--q-bg);border-color:var(--q)"></i>in the frontier</span>
+          <span><i style="background:var(--new-bg);border-color:var(--warn)"></i>just added</span>
+          <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>current node</span>
+          <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>expanded</span>
+          <span><i style="background:var(--goal-bg);border-color:var(--goal)"></i>solution path</span>
+          <span><i style="background:var(--surface);border-color:var(--bad);border-style:dashed"></i>skipped copy</span>
+        </div>
+        <p class="muted" style="margin-top:10px" id="boardNote"></p>
+      </div>
+
+      <div class="card">
+        <div class="msg" id="msg"></div>
+        <h3 id="frontTitle">Frontier</h3>
+        <div class="qstrip" id="frontStrip"></div>
+        <h3 id="seenTitle">Explored</h3>
+        <div class="qstrip" id="seen"></div>
+        <div class="stats" id="stats"></div>
+        <h3>Pseudo code <span class="side muted" id="codeNote"></span></h3>
+        <pre class="pseudo" id="code"></pre>
+        <h3>History</h3>
+        <ol id="log"></ol>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ================= 3. Pseudo code ================= -->
+  <section data-tab="2" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Pseudo code</h2>
+        <p>It is the Greedy code. Only the <b>green</b> lines are new: the number <b>k</b>,
+          and one line that throws away the rest.</p>
+        <pre class="pseudo" id="stdCode"></pre>
+        <h3>Small rules (you need them for the trace)</h3>
+        <ul>
+          <li>We cut the frontier <b>after</b> we add <b>all</b> the children of the node.</li>
+          <li>Old and new nodes compete <b>together</b>. An old node can be thrown away too.</li>
+          <li>Two nodes with the same h: the one that came into the frontier <b>first</b> stays.</li>
+        </ul>
+        <h3>Greedy and Beam Search</h3>
+        <div class="tablewrap">
+          <table>
+            <tr><th></th><th>Greedy</th><th>Beam Search</th></tr>
+            <tr><td>Sort by</td><td>f = <span class="hval">h</span></td><td>f = <span class="hval">h</span></td></tr>
+            <tr><td>Frontier size</td><td>no limit</td><td>at most <b>k</b></td></tr>
+            <tr><td>Throws nodes away?</td><td class="yes">No</td><td class="no">Yes</td></tr>
+            <tr><td>Complete? (graph search)</td><td class="yes">Yes*</td><td class="no">No</td></tr>
+            <tr><td>Finds the cheapest path?</td><td class="no">No</td><td class="no">No</td></tr>
+          </table>
+        </div>
+        <p class="muted">* if the number of states is finite.</p>
+        <div class="note"><b>Another version:</b> on the internet (for example GeeksforGeeks) you will also find Beam Search
+          <b>level by level</b>, like BFS: expand <b>all</b> the k nodes of one level together, put <b>all</b> their children
+          in one list, and keep the k best of that list as the next level. The frontier is still at most k,
+          but the trace is different. In this course we use the version on this page.</div>
+      </div>
+
+      <div class="card">
+        <h2>Trace by hand</h2>
+        <p>The city map, the <b>GPS guess</b>, <b>graph search</b>, <b>k = 2</b>. The small number is <b>h</b>.
+          The frontier is written smallest h first.</p>
+        <div class="tablewrap"><table id="traceA"></table></div>
+        <div class="note"><b>Look at step 3:</b> A<sub>8</sub> was in the frontier from step 1.
+          The new G<sub>0</sub> and B<sub>4</sub> are better, so the <b>old</b> A<sub>8</sub> is thrown away.</div>
+        <p class="muted" style="margin-top:12px">Your turn: write the same table with the <b>misleading guess</b>
+          (S 9, A 2, B 6, C 1, D 7, E 5, F 6, G 0), graph search, <b>k = 2</b>. Then check.</p>
+        <button data-show="traceBWrap" data-label="Show the trace">Show the trace</button>
+        <div class="tablewrap hidden" id="traceBWrap"><table id="traceB"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4. Is Beam Search good? ================= -->
+  <section data-tab="3" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Is Beam Search good?</h2>
+        <p><b>k</b> = the beam width. <b>b</b> = the branching factor (the most children a node can have).</p>
+        <table>
+          <tr><th>Question</th><th>Answer</th><th>Why</th></tr>
+          <tr><td>Complete?<br><span class="muted">Does it find a solution if one exists?</span></td>
+            <td class="no">No</td>
+            <td>A node that we throw away never comes back. If the way to the goal was in it, we lose it.
+              Tree search can also go around a loop, like Greedy.</td></tr>
+          <tr><td>Optimal?<br><span class="muted">Is the solution the cheapest?</span></td>
+            <td class="no">No</td><td>It uses only h, like Greedy. It can also throw away the cheapest way.</td></tr>
+          <tr><td>Time</td><td>Depends on h</td><td>Each step takes 1 node, makes at most b children and keeps k.
+              The frontier is small, so each step is cheap. The number of steps depends on the guess.</td></tr>
+          <tr><td>Space</td><td class="yes">Small</td><td>After each step the frontier has at most <b>k</b> nodes
+              (k + b for a moment, while we add the children). Graph search also keeps the explored set.</td></tr>
+        </table>
+        <div class="okbox"><b>Good point:</b> with the GPS guess, Beam Search with k = 1 finds the same path as Greedy
+          (<b id="gPath"></b>). After each step, its frontier has at most 1 node. Greedy's frontier grows to <b id="gMax"></b> nodes.</div>
+
+        <h3>k changes everything</h3>
+        <div class="tablewrap">
+          <table>
+            <tr><th>k</th><th>What happens</th></tr>
+            <tr><td><b>1</b></td><td>Only one node in the frontier. It always goes to the best child of the current node,
+              and never goes back. (Very close to Hill Climbing, the next lesson.)</td></tr>
+            <tr><td><b>small</b></td><td>Little memory, fast. It can throw away the way to the goal.</td></tr>
+            <tr><td><b>bigger</b></td><td>More memory and more work in each step. It keeps more nodes, so it throws away less.</td></tr>
+            <tr><td><b>no limit</b></td><td>Nothing is thrown away. It is Greedy.</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>How Beam Search fails</h2>
+          <p>Misleading guess, graph search, <b>k = 1</b>. Only one place in the frontier:</p>
+          <ol>
+            <li>S: children A<sub>2</sub>, B<sub>6</sub>. Keep A. <span class="no">Throw away B.</span></li>
+            <li>A: children C<sub>1</sub>, D<sub>7</sub>, S<sub>9</sub>. Keep C. <span class="no">Throw away D and S.</span></li>
+            <li>C: children A<sub>2</sub>, F<sub>6</sub>. A has the smaller h, so keep A. <span class="no">Throw away F.</span></li>
+            <li>Take A: it is already explored. Skip it. The frontier is <b>empty</b>.</li>
+          </ol>
+          <div class="badbox"><b>Failure!</b> But a path exists: S → B → E → G (21 km).
+            We threw away B, D and F: every way to G.</div>
+          <p>With k = 2 the same map works: B stays in the frontier, and Beam Search finds S → B → E → G.</p>
+        </div>
+        <div class="card">
+          <h2>Beam Search in short</h2>
+          <div class="okbox"><b>Good:</b> small memory, the frontier keeps at most k nodes. Simple: Greedy + one line.</div>
+          <div class="badbox"><b>Bad:</b> not complete, not optimal. A bad guess or a small k can throw away the goal.</div>
+          <p>Next lesson: <b>Hill Climbing</b>. It keeps only <b>one</b> state, like k = 1.</p>
+        </div>
+        <div class="card">
+          <h2>Check yourself</h2>
+          <ol class="tasks">
+            <li>Beam Search with <b>no limit</b> on k is the same as which algorithm?
+              <button data-show="q1">Show the answer</button>
+              <div class="ans hidden" id="q1">Greedy Best-First Search. Nothing is thrown away.</div></li>
+            <li>With the GPS guess, Beam Search (k = 1) and Greedy find the same path. So why use Beam Search?
+              <button data-show="q2">Show the answer</button>
+              <div class="ans hidden" id="q2">Same answer, less memory. After each step, its frontier has at most 1 node.
+                Greedy's frontier grows to <span class="gMax2"></span> nodes. On a big problem this matters a lot.</div></li>
+            <li>Misleading guess, graph search, k = 1: why does Beam Search stop with failure?
+              <button data-show="q3">Show the answer</button>
+              <div class="ans hidden" id="q3">At C, the copy of A (h = 2) takes the only place, and F (h = 6) is thrown away.
+                A is already explored, so it is skipped. The frontier is empty.</div></li>
+            <li><b>What happens if</b> Beam Search does not add a child that is already explored?
+              Run the misleading guess, graph search, k = 1 again, by hand.
+              <button data-show="q4">Show the answer</button>
+              <div class="ans hidden" id="q4">At A, S is explored, so only C<sub>1</sub> and D<sub>7</sub> are added. Keep C.
+                At C, A is explored, so only F<sub>6</sub> is added. Keep F.
+                At F, C is explored, so only G<sub>0</sub> is added. Take G: the goal.
+                Path S → A → C → F → G, 18 km. This time it works (and it is even the cheapest path, by luck).
+                A place in the frontier is not wasted on an explored city.</div></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="navrow">
+    <button id="prevBtn">← Back</button>
+    <button id="nextBtn" class="on">Next →</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ================= the maps ================= */
+// The city map is the same as in BFS, DFS and UCS (CityMap.example()). The goal is always G.
+const CITY_POS = { S:[200,36], A:[110,112], B:[290,112], C:[45,192], D:[200,192], E:[355,192], F:[110,266], G:[290,266] };
+const CITY_ROADS = [['S','A',10],['S','B',12],['A','C',5],['A','D',12],['B','D',8],['B','E',4],['C','F',2],['D','G',11],['E','G',5],['F','G',1]];
+const CITY_VIEW = '0 -20 400 346';
+
+// A small map with a guess that is admissible but NOT consistent (look at the road B–A).
+const SMALL_POS = { S:[50,150], B:[170,55], A:[290,150], G:[410,150] };
+const SMALL_ROADS = [['S','A',4],['S','B',1],['A','B',1],['A','G',5]];
+const SMALL_VIEW = '0 10 460 190';
+const SMALL_H = { S:4, A:0, B:5, G:0 };
+
+function makeMap(pos, roads, h, view) {
+  const adj = {};
+  for (const k in pos) adj[k] = {};
+  for (const [a, b, w] of roads) { adj[a][b] = w; adj[b][a] = w; }
+  return { pos, roads, start: 'S', goal: 'G', h, view,
+    hStar: realCost(adj, 'G'),
+    next: s => Object.keys(adj[s]).sort(),  // neighbors in ABC order (like the TreeMap in CityMap.java)
+    cost: (a, b) => adj[a][b] };
+}
+
+// h*(n) = the REAL cheapest cost from n to the goal (Dijkstra, from the goal backwards)
+function realCost(adj, goal) {
+  const d = { [goal]: 0 }, done = new Set();
+  for (;;) {
+    let u = null;
+    for (const k in d) if (!done.has(k) && (u === null || d[k] < d[u])) u = k;
+    if (u === null) return d;
+    done.add(u);
+    for (const v in adj[u]) if (!(v in d) || d[u] + adj[u][v] < d[v]) d[v] = d[u] + adj[u][v];
+  }
+}
+
+// the guesses (h) for the city map, goal G
+const H_CITY = {
+  gps:  { S:14, A:8, B:4, C:3, D:9, E:3, F:1, G:0 },    // admissible and consistent
+  zero: { S:0, A:0, B:0, C:0, D:0, E:0, F:0, G:0 },
+  big:  { S:14, A:15, B:4, C:3, D:9, E:3, F:1, G:0 },   // too big at A: NOT admissible
+  drop: { S:14, A:8, B:4, C:0, D:9, E:3, F:1, G:0 },    // admissible, NOT consistent (road A–C)
+  bad:  { S:9, A:2, B:6, C:1, D:7, E:5, F:6, G:0 },     // a misleading guess (not admissible)
+};
+H_CITY.perfect = makeMap(CITY_POS, CITY_ROADS, H_CITY.zero, CITY_VIEW).hStar;  // h = h*
+const H_NAMES = {
+  gps: 'GPS guess', zero: 'h = 0', big: 'too big at A', drop: 'drops too fast', bad: 'misleading guess', perfect: 'perfect h = h*',
+};
+const cityMap = h => makeMap(CITY_POS, CITY_ROADS, h, CITY_VIEW);
+const smallMap = () => makeMap(SMALL_POS, SMALL_ROADS, SMALL_H, SMALL_VIEW);
+
+/* ================= check a heuristic ================= */
+// admissible: h(n) <= h*(n) for every node
+const overNodes = m => Object.keys(m.pos).filter(s => m.h[s] > m.hStar[s]);
+// consistent: on every road, h can not drop by more than the road cost: |h(a) - h(b)| <= c
+const badRoads = m => m.roads.filter(([a, b, c]) => Math.abs(m.h[a] - m.h[b]) > c);
+
+/* ================= drawing a map ================= */
+const edgeKey = (a, b) => a < b ? a + b : b + a;
+// look: { node: s => class, edge: (a, b) => class, top: s => [text, grey], badge: s => count,
+//         under: s => [text, class] (default: h=...) }
+function drawMap(svg, prob, look = {}) {
+  svg.setAttribute('viewBox', prob.view);
+  const P = prob.pos;
+  let lines = '', weights = '', nodes = '';
+  for (const [a, b, w] of prob.roads) {
+    const cls = (look.edge && look.edge(a, b)) || 'e';
+    lines += `<line class="${cls}" x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}"/>`;
+    const mx = (P[a][0] + P[b][0]) / 2, my = (P[a][1] + P[b][1]) / 2;
+    const bw = String(w).length > 1 ? 24 : 18;
+    weights += `<rect class="wbox" x="${mx - bw / 2}" y="${my - 9}" width="${bw}" height="18" rx="5"/><text class="wtxt" x="${mx}" y="${my}">${w}</text>`;
+  }
+  for (const s in P) {
+    const [x, y] = P[s];
+    const top = look.top ? look.top(s) : null;
+    const k = look.badge ? look.badge(s) : 0;
+    const under = look.under ? look.under(s) : [`h=${prob.h[s]}`, ''];
+    nodes += `<g class="clickable" data-s="${s}">`
+      + `<circle class="nd ${(look.node && look.node(s)) || 'st-new'}" cx="${x}" cy="${y}" r="20"/>`
+      + (s === prob.goal ? `<circle class="goalring" cx="${x}" cy="${y}" r="26"/>` : '')
+      + `<text class="nlbl" x="${x}" y="${y}">${s}</text>`
+      + (top ? `<text class="glbl${top[1] ? ' ex' : ''}" x="${x}" y="${y - 30}">${top[0]}</text>` : '')
+      + (under ? `<text class="hlbl ${under[1]}" x="${x}" y="${y + 37}">${under[0]}</text>` : '')
+      + (k > 1 ? `<circle class="badge" cx="${x + 18}" cy="${y + 18}" r="9"/><text class="badgetxt" x="${x + 18}" y="${y + 18}">×${k}</text>` : '')
+      + `</g>`;
+  }
+  svg.innerHTML = lines + weights + nodes;
+}
+
+/* ================= tabs, theme, answers ================= */
+let tab = 0;
+function setupTabs(names, key, onChange) {
+  $('#tabs').innerHTML = names.map((t, i) => `<button data-i="${i}"><span class="n">${i + 1}</span>${t}</button>`).join('');
+  const set = i => {
+    tab = Math.max(0, Math.min(names.length - 1, i));
+    $$('#tabs button').forEach((b, j) => b.classList.toggle('on', j === tab));
+    $$('section[data-tab]').forEach(s => s.classList.toggle('hidden', +s.dataset.tab !== tab));
+    $('#prevBtn').disabled = tab === 0;
+    $('#nextBtn').disabled = tab === names.length - 1;
+    if (onChange) onChange(tab);
+    try { localStorage.setItem(key, tab); } catch (e) {}
+  };
+  $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) set(+b.dataset.i); };
+  $('#prevBtn').onclick = () => { set(tab - 1); scrollTo(0, 0); };
+  $('#nextBtn').onclick = () => { set(tab + 1); scrollTo(0, 0); };
+  let saved = 0;
+  try { saved = +localStorage.getItem(key) || 0; } catch (e) {}
+  set(saved);
+}
+
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+
+// <button data-show="x">Show answer</button> opens/closes the element with id x
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-show]');
+  if (!b) return;
+  const box = document.getElementById(b.dataset.show);
+  box.classList.toggle('hidden');
+  b.textContent = box.classList.contains('hidden') ? (b.dataset.label || 'Show the answer') : 'Hide';
+});
+
+// buttons in a group: only one is "on"
+function oneOf(sel, fn) {
+  $$(sel).forEach(b => b.onclick = () => {
+    $$(sel).forEach(x => x.classList.toggle('on', x === b));
+    fn(b);
+  });
+}
+
+/* ENGINE START */
+/* ================= best-first search: one engine, four algorithms ================= */
+// The only difference: the number f that the priority queue sorts by.
+// Beam Search = Greedy, but the frontier keeps only the k best nodes (opt.k).
+const ALGOS = {
+  ucs:    { name: 'UCS',    by: 'g', f: (g, h) => g },
+  greedy: { name: 'Greedy', by: 'h', f: (g, h) => h },
+  astar:  { name: 'A*',     by: 'f', f: (g, h) => g + h },
+  beam:   { name: 'Beam',   by: 'h', f: (g, h) => h },
+};
+const LIMIT = 400;
+
+function newRun(prob, opt) {   // opt = { algo: 'astar' | 'greedy' | 'ucs' | 'beam', graph: true | false, k: beam width }
+  const R = { prob, opt, A: ALGOS[opt.algo], front: [], seen: new Set(), fAt: {}, current: null, phase: 'pop',
+    expanded: 0, generated: 0, steps: 0, done: false, found: null, skipped: null, stopped: false,
+    dropped: [], droppedTotal: 0, maxFront: 1,
+    ids: 0, newIds: new Set(), log: [], rows: [], line: [], msg: '' };
+  const root = makeNode(R, prob.start, null);
+  R.front.push(root);
+  R.generated = 1;
+  R.newIds.add(root.id);
+  R.line = opt.graph ? ['init', 'exset'] : ['init'];
+  R.msg = `Put the start node <b>${prob.start}</b> in the priority queue: ${calc(R, root)}.`;
+  return R;
+}
+
+function makeNode(R, s, parent) {
+  const g = parent ? parent.g + R.prob.cost(parent.s, s) : 0, h = R.prob.h[s];
+  return { id: R.ids++, s, parent, g, h, f: R.A.f(g, h), depth: parent ? parent.depth + 1 : 0 };
+}
+
+// the number we sort by, and how we got it
+function calc(R, n) {
+  if (R.A.by === 'g') return `g = <b>${n.g}</b>`;
+  if (R.A.by === 'h') return `h = <b>${n.h}</b>`;
+  return `f = ${n.g} + ${n.h} = <b>${n.f}</b>`;
+}
+
+// put the node in its place by f (after the nodes with the same f)
+function addToFrontier(R, n) {
+  let i = R.front.findIndex(x => x.f > n.f);
+  if (i < 0) i = R.front.length;
+  R.front.splice(i, 0, n);
+}
+
+const nn = n => `${n.s}<sub>${n.f}</sub>`;
+const pathOf = n => { const p = []; for (; n; n = n.parent) p.unshift(n.s); return p.join(' → '); };
+
+function step(R) {
+  if (R.done) return false;
+  if (R.steps >= LIMIT) {
+    R.done = R.stopped = true; R.current = null;
+    R.msg = `Stopped after ${LIMIT} steps. Tree search goes around a loop again and again. It <b>never</b> takes G.`;
+    R.log.push('stopped: a loop');
+    return false;
+  }
+  R.steps++;
+  R.newIds = new Set();
+  R.skipped = null;
+  R.dropped = [];
+  const P = R.prob, by = R.A.by;
+
+  if (R.phase === 'pop') {
+    if (R.front.length === 0) {
+      R.done = true; R.current = null; R.line = ['loop', 'fail'];
+      R.msg = R.opt.k
+        ? 'The frontier is empty. Beam Search stops: <b>failure</b>.'
+          + (P.start in P.hStar ? '<br><span class="no">But a path to ' + P.goal + ' exists! We threw it away.</span>' : '')
+        : 'The frontier is empty. There is <b>no solution</b>.';
+      R.log.push(R.opt.k ? 'frontier empty → failure' : 'frontier empty → no solution');
+      return true;
+    }
+    const n = R.front.shift();
+    R.current = n;
+    const take = `Take the node with the smallest ${by}: <b>${n.s}</b> (${calc(R, n)})`;
+    if (R.opt.graph && R.seen.has(n.s)) {
+      R.skipped = n; R.line = ['pop', 'skip'];
+      R.msg = `${take}. But ${n.s} is already explored. <b>Skip this copy.</b>`;
+      R.log.push(`take ${nn(n)} → skip, already explored`);
+      R.rows.push({ take: n, result: 'skip', added: [], front: R.front.slice() });
+      return true;
+    }
+    if (n.s === P.goal) {
+      R.found = n; R.done = true; R.line = ['pop', 'goal'];
+      R.msg = `${take}. It is the goal! <b>Return it.</b><br>Path: ${pathOf(n)} · cost <b>${n.g}</b>`
+        + (n.g > P.hStar[P.start] ? ` · <span class="no">not the cheapest (${P.hStar[P.start]})</span>` : ' · <span class="yes">the cheapest</span>');
+      R.log.push(`take ${nn(n)} → goal! cost ${n.g}`);
+      R.rows.push({ take: n, result: 'goal', added: [], front: R.front.slice() });
+      return true;
+    }
+    R.line = R.opt.graph ? ['pop', 'skip', 'goal'] : ['pop', 'goal'];
+    R.msg = `${take}. It is not the goal. Now we expand it.`;
+    R.phase = 'expand';
+    return true;
+  }
+
+  // expand the current node
+  const n = R.current;
+  if (R.opt.graph) R.seen.add(n.s);
+  if (!(n.s in R.fAt)) R.fAt[n.s] = n.f;
+  R.expanded++;
+  const added = [];
+  for (const t of P.next(n.s)) {
+    const c = makeNode(R, t, n);
+    R.generated++;
+    addToFrontier(R, c);
+    R.newIds.add(c.id);
+    added.push(c);
+  }
+  R.line = (R.opt.graph ? ['addex'] : []).concat(['for', 'child', 'fval', 'push']);
+  R.msg = `Expand <b>${n.s}</b>: ` + added.map(c => `${c.s}: ${calc(R, c)}`).join(' · ') + '. Each child goes to its <b>place by ' + by + '</b>.';
+  R.log.push(`expand ${n.s} → add ${added.map(nn).join(' ')}`);
+  // Beam Search: keep only the k best nodes (old and new together), throw away the rest
+  if (R.opt.k) {
+    R.dropped = R.front.splice(R.opt.k);
+    R.droppedTotal += R.dropped.length;
+    R.line.push('cut');
+    R.msg += ` Keep the <b>${R.opt.k}</b> best.` + (R.dropped.length
+      ? ` <span class="no">Throw away: ${R.dropped.map(nn).join(' ')}</span>` : ' Nothing to throw away.');
+    if (R.dropped.length) R.log.push(`throw away ${R.dropped.map(nn).join(' ')}`);
+  }
+  R.maxFront = Math.max(R.maxFront, R.front.length);
+  R.rows.push({ take: n, result: 'expand', added, dropped: R.dropped, front: R.front.slice() });
+  R.phase = 'pop';
+  return true;
+}
+
+function runToEnd(prob, opt) {
+  const R = newRun(prob, opt);
+  while (step(R));
+  return R;
+}
+/* ENGINE END */
+
+/* ================= pseudo code ================= */
+// [key, indent, text, mark]  (mark 'chg' = this line is different from UCS)
+function codeLines(algo) {
+  if (algo === 'beam') return beamLines();
+  const by = { ucs: 'g', greedy: 'h', astar: 'f = g + h' }[algo];
+  const name = { ucs: 'UCS', greedy: 'GreedyBestFirst', astar: 'AStar' }[algo];
+  const fLine = {
+    ucs:    'child.f ← child.g                <c># the real cost only</c>',
+    greedy: 'child.f ← h(child)               <c># the guess only</c>',
+    astar:  'child.f ← child.g + h(child)     <c># real cost + guess</c>',
+  }[algo];
+  return [
+    ['fn',    0, `<k>function</k> ${name}(problem, graphSearch):`],
+    ['init',  1, `frontier ← a priority queue (by ${by}) with the start node`, 'chg'],
+    ['exset', 1, 'explored ← an empty set'],
+    ['loop',  1, '<k>while</k> frontier is not empty:'],
+    ['pop',   2, 'node ← frontier.removeBest()       <c># the smallest f</c>'],
+    ['skip',  2, '<k>if</k> graphSearch <k>and</k> node.state <k>in</k> explored: <k>continue</k>'],
+    ['goal',  2, '<k>if</k> isGoal(node.state): <k>return</k> node'],
+    ['addex', 2, '<k>if</k> graphSearch: explored.add(node.state)'],
+    ['for',   2, '<k>for each</k> child <k>of</k> node:'],
+    ['child', 3, 'child.g ← node.g + cost(node, child)' + (algo === 'greedy' ? '  <c># for the final cost</c>' : '')],
+    ['fval',  3, fLine, 'chg'],
+    ['push',  3, 'frontier.add(child)              <c># in its place by f</c>'],
+    ['fail',  1, '<k>return</k> failure'],
+  ];
+}
+
+// Beam Search = the Greedy code + k + one new line (mark 'chg' = different from Greedy)
+function beamLines() {
+  const L = codeLines('greedy').map(([k, ind, t]) => [k, ind, t]);
+  L[0] = ['fn', 0, '<k>function</k> BeamSearch(problem, k, graphSearch):', 'chg'];
+  L.splice(L.length - 1, 0, ['cut', 2, 'frontier ← the k best of frontier  <c># throw away the rest</c>', 'chg']);
+  return L;
+}
+
+function codeHtml(lines, hl = [], off = [], marks = true) {
+  return lines.map(([k, ind, t, mark]) => {
+    const txt = '    '.repeat(ind) + t
+      .replace(/<k>/g, '<span class="kw">').replace(/<\/k>/g, '</span>')
+      .replace(/<c>/g, '<span class="com">').replace(/<\/c>/g, '</span>');
+    const m = marks ? mark : '';
+    const cls = ['ln', hl.includes(k) ? 'hl' : '', off.includes(k) ? 'off' : '', m === 'chg' ? 'chg' : ''].join(' ');
+    return `<span class="${cls}">${txt || ' '}</span>`;
+  }).join('');
+}
+
+function pathEdges(n) {
+  const set = new Set();
+  for (; n && n.parent; n = n.parent) set.add(edgeKey(n.s, n.parent.s));
+  return set;
+}
+const pathStates = n => { const set = new Set(); for (; n; n = n.parent) set.add(n.s); return set; };
+
+// draw a found path on a small map (used in the "idea" tabs)
+function drawPath(svg, prob, n, bad) {
+  const edges = pathEdges(n), states = pathStates(n);
+  drawMap(svg, prob, {
+    edge: (a, b) => edges.has(edgeKey(a, b)) ? (bad ? 'e-bad' : 'e-path') : 'e',
+    node: s => states.has(s) ? (bad ? 'st-bad' : 'st-path') : 'st-new',
+  });
+}
+
+/* ================= a trace table ================= */
+function traceTable(R) {
+  const k = R.opt.k;
+  const head = `<tr><th class="r">#</th><th>Take</th><th>What happens</th>`
+    + (k ? '<th>Throw away</th>' : '')
+    + `<th>Frontier after (smallest ${R.A.by} first${k ? ', at most ' + k : ''})</th></tr>`;
+  const what = r => r.result === 'skip' ? `<span class="no">skip</span> (${r.take.s} is explored)`
+    : r.result === 'goal' ? `<span class="yes">goal! return</span> · cost ${r.take.g}`
+    : 'expand, add ' + r.added.map(nn).join(' ');
+  const drop = r => k ? `<td class="mono no">${r.dropped && r.dropped.length ? r.dropped.map(nn).join(' ') : ''}</td>` : '';
+  const span = k ? 4 : 3;
+  return head + R.rows.map((r, i) => `<tr><td class="r">${i + 1}</td><td><b>${nn(r.take)}</b></td><td>${what(r)}</td>${drop(r)}`
+    + `<td class="mono">${r.result === 'goal' ? '' : r.front.map(nn).join(' ') || '<span class="muted">empty</span>'}</td></tr>`).join('')
+    + (R.found ? `<tr><td></td><td colspan="${span}">Path: <b>${pathOf(R.found)}</b> · cost <b>${R.found.g}</b> · `
+      + `expanded ${R.expanded}, generated ${R.generated}</td></tr>`
+      : k && R.done && !R.stopped ? `<tr><td></td><td colspan="${span}"><span class="no">The frontier is empty: failure.</span> `
+      + `expanded ${R.expanded}, generated ${R.generated}</td></tr>` : '');
+}
+
+/* ================= the "watch it run" tab ================= */
+// The page gives: runProblem() and runOpt(), and calls restart() when they change.
+let run, timer = null;
+function restart() { stopPlay(); run = newRun(runProblem(), runOpt()); drawRun(); }
+
+function drawRun() {
+  const R = run, by = R.A.by;
+  // for every state: how many copies are in the frontier, and the smallest f
+  const inF = {};
+  for (const n of R.front) {
+    const i = inF[n.s] || (inF[n.s] = { k: 0, f: n.f, fresh: false });
+    i.k++; i.f = Math.min(i.f, n.f);
+    if (R.newIds.has(n.id)) i.fresh = true;
+  }
+  const chainNode = R.found || (R.done ? null : R.current);
+  const edges = pathEdges(chainNode), onPath = R.found ? pathStates(R.found) : new Set();
+  const dropNow = new Set(R.dropped.map(n => n.s));
+  drawMap($('#board'), R.prob, {
+    edge: (a, b) => edges.has(edgeKey(a, b)) ? (R.found ? 'e-path' : 'e-cur') : 'e',
+    node: s => {
+      if (onPath.has(s)) return 'st-path';
+      if (R.skipped && R.skipped.s === s && !inF[s]) return 'st-skip';
+      if (R.current && R.current.s === s && R.phase === 'expand') return 'st-cur';
+      if (inF[s]) return inF[s].fresh ? 'st-just' : 'st-q';
+      if (dropNow.has(s) && !R.seen.has(s)) return 'st-drop';
+      if (s in R.fAt) return 'st-ex';
+      return 'st-new';
+    },
+    // UCS: show g above the city, A*: show f. Greedy: h is already under the city.
+    top: s => by === 'h' ? null : inF[s] ? [`${by}=${inF[s].f}`, false] : s in R.fAt ? [`${by}=${R.fAt[s]}`, true] : null,
+    badge: s => inF[s] ? inF[s].k : 0,
+  });
+
+  const head = R.steps === 0 ? 'Start' : `Step ${R.steps}`;
+  $('#msg').innerHTML = `<span class="stepno">${head}${R.done ? ' · finished' : ''}</span>${R.msg}`;
+
+  $('#frontTitle').innerHTML = R.opt.k
+    ? `Frontier: at most <b>k = ${R.opt.k}</b> nodes <span class="side muted">· smallest ${by} first · small number = ${by}</span>`
+    : `Frontier: a priority queue <span class="side muted">· smallest ${by} first · small number = ${by}</span>`;
+  if ($('#dropStrip')) $('#dropStrip').innerHTML = R.dropped.length
+    ? R.dropped.map(n => `<span class="chip drop">${nn(n)}</span>`).join('')
+    : `<span class="muted">${R.droppedTotal ? 'nothing in this step' : 'nothing yet'}</span>`;
+  const show = R.front.slice(0, 24);
+  $('#frontStrip').innerHTML = R.front.length
+    ? `<span class="end">best →</span>` + show.map((n, i) =>
+        `<span class="chip ${R.newIds.has(n.id) ? 'new' : 'q'}${i === 0 ? ' top' : ''}">${nn(n)}</span>`).join('')
+      + (R.front.length > show.length ? `<span class="end">… +${R.front.length - show.length} more</span>` : '')
+    : '<span class="muted">empty</span>';
+
+  if (R.opt.graph) {
+    $('#seenTitle').textContent = 'Explored (expanded)';
+    const all = [...R.seen];
+    $('#seen').innerHTML = all.length ? all.map(s => `<span class="chip ex">${s}</span>`).join('') : '<span class="muted">empty</span>';
+  } else {
+    $('#seenTitle').textContent = 'Explored';
+    $('#seen').innerHTML = '<span class="muted">Tree search remembers nothing. The same city can be expanded again.</span>';
+  }
+
+  $('#stats').innerHTML = [
+    [R.expanded, 'expanded'], [R.generated, 'generated'], [R.front.length, 'in the frontier'],
+  ].concat(R.opt.k ? [[R.droppedTotal, 'thrown away']] : []).concat([
+    [R.found ? R.found.g : '–', 'path cost'],
+  ]).map(([v, t]) => `<div class="stat"><b>${v}</b><span>${t}</span></div>`).join('');
+
+  $('#code').innerHTML = codeHtml(codeLines(R.opt.algo), R.line, R.opt.graph ? [] : ['exset', 'skip', 'addex'], false);
+  $('#codeNote').textContent = (R.opt.k ? '· k = ' + R.opt.k + ' ' : '') + '· graphSearch = ' + R.opt.graph;
+
+  const start = Math.max(0, R.log.length - 14);
+  $('#log').innerHTML = R.log.slice(start).map((m, i) => `<li><b>${start + i + 1}.</b> ${m}</li>`).reverse().join('');
+
+  $('#bBack').disabled = R.steps === 0;
+  $('#bStep').disabled = $('#bEnd').disabled = R.done;
+}
+
+function doStep() { step(run); drawRun(); if (run.done) stopPlay(); }
+function doBack() {
+  if (run.steps === 0) return;
+  stopPlay();
+  const k = run.steps - 1;
+  run = newRun(runProblem(), runOpt());
+  while (run.steps < k && step(run));
+  drawRun();
+}
+function stopPlay() { clearInterval(timer); timer = null; $('#bPlay').textContent = 'Play'; }
+function startPlay() {
+  if (run.done) restart();
+  clearInterval(timer);
+  timer = setInterval(doStep, 1000 / +$('#speed').value);
+  $('#bPlay').textContent = 'Pause';
+}
+$('#bStep').onclick = () => { stopPlay(); doStep(); };
+$('#bBack').onclick = doBack;
+$('#bReset').onclick = restart;
+$('#bPlay').onclick = () => timer ? stopPlay() : startPlay();
+$('#bEnd').onclick = () => { stopPlay(); while (step(run)); drawRun(); };
+$('#speed').oninput = () => { if (timer) startPlay(); };
+document.addEventListener('keydown', e => {
+  if (tab !== RUN_TAB || e.target.closest('input')) return;
+  if (e.key === 'ArrowRight') { stopPlay(); doStep(); }
+  if (e.key === 'ArrowLeft') doBack();
+});
+
+
+const RUN_TAB = 1;
+// k = 0 means: no limit (that is Greedy)
+const beamRun = (hName, k, graph = true) =>
+  runToEnd(cityMap(H_CITY[hName]), k ? { algo: 'beam', graph, k } : { algo: 'greedy', graph });
+
+/* ================= 1. the idea ================= */
+let ideaK = 2, ideaH = 'gps';
+function drawIdea() {
+  const m = cityMap(H_CITY[ideaH]);
+  const R = beamRun(ideaH, ideaK), G = beamRun(ideaH, 0);
+  const name = (ideaK ? `k = ${ideaK}` : 'No limit (Greedy)') + ', ' + (ideaH === 'gps' ? 'GPS guess' : 'misleading guess');
+  if (R.found) {
+    drawPath($('#ideaSvg'), m, R.found, R.found.g > m.hStar[m.start]);
+    $('#ideaText').innerHTML = `<b>${name}:</b> ${pathOf(R.found)} · <b>${R.found.g} km</b>. `
+      + `Expanded ${R.expanded} cities. After each step, the frontier had at most <b>${R.maxFront}</b> node${R.maxFront > 1 ? 's' : ''}`
+      + (ideaK ? ` (Greedy: ${G.maxFront}).` : '.');
+  } else {
+    drawMap($('#ideaSvg'), m, { node: s => R.seen.has(s) ? 'st-ex' : 'st-new' });
+    $('#ideaText').innerHTML = `<b>${name}:</b> <span class="no">failure!</span> The frontier became empty. `
+      + `But a path exists: Greedy finds ${pathOf(G.found)} (${G.found.g} km). Beam Search threw the way away.`;
+  }
+}
+oneOf('[data-ik]', b => { ideaK = +b.dataset.ik; drawIdea(); });
+oneOf('[data-ih]', b => { ideaH = b.dataset.ih; drawIdea(); });
+
+/* ================= 2. watch it run ================= */
+let mode = 'graph', hName = 'gps', K = 2;
+const runProblem = () => cityMap(H_CITY[hName]);
+const runOpt = () => ({ algo: 'beam', graph: mode === 'graph', k: K });
+oneOf('[data-k]', b => { K = +b.dataset.k; restart(); });
+oneOf('[data-mode]', b => { mode = b.dataset.mode; restart(); });
+oneOf('[data-h]', b => { hName = b.dataset.h; restart(); });
+// a "Thrown away" strip under the frontier, and one more color in the legend
+$('#frontStrip').insertAdjacentHTML('afterend',
+  '<h3>Thrown away <span class="side muted">· in this step · they never come back</span></h3><div class="qstrip" id="dropStrip"></div>');
+$('.legend').insertAdjacentHTML('beforeend',
+  '<span><i style="background:var(--bad-bg);border-color:var(--bad);border-style:dashed"></i>thrown away</span>');
+$('#boardNote').innerHTML = 'The <span class="hval">orange</span> number under a city is <b>h</b>, the guess.'
+  + ' Beam Search sorts the frontier by h, then keeps only the <b>k</b> best. ×2 = two copies in the frontier.';
+
+/* ================= 3. pseudo code + traces ================= */
+$('#stdCode').innerHTML = codeHtml(codeLines('beam'));
+$('#traceA').innerHTML = traceTable(beamRun('gps', 2));
+$('#traceB').innerHTML = traceTable(beamRun('bad', 2));
+
+/* ================= 4. is it good? ================= */
+const G_GPS = beamRun('gps', 0);
+$('#gPath').textContent = pathOf(beamRun('gps', 1).found) + ', ' + beamRun('gps', 1).found.g + ' km';
+$('#gMax').textContent = G_GPS.maxFront;
+$$('.gMax2').forEach(e => e.textContent = G_GPS.maxFront);
+
+/* ================= start ================= */
+drawIdea();
+restart();
+setupTabs(['The idea', 'Watch it run', 'Pseudo code', 'Is Beam Search good?'], 'beam-tab', t => { if (t !== RUN_TAB) stopPlay(); });
+</script>
+</body>
+</html>
