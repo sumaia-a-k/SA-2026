@@ -1,20 +1,24 @@
 """
 The start point of the program.
 We solve the maze with BFS, then we compare the BFS versions and the DFS versions.
-At the end we compare BFS and UCS on a city map where the roads have different lengths.
+Then we compare BFS and UCS on a city map where the roads have different lengths.
+At the end we compare UCS, Greedy and A* (they use a heuristic).
 
 How to run (inside the SA-2026/python folder):
     python -m sa2026.main
 """
+from sa2026.algorithms.a_star import AStar
 from sa2026.algorithms.bfs import BFS
 from sa2026.algorithms.bfs_optimized import BFSOptimized
 from sa2026.algorithms.depth_limited_dfs import DepthLimitedDFS
 from sa2026.algorithms.dfs import DFS
 from sa2026.algorithms.dfs_cycle_check import DFSCycleCheck
+from sa2026.algorithms.greedy import Greedy
 from sa2026.algorithms.iterative_deepening import IterativeDeepening
 from sa2026.algorithms.ucs import UCS
 from sa2026.core.problem import Problem
 from sa2026.core.search_algorithm import SearchAlgorithm
+from sa2026.problems.citymap.city_heuristic import CityHeuristic
 from sa2026.problems.citymap.city_map import CityMap
 from sa2026.problems.citymap.city_map_problem import CityMapProblem
 from sa2026.problems.maze.maze import Maze
@@ -64,6 +68,15 @@ def main():
     print("\n=== UCS, graph search: the path ===")
     ucs = UCS(True)
     ucs.print_solution(city_map.solve(ucs))
+
+    # 5. the same city map with a heuristic: the GPS guess of the lesson pages
+    print("\n=== City map S -> G: UCS vs Greedy vs A* (GPS guess) ===")
+    city_map_h = CityMapProblem("S", "G", CityMap.example(), CityHeuristic.gps_guess_to_g())
+    print("Version                  Steps   Cost  Expanded  Generated")
+    compare_cost("UCS, graph search", UCS(True), city_map_h)
+    compare_cost("Greedy, graph search", Greedy(True), city_map_h)
+    compare_cost("A*, graph search", AStar(True), city_map_h)
+    compare_cost("A*, tree search", AStar(False), city_map_h)
 
 
 # solves the problem and prints one line of numbers

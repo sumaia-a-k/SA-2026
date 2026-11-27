@@ -1,33 +1,40 @@
 #include <cstdio>
 #include <iostream>
+#include <memory>
 #include <string>
 
+#include "sa2026/algorithms/AStar.h"
 #include "sa2026/algorithms/BFS.h"
 #include "sa2026/algorithms/BFSOptimized.h"
 #include "sa2026/algorithms/DFS.h"
 #include "sa2026/algorithms/DFSCycleCheck.h"
 #include "sa2026/algorithms/DepthLimitedDFS.h"
+#include "sa2026/algorithms/Greedy.h"
 #include "sa2026/algorithms/IterativeDeepening.h"
 #include "sa2026/algorithms/UCS.h"
 #include "sa2026/core/Node.h"
 #include "sa2026/core/Problem.h"
 #include "sa2026/core/SearchAlgorithm.h"
+#include "sa2026/problems/citymap/CityHeuristic.h"
 #include "sa2026/problems/citymap/CityMap.h"
 #include "sa2026/problems/citymap/CityMapProblem.h"
 #include "sa2026/problems/maze/Maze.h"
 #include "sa2026/problems/maze/MazeProblem.h"
 
 // "using" lets us write BFS instead of sa2026::algorithms::BFS (like import in Java)
+using sa2026::algorithms::AStar;
 using sa2026::algorithms::BFS;
 using sa2026::algorithms::BFSOptimized;
 using sa2026::algorithms::DepthLimitedDFS;
 using sa2026::algorithms::DFS;
 using sa2026::algorithms::DFSCycleCheck;
+using sa2026::algorithms::Greedy;
 using sa2026::algorithms::IterativeDeepening;
 using sa2026::algorithms::UCS;
 using sa2026::core::NodePtr;
 using sa2026::core::Problem;
 using sa2026::core::SearchAlgorithm;
+using sa2026::problems::citymap::CityHeuristic;
 using sa2026::problems::citymap::CityMap;
 using sa2026::problems::citymap::CityMapProblem;
 using sa2026::problems::maze::Maze;
@@ -37,7 +44,8 @@ using sa2026::problems::maze::MazeProblem;
 /*
  * The start point of the program.
  * We solve the maze with BFS, then we compare the BFS versions and the DFS versions.
- * At the end we compare BFS and UCS on a city map where the roads have different lengths.
+ * Then we compare BFS and UCS on a city map where the roads have different lengths.
+ * At the end we compare UCS, Greedy and A* (they use a heuristic).
  *
  * How to run (inside the SA-2026/cpp folder):
  *   .\run.bat   (Windows)   or   ./run.sh   (Git Bash, macOS, Linux)
@@ -116,5 +124,18 @@ int main() {
     std::cout << "\n=== UCS, graph search: the path ===" << std::endl;
     UCS ucs(true);
     ucs.printSolution(cityMap.solve(ucs));
+
+    // 5. the same city map with a heuristic: the GPS guess of the lesson pages
+    std::cout << "\n=== City map S -> G: UCS vs Greedy vs A* (GPS guess) ===" << std::endl;
+    CityMapProblem cityMapH("S", "G", CityMap::example(),
+                            std::make_shared<CityHeuristic>(CityHeuristic::gpsGuessToG()));
+    std::cout << "Version                  Steps   Cost  Expanded  Generated" << std::endl;
+    Greedy greedyGraph(true);
+    AStar aStarGraph(true);
+    AStar aStarTree(false);
+    compareCost("UCS, graph search", ucsGraph, cityMapH);  // the same UCS object as above: search() resets the counters
+    compareCost("Greedy, graph search", greedyGraph, cityMapH);
+    compareCost("A*, graph search", aStarGraph, cityMapH);
+    compareCost("A*, tree search", aStarTree, cityMapH);
     return 0;
 }
