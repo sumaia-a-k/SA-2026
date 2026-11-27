@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hill Climbing</title>
+<style>
+:root {
+  --bg:#f5f6fa; --surface:#ffffff; --ink:#1d2433; --muted:#5b6475; --line:#c9d0de;
+  --accent:#3b5bdb; --accent-bg:#e8edfd;
+  --q:#3b5bdb; --q-bg:#e8edfd;           /* in the frontier */
+  --ex:#7b8494; --ex-bg:#e3e7ee;         /* expanded */
+  --cur:#d9480f; --cur-bg:#fff0e6;       /* current node */
+  --goal:#2b8a3e; --goal-bg:#dcf3e2;     /* goal and final path */
+  --ok:#2b8a3e; --bad:#e03131; --bad-bg:#ffe3e3; --warn:#d9480f; --warn-bg:#fff0e6;
+  --code-bg:#f2f4f8; --kw:#a61e4d; --ty:#1864ab; --com:#868e96; --num:#c2410c; --str:#2b8a3e;
+  --new-bg:#fff3bf;
+  --shadow:0 1px 2px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+    --accent:#8ea2ff; --accent-bg:#1f2744;
+    --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+    --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+    --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+    --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+    --new-bg:#4a3f10;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#10131a; --surface:#191e28; --ink:#e6e9ef; --muted:#9aa3b2; --line:#384052;
+  --accent:#8ea2ff; --accent-bg:#1f2744;
+  --q:#8ea2ff; --q-bg:#1f2744; --ex:#8d96a6; --ex-bg:#2a303c;
+  --cur:#ffa463; --cur-bg:#3a2414; --goal:#6fdc85; --goal-bg:#163522;
+  --ok:#6fdc85; --bad:#ff8787; --bad-bg:#3d1c1c; --warn:#ffa463; --warn-bg:#3a2414;
+  --code-bg:#12161e; --kw:#f783ac; --ty:#74c0fc; --com:#7d8696; --num:#ffa94d; --str:#8ce99a;
+  --new-bg:#4a3f10;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 18px 24px 32px; }
+header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+header h1 { margin: 0; font-size: 22px; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+button {
+  font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px; padding: 6px 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 14px; }
+.steps button { border-radius: 99px; padding: 5px 12px 5px 6px; display: inline-flex; align-items: center; gap: 7px; }
+.steps button .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; background: var(--accent-bg); color: var(--accent);
+}
+.steps button.on .n { background: var(--surface); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 22px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.stack > * + * { margin-top: 18px; }
+h2 { margin: 0 0 8px; font-size: 24px; }
+h3 { margin: 18px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+h3:first-child { margin-top: 0; }
+h3 .side { text-transform: none; letter-spacing: 0; font-weight: 400; }
+p { margin: 6px 0; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+.box { background: var(--accent-bg); border-left: 4px solid var(--accent); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note { background: var(--warn-bg); border-left: 4px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.note b:first-child { color: var(--warn); }
+.okbox { background: var(--goal-bg); border-left: 4px solid var(--goal); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+.badbox { background: var(--bad-bg); border-left: 4px solid var(--bad); border-radius: 10px; padding: 10px 14px; margin: 10px 0; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 6px 0 0; }
+.kw { color: var(--kw); font-weight: 600; } .ty { color: var(--ty); } .com { color: var(--com); font-style: italic; } .num { color: var(--num); } .str { color: var(--str); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 6px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; }
+.yes { color: var(--ok); font-weight: 600; } .no { color: var(--bad); font-weight: 600; }
+.navrow { display: flex; justify-content: space-between; margin-top: 18px; }
+td code { font-size: 12.5px; }
+
+/* pseudo code */
+.pseudo { padding: 8px 0; }
+.pseudo .ln { display: block; padding: 1px 14px 1px 10px; border-left: 4px solid transparent; white-space: pre; }
+.pseudo .ln.hl { background: var(--new-bg); border-left-color: var(--warn); }
+.pseudo .ln.off { opacity: .4; }
+.pseudo .ln.new { box-shadow: inset 3px 0 0 var(--goal); }
+.pseudo .ln.chg { background: var(--goal-bg); }
+.pseudo .star { color: var(--goal); font-weight: 700; }
+.diff .add { display: block; background: var(--goal-bg); margin: 0 -14px; padding: 0 14px; }
+.diff .del { display: block; background: var(--bad-bg); margin: 0 -14px; padding: 0 14px; text-decoration: line-through; opacity: .75; }
+
+/* run tab */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; margin-bottom: 18px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lbl { font-size: 13px; color: var(--muted); }
+#speed { width: 90px; vertical-align: middle; }
+svg { display: block; width: 100%; height: auto; user-select: none; }
+.board { max-height: 440px; }
+.hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 13px; color: var(--muted);
+  border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 2px solid; }
+.msg { font-size: 16px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-height: 72px; }
+.msg .stepno { font-size: 12px; color: var(--muted); display: block; }
+.qstrip { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-height: 34px; }
+.qstrip .end { font-size: 12px; color: var(--muted); }
+.chip { display: inline-flex; align-items: baseline; gap: 1px; padding: 3px 8px; border-radius: 7px; font: 13px ui-monospace, Consolas, monospace;
+  border: 1.5px solid var(--line); background: var(--surface); }
+.chip sub { font-size: 10px; color: var(--muted); }
+.chip.q { background: var(--q-bg); border-color: var(--q); }
+.chip.new { background: var(--new-bg); border-color: var(--warn); }
+.chip.ex { background: var(--ex-bg); border-color: var(--ex); }
+.chip.top { box-shadow: 0 0 0 2px var(--cur); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.stat { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+.stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+#log { margin: 4px 0 0; padding-left: 0; list-style: none; font-size: 13px; color: var(--muted); max-height: 170px; overflow: auto; }
+#log li { padding: 2px 0; border-bottom: 1px dashed var(--line); }
+#log li b { color: var(--ink); }
+
+/* drawing */
+.e { stroke: var(--line); stroke-width: 3; }
+.e-cur { stroke: var(--cur); stroke-width: 5; }
+.e-path { stroke: var(--goal); stroke-width: 7; }
+.e-bfs { stroke: var(--bad); stroke-width: 5; stroke-dasharray: 9 6; }
+.wbox { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.wtxt { font-size: 12px; font-weight: 700; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.nd { stroke-width: 3; }
+.st-new { fill: var(--surface); stroke: var(--line); }
+.st-q { fill: var(--q-bg); stroke: var(--q); }
+.st-ex { fill: var(--ex-bg); stroke: var(--ex); }
+.st-cur { fill: var(--cur-bg); stroke: var(--cur); stroke-width: 4; }
+.st-path { fill: var(--goal-bg); stroke: var(--goal); stroke-width: 4; }
+.st-just { fill: var(--new-bg); stroke: var(--warn); }
+.st-skip { fill: var(--surface); stroke: var(--bad); stroke-dasharray: 3 3; }
+.st-bad { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 4; }
+.goalring { fill: none; stroke: var(--goal); stroke-width: 2; }
+.nlbl { font-weight: 700; font-size: 16px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.glbl { font-size: 12px; font-weight: 700; fill: var(--accent); text-anchor: middle; }
+.glbl.ex { fill: var(--muted); }
+.badge { fill: var(--q); }
+.badgetxt { fill: var(--surface); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.clickable { cursor: pointer; }
+
+/* idea tab */
+.pq { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 44px; padding: 8px 10px;
+  border: 2px dashed var(--line); border-radius: 12px; margin: 8px 0; }
+.pq .chip { font-size: 15px; padding: 5px 10px; }
+.slider { display: flex; gap: 10px; align-items: center; margin: 4px 0; }
+.slider input { flex: 1; max-width: 300px; }
+.slider b { min-width: 28px; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding: 14px 16px 28px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { padding: 14px 16px; }
+}
+
+
+/* informed search */
+.hlbl { font-size: 12px; font-weight: 700; fill: var(--warn); text-anchor: middle; dominant-baseline: central;
+  paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.hlbl.real { fill: var(--goal); }
+.hlbl.bad { fill: var(--bad); }
+.hlbl.both { fill: var(--ink); }
+.e-bad { stroke: var(--bad); stroke-width: 5; stroke-dasharray: 9 6; }
+.hval { color: var(--warn); font-weight: 700; }
+.fval { color: var(--accent); font-weight: 700; }
+.gval { color: var(--goal); font-weight: 700; }
+.formula { font-size: 20px; text-align: center; margin: 12px 0; font-weight: 700; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 13px; font-weight: 700; }
+.tag.yes { background: var(--goal-bg); } .tag.no { background: var(--bad-bg); }
+tr.badrow td { background: var(--bad-bg); }
+.ans { margin-top: 6px; }
+ol.tasks > li { margin-bottom: 12px; }
+a { color: var(--accent); }
+
+/* hill climbing */
+.qboard { border-collapse: collapse; margin: 0 auto; width: auto; font-variant-numeric: tabular-nums; }
+.qboard td, .qboard th { width: 44px; height: 44px; padding: 0; text-align: center; vertical-align: middle; border: 1px solid var(--line); }
+.qboard th { border: none; font-size: 12px; color: var(--muted); font-weight: 600; width: 22px; }
+.qboard thead th { height: 22px; }
+.qboard td { font-size: 13px; color: var(--muted); }
+.qboard td.dark { background: var(--code-bg); }
+.qboard td.queen { font-size: 28px; color: var(--ink); background: var(--q-bg); }
+.qboard td.queen.good { background: var(--goal-bg); }
+.qboard td.queen.hit { background: var(--bad-bg); color: var(--bad); }
+.qboard td.queen.swap { background: var(--cur-bg); color: var(--cur); outline: 3px solid var(--cur); outline-offset: -3px; }
+.qswap { border-collapse: collapse; margin: 0 auto; width: auto; font-variant-numeric: tabular-nums; }
+.qswap td, .qswap th { width: 36px; height: 30px; padding: 0; text-align: center; vertical-align: middle; font-size: 13px; }
+.qswap td { border: 1px solid var(--line); color: var(--muted); }
+.qswap th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.qswap td.none { border: none; }
+.qswap td.low { color: var(--ink); font-weight: 700; }
+.qswap td.best { outline: 3px solid var(--cur); outline-offset: -3px; color: var(--cur); font-weight: 700; font-size: 15px; }
+.land .pt { cursor: pointer; }
+.land .pt circle { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
+.land .pt:hover circle { stroke: var(--accent); }
+.land .pt.cur circle { fill: var(--cur-bg); stroke: var(--cur); stroke-width: 4; }
+.land .pt.walk circle { fill: var(--ex-bg); stroke: var(--ex); }
+.land .pt.goal circle { fill: var(--goal-bg); stroke: var(--goal); stroke-width: 4; }
+.land .pt.stuck circle { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 4; }
+.land .ground { fill: none; stroke: var(--muted); stroke-width: 2; }
+.land .hv { font-size: 11px; fill: var(--muted); text-anchor: middle; }
+.land .tag { font-size: 12px; font-weight: 700; fill: var(--muted); text-anchor: middle; }
+.rgrid { border-collapse: separate; border-spacing: 4px; width: auto; margin: 0 auto; }
+.rgrid td { width: 52px; height: 52px; text-align: center; vertical-align: middle; border-radius: 8px; cursor: pointer;
+  border: 2px solid var(--line); font-weight: 700; font-size: 16px; padding: 0; }
+.rgrid td.diag { background: var(--accent-bg); }
+.rgrid td.walk { background: var(--ex-bg); border-color: var(--ex); }
+.rgrid td.cur { background: var(--cur-bg); border-color: var(--cur); }
+.rgrid td.goal { background: var(--goal-bg); border-color: var(--goal); }
+.rgrid td.stuck { background: var(--bad-bg); border-color: var(--bad); }
+.rgrid td.nb { border-color: var(--cur); border-width: 3px; }
+.rgrid td.better { background: var(--goal-bg); border-color: var(--goal); border-style: dashed; border-width: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Hill Climbing</h1>
+      <p>Intelligent Search Algorithms · Latakia University · Local search: after Greedy, A* and Beam Search</p>
+    </div>
+    <button id="themeBtn">Dark / Light</button>
+  </header>
+
+  <nav class="steps" id="tabs"></nav>
+
+  <!-- ================= 1. The idea ================= -->
+  <section data-tab="0">
+    <div class="grid">
+      <div class="card">
+        <h2>The idea</h2>
+        <p class="lead">You are on a mountain in thick fog, and you want to reach the lowest point.
+          You can only see the ground around your feet. So at every step you go to the <b>lowest</b> place next to you.
+          When no place around you is lower, you stop.</p>
+        <div class="box"><b>Hill Climbing in one sentence:</b> keep only <b>one</b> state. Look at <b>all</b> its neighbours
+          and move to the best one (the smallest <b>h</b>), but only if it is <b>better</b> than where you are now.
+          If no neighbour is better, stop.</div>
+        <div class="tablewrap">
+          <table>
+            <tr><th>We want</th><th>The best neighbour</th><th>Move only if</th></tr>
+            <tr><td><b>the minimum</b> (minimization)<br><span class="muted">h is a cost or a distance: smaller is better</span></td>
+              <td>the <b>smallest</b> h</td><td class="formula" style="font-size:16px;text-align:left;white-space:nowrap">h(best) <b>&lt;</b> h(current)</td></tr>
+            <tr><td><b>the maximum</b> (maximization)<br><span class="muted">h is a score: bigger is better</span></td>
+              <td>the <b>biggest</b> h</td><td class="formula" style="font-size:16px;text-align:left;white-space:nowrap">h(best) <b>&gt;</b> h(current)</td></tr>
+          </table>
+        </div>
+        <p>On this page we <b>minimize</b>: our h is a distance to the goal, so smaller is better and we go down to h = 0.
+          The name "climbing" comes from maximization (climb up to the top). It is the same algorithm, upside down.</p>
+        <p>No frontier, no explored set, no going back. Only the current state.</p>
+        <div class="note"><b>The price:</b> it can stop at a place that is <b>not</b> the goal. We say it is <b>stuck</b>.</div>
+        <p class="muted">Two neighbours with the same smallest h: in this course we take the <b>first</b> one
+          (on the city map: ABC order). Some books choose one at random.</p>
+      </div>
+
+      <div class="card">
+        <h3>The city map. Orange = the guess h to G (km)</h3>
+        <div class="grp" style="margin-bottom:8px"><span class="lbl">Guess</span>
+          <button data-ih="gps" class="on">GPS guess</button>
+          <button data-ih="bad">misleading guess</button>
+          <span class="lbl" style="margin-left:10px"></span>
+          <button id="iReset">⏮ Reset</button>
+          <button id="iBack">◀ Back</button>
+          <button id="iStep" class="on">Step ▶</button>
+        </div>
+        <svg id="ideaSvg" class="board" aria-label="Hill Climbing on the city map"></svg>
+        <div class="legend">
+          <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>current city</span>
+          <span><i style="background:var(--q-bg);border-color:var(--q)"></i>its neighbours</span>
+          <span><i style="background:var(--new-bg);border-color:var(--warn)"></i>best neighbour</span>
+          <span><i style="background:var(--ex-bg);border-color:var(--ex)"></i>already passed</span>
+        </div>
+        <div class="msg" id="ideaMsg" style="margin-top:10px"></div>
+        <div class="box"><b>Before you click:</b> take the misleading guess. Start at S and always go to the neighbour with
+          the smallest h, but only if it is smaller than h of your city. Where do you stop?</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. 8-queens ================= -->
+  <section data-tab="1" class="hidden">
+    <div class="card toolbar">
+      <div class="grp"><span class="lbl">Board</span>
+        <button data-qb="0" class="on">Example 1</button>
+        <button data-qb="1">Example 2</button>
+        <button data-qb="rnd">Random board</button>
+      </div>
+      <div class="grp">
+        <button id="qReset" title="Back to the start board">⏮ Reset</button>
+        <button id="qBack">◀ Back</button>
+        <button id="qStep" class="on">Step ▶</button>
+        <button id="qEnd">Finish ⏭</button>
+      </div>
+      <div class="grp"><button id="qRestart">Random restart until solved</button></div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <table class="qboard" id="qBoard"></table>
+        <p class="hint">♛ = a queen. Red = this queen is attacked (on a diagonal with another queen).
+          Orange = the two queens of the best swap.</p>
+        <h3>All 28 swaps: h after the swap</h3>
+        <table class="qswap" id="qSwap"></table>
+        <p class="hint">The cell in row i and column j = h if we swap the queens of column i and column j.<br>
+          Orange = the best swap: the smallest h. Two equal numbers: the <b>first</b> one
+          (1↔2, 1↔3, ..., 1↔8, then 2↔3, ...).</p>
+      </div>
+      <div class="card">
+        <div class="msg" id="qMsg"></div>
+        <div class="stats" id="qStats"></div>
+        <h3>History</h3>
+        <ol id="log"></ol>
+        <h3>The 8-queens problem</h3>
+        <p>Put 8 queens on a chess board so that <b>no two attack each other</b>.
+          A queen attacks along its row, its column and its two diagonals.</p>
+        <ul>
+          <li><b>State:</b> one queen in each row <b>and</b> in each column, always. This part is easy, so we start with it:
+            no two queens share a row or a column, and only the <b>diagonals</b> can be a problem.</li>
+          <li><b>Neighbour:</b> <b>swap</b> two queens: the queen of column i takes the row of the queen of column j,
+            and the other way. So it is still one queen in each row and column. 8 × 7 / 2 = <b>28</b> neighbours.</li>
+          <li><b>h:</b> the number of <b>pairs</b> of queens on the same diagonal.
+            We count a pair even if another queen stands between them.</li>
+          <li><b>Goal:</b> h = 0. There are 8! = 40,320 such boards, and 92 of them are solutions.</li>
+        </ul>
+        <p class="muted">Russell &amp; Norvig use another version: one queen in each column, and a move takes one queen up or
+          down in its column (56 neighbours). Then two queens can share a row, and one climb solves only about 14% of the boards.
+          Here we do not need a path: only the final board is the answer.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. Pseudo code ================= -->
+  <section data-tab="2" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Pseudo code</h2>
+        <p><b>Minimization</b> (our h: a distance, smaller is better):</p>
+        <pre class="pseudo" id="hcCode"></pre>
+        <p style="margin-top:12px"><b>Maximization</b> (h is a score, bigger is better): only the <b>green</b> lines change.</p>
+        <pre class="pseudo" id="hcCodeMax"></pre>
+        <p class="muted">Here we return "stuck" when it stops at a state that is not the goal, because our problems have a
+          goal test. Russell &amp; Norvig return the current state: for some problems any good state is useful.</p>
+        <h3>Compare with Greedy</h3>
+        <ul>
+          <li>No frontier and no explored set: only <b>current</b>.</li>
+          <li>We look at <b>all</b> the neighbours, take the best one, and forget the others.</li>
+          <li>One new test: if the best neighbour is <b>not better</b>, stop.</li>
+        </ul>
+        <div class="okbox"><b>It never goes around a loop</b>, even without an explored set:
+          h gets smaller at every move, so it can never come back to a state it has seen.</div>
+      </div>
+
+      <div class="card">
+        <h2>Trace by hand</h2>
+        <p>The city map, the <b>GPS guess</b>. Start S, goal G.</p>
+        <div class="tablewrap"><table id="traceA"></table></div>
+        <p style="margin-top:12px">The same map with the <b>misleading guess</b> (S 9, A 2, B 6, C 1, D 7, E 5, F 6, G 0):</p>
+        <div class="tablewrap"><table id="traceB"></table></div>
+        <p class="muted" style="margin-top:12px">Your turn: the guess <b>h = 0</b> for every city. Where does Hill Climbing stop? Why?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 4. Where it gets stuck ================= -->
+  <section data-tab="3" class="hidden">
+    <div class="card" style="margin-bottom:16px">
+      <h2>1. Three places where Hill Climbing gets stuck</h2>
+      <p>Think of the h values as the ground. Hill Climbing walks down on it. In these 3 kinds of places it stops,
+        but it is <b>not</b> at the goal. They are places, not kinds of Hill Climbing.</p>
+      <div class="tablewrap">
+        <table>
+          <tr><th>Place</th><th>What it looks like</th><th>Why Hill Climbing stops</th><th>Example</th></tr>
+          <tr><td><b>Local minimum</b></td><td>a small hole</td><td>every neighbour is <b>worse</b> (bigger h)</td>
+            <td>the landscape below (h = 4); the city map, misleading guess: C</td></tr>
+          <tr><td><b>Plateau</b></td><td>flat ground</td><td>every neighbour has the <b>same</b> h</td>
+            <td>the landscape below (h = 6, 6, 6, 6); 8-queens: Example 2</td></tr>
+          <tr><td><b>Ridge</b></td><td>a narrow path that goes down <b>diagonally</b></td>
+            <td>a better state is very close, but it is <b>not a neighbour</b></td><td>the grid below (the blue squares)</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="grid" style="margin-bottom:16px">
+      <div class="card">
+          <h2>Local minimum and plateau</h2>
+          <p><b>Click a point</b> to start there. Each point has two neighbours: left and right.</p>
+          <svg id="landSvg" class="land" viewBox="0 0 640 270" aria-label="A landscape of h values"></svg>
+          <div class="msg" id="landMsg"></div>
+        </div>
+      <div class="card">
+          <h2>Ridge</h2>
+          <p>A grid of h values. The goal is the bottom right square (h = 0).
+            From a square we can only step <b>up, down, left or right</b> (not diagonally).</p>
+          <table class="rgrid" id="ridge"></table>
+          <div class="legend" style="justify-content:center">
+            <span><i style="background:var(--cur-bg);border-color:var(--cur)"></i>where we are</span>
+            <span><i style="background:var(--surface);border-color:var(--cur)"></i>its 4 neighbours</span>
+            <span><i style="background:var(--goal-bg);border-color:var(--goal);border-style:dashed"></i>better, but not a neighbour</span>
+          </div>
+          <div class="msg" id="ridgeMsg" style="margin-top:10px"></div>
+          <ul>
+            <li>But the square with h = 2 is <b>better</b>, and it is only one <b>diagonal</b> step away.
+              Hill Climbing can not go there: first it would have to step to a worse square (6), and it never does that.</li>
+            <li>The blue squares (8, 6, 4, 2, 0) are the <b>ridge</b>: a narrow path to the goal that goes in a direction we can
+              not step in. On every blue square (except the goal) Hill Climbing stops.</li>
+          </ul>
+        </div>
+    </div>
+    <div class="grid">
+        <div class="card">
+          <h2>2. A way out: random restart</h2>
+          <p>When it is stuck, start again from a <b>new random state</b>. Repeat until you find the goal.</p>
+          <pre class="pseudo"><span class="ln"><span class="kw">function</span> RandomRestart(problem, maxClimbs):</span><span class="ln">    <span class="kw">repeat</span> maxClimbs <span class="kw">times</span>:</span><span class="ln">        <span class="com"># any state must be allowed as a start</span></span><span class="ln">        start ← a random state</span><span class="ln">        result ← HillClimbing(problem, start)</span><span class="ln">        <span class="kw">if</span> result <span class="kw">is not</span> stuck: <span class="kw">return</span> result   <span class="com"># the goal</span></span><span class="ln">    <span class="kw">return</span> failure        <span class="com"># no goal after maxClimbs climbs</span></span></pre>
+          <p class="muted">HillClimbing(problem, start) is the code of step 3, but it starts from <i>start</i>.
+            maxClimbs is a limit, so the search always stops.</p>
+        </div>
+        <div class="card">
+          <h2>3. Another kind: Stochastic Hill Climbing</h2>
+          <p>Our Hill Climbing (steepest) takes the <b>best</b> neighbour.
+            Stochastic Hill Climbing takes a <b>random</b> one of the <b>better</b> neighbours.</p>
+          <pre class="pseudo"><span class="ln"><span class="kw">function</span> StochasticHillClimbing(problem):</span><span class="ln">    current ← the start state</span><span class="ln">    <span class="kw">loop</span>:</span><span class="ln">        <span class="kw">if</span> isGoal(current): <span class="kw">return</span> current    <span class="com"># success</span></span><span class="ln chg">        better ← the neighbours with h &lt; h(current)</span><span class="ln chg">        <span class="kw">if</span> better <span class="kw">is</span> empty: <span class="kw">return</span> stuck</span><span class="ln chg">        current ← a random state from better</span></pre>
+          <p>The <b>green</b> lines are different from step 3. It is <b>not</b> a way out: it stops for the same reason
+            (no neighbour is better), in the same 3 kinds of places.
+            It usually needs more moves. Because it is random, two runs from the same start can end in different places.</p>
+          <p class="muted">Here every better neighbour has the same chance. Some books give a bigger chance to a much
+            better neighbour (Russell &amp; Norvig).</p>
+        </div>
+    </div>
+  </section>
+
+  <!-- ================= 5. Is it good? ================= -->
+  <section data-tab="4" class="hidden">
+    <div class="grid">
+      <div class="card">
+        <h2>Is Hill Climbing good?</h2>
+        <p><b>b</b> = the number of neighbours of a state.</p>
+        <table>
+          <tr><th>Question</th><th>Answer</th><th>Why</th></tr>
+          <tr><td>Complete?<br><span class="muted">Does it find a solution if one exists?</span></td>
+            <td class="no">No</td><td>It can get stuck: local minimum, plateau, ridge.
+              The city map with the misleading guess: stuck at C.</td></tr>
+          <tr><td>Optimal?<br><span class="muted">Is the solution the cheapest?</span></td>
+            <td class="no">No</td><td>It uses only h. With the GPS guess it pays 21 km, but 18 km is possible.</td></tr>
+          <tr><td>Time</td><td>Usually small</td><td>Each move looks at all b neighbours. It always stops, because h gets smaller
+              at every move. With whole-number h: at most h(start) moves (8-queens: h ≤ 28).</td></tr>
+          <tr><td>Space</td><td class="yes">Very small</td><td>Only the current state (and its neighbours while we look at them).</td></tr>
+        </table>
+        <div class="okbox"><b>With random restart</b> it finds a goal in the end, if a goal exists:
+          the chance goes up to 100% (Russell &amp; Norvig). But we can not say how many climbs it needs.</div>
+
+        <h3>Greedy, Beam Search (k = 1) and Hill Climbing</h3>
+        <div class="tablewrap">
+          <table>
+            <tr><th></th><th>Greedy</th><th>Beam, k = 1</th><th>Hill Climbing</th></tr>
+            <tr><td>Keeps between two steps</td><td>all the waiting nodes (+ the explored set)</td><td>1 node: the best child, which becomes the next current node (+ the explored set)</td><td>1 state: the current one</td></tr>
+            <tr><td>Takes</td><td>the best node of the frontier</td><td>the best child</td><td>the best neighbour, <b>only if it is better</b></td></tr>
+            <tr><td>Can go to a worse state?</td><td>Yes</td><td>Yes</td><td class="yes">Never</td></tr>
+          </table>
+        </div>
+        <p><b>Beam k = 1 and Hill Climbing look almost the same.</b> The difference is at C (misleading guess):
+          Beam takes the best child A (h = 2) although it is <b>worse</b> than C (h = 1). Hill Climbing does not move: A is not better, so it stops.</p>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>Hill Climbing in short</h2>
+          <div class="okbox"><b>Good:</b> very simple, very little memory, often fast. Good for big problems where only the
+            final state matters (8-queens).</div>
+          <div class="badbox"><b>Bad:</b> not complete, not optimal. It gets stuck in a local minimum, on a plateau or on a ridge.</div>
+          <p><b>A way out:</b> random restart (step 4).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="navrow">
+    <button id="prevBtn">← Back</button>
+    <button id="nextBtn" class="on">Next →</button>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+/* ================= the maps ================= */
+// The city map is the same as in BFS, DFS and UCS (CityMap.example()). The goal is always G.
+const CITY_POS = { S:[200,36], A:[110,112], B:[290,112], C:[45,192], D:[200,192], E:[355,192], F:[110,266], G:[290,266] };
+const CITY_ROADS = [['S','A',10],['S','B',12],['A','C',5],['A','D',12],['B','D',8],['B','E',4],['C','F',2],['D','G',11],['E','G',5],['F','G',1]];
+const CITY_VIEW = '0 -20 400 346';
+
+// A small map with a guess that is admissible but NOT consistent (look at the road B–A).
+const SMALL_POS = { S:[50,150], B:[170,55], A:[290,150], G:[410,150] };
+const SMALL_ROADS = [['S','A',4],['S','B',1],['A','B',1],['A','G',5]];
+const SMALL_VIEW = '0 10 460 190';
+const SMALL_H = { S:4, A:0, B:5, G:0 };
+
+function makeMap(pos, roads, h, view) {
+  const adj = {};
+  for (const k in pos) adj[k] = {};
+  for (const [a, b, w] of roads) { adj[a][b] = w; adj[b][a] = w; }
+  return { pos, roads, start: 'S', goal: 'G', h, view,
+    hStar: realCost(adj, 'G'),
+    next: s => Object.keys(adj[s]).sort(),  // neighbors in ABC order (like the TreeMap in CityMap.java)
+    cost: (a, b) => adj[a][b] };
+}
+
+// h*(n) = the REAL cheapest cost from n to the goal (Dijkstra, from the goal backwards)
+function realCost(adj, goal) {
+  const d = { [goal]: 0 }, done = new Set();
+  for (;;) {
+    let u = null;
+    for (const k in d) if (!done.has(k) && (u === null || d[k] < d[u])) u = k;
+    if (u === null) return d;
+    done.add(u);
+    for (const v in adj[u]) if (!(v in d) || d[u] + adj[u][v] < d[v]) d[v] = d[u] + adj[u][v];
+  }
+}
+
+// the guesses (h) for the city map, goal G
+const H_CITY = {
+  gps:  { S:14, A:8, B:4, C:3, D:9, E:3, F:1, G:0 },    // admissible and consistent
+  zero: { S:0, A:0, B:0, C:0, D:0, E:0, F:0, G:0 },
+  big:  { S:14, A:15, B:4, C:3, D:9, E:3, F:1, G:0 },   // too big at A: NOT admissible
+  drop: { S:14, A:8, B:4, C:0, D:9, E:3, F:1, G:0 },    // admissible, NOT consistent (road A–C)
+  bad:  { S:9, A:2, B:6, C:1, D:7, E:5, F:6, G:0 },     // a misleading guess (not admissible)
+};
+H_CITY.perfect = makeMap(CITY_POS, CITY_ROADS, H_CITY.zero, CITY_VIEW).hStar;  // h = h*
+const H_NAMES = {
+  gps: 'GPS guess', zero: 'h = 0', big: 'too big at A', drop: 'drops too fast', bad: 'misleading guess', perfect: 'perfect h = h*',
+};
+const cityMap = h => makeMap(CITY_POS, CITY_ROADS, h, CITY_VIEW);
+const smallMap = () => makeMap(SMALL_POS, SMALL_ROADS, SMALL_H, SMALL_VIEW);
+
+/* ================= check a heuristic ================= */
+// admissible: h(n) <= h*(n) for every node
+const overNodes = m => Object.keys(m.pos).filter(s => m.h[s] > m.hStar[s]);
+// consistent: on every road, h can not drop by more than the road cost: |h(a) - h(b)| <= c
+const badRoads = m => m.roads.filter(([a, b, c]) => Math.abs(m.h[a] - m.h[b]) > c);
+
+/* ================= drawing a map ================= */
+const edgeKey = (a, b) => a < b ? a + b : b + a;
+// look: { node: s => class, edge: (a, b) => class, top: s => [text, grey], badge: s => count,
+//         under: s => [text, class] (default: h=...) }
+function drawMap(svg, prob, look = {}) {
+  svg.setAttribute('viewBox', prob.view);
+  const P = prob.pos;
+  let lines = '', weights = '', nodes = '';
+  for (const [a, b, w] of prob.roads) {
+    const cls = (look.edge && look.edge(a, b)) || 'e';
+    lines += `<line class="${cls}" x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}"/>`;
+    const mx = (P[a][0] + P[b][0]) / 2, my = (P[a][1] + P[b][1]) / 2;
+    const bw = String(w).length > 1 ? 24 : 18;
+    weights += `<rect class="wbox" x="${mx - bw / 2}" y="${my - 9}" width="${bw}" height="18" rx="5"/><text class="wtxt" x="${mx}" y="${my}">${w}</text>`;
+  }
+  for (const s in P) {
+    const [x, y] = P[s];
+    const top = look.top ? look.top(s) : null;
+    const k = look.badge ? look.badge(s) : 0;
+    const under = look.under ? look.under(s) : [`h=${prob.h[s]}`, ''];
+    nodes += `<g class="clickable" data-s="${s}">`
+      + `<circle class="nd ${(look.node && look.node(s)) || 'st-new'}" cx="${x}" cy="${y}" r="20"/>`
+      + (s === prob.goal ? `<circle class="goalring" cx="${x}" cy="${y}" r="26"/>` : '')
+      + `<text class="nlbl" x="${x}" y="${y}">${s}</text>`
+      + (top ? `<text class="glbl${top[1] ? ' ex' : ''}" x="${x}" y="${y - 30}">${top[0]}</text>` : '')
+      + (under ? `<text class="hlbl ${under[1]}" x="${x}" y="${y + 37}">${under[0]}</text>` : '')
+      + (k > 1 ? `<circle class="badge" cx="${x + 18}" cy="${y + 18}" r="9"/><text class="badgetxt" x="${x + 18}" y="${y + 18}">×${k}</text>` : '')
+      + `</g>`;
+  }
+  svg.innerHTML = lines + weights + nodes;
+}
+
+/* ================= tabs, theme, answers ================= */
+let tab = 0;
+function setupTabs(names, key, onChange) {
+  $('#tabs').innerHTML = names.map((t, i) => `<button data-i="${i}"><span class="n">${i + 1}</span>${t}</button>`).join('');
+  const set = i => {
+    tab = Math.max(0, Math.min(names.length - 1, i));
+    $$('#tabs button').forEach((b, j) => b.classList.toggle('on', j === tab));
+    $$('section[data-tab]').forEach(s => s.classList.toggle('hidden', +s.dataset.tab !== tab));
+    $('#prevBtn').disabled = tab === 0;
+    $('#nextBtn').disabled = tab === names.length - 1;
+    if (onChange) onChange(tab);
+    try { localStorage.setItem(key, tab); } catch (e) {}
+  };
+  $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) set(+b.dataset.i); };
+  $('#prevBtn').onclick = () => { set(tab - 1); scrollTo(0, 0); };
+  $('#nextBtn').onclick = () => { set(tab + 1); scrollTo(0, 0); };
+  let saved = 0;
+  try { saved = +localStorage.getItem(key) || 0; } catch (e) {}
+  set(saved);
+}
+
+$('#themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+};
+
+// <button data-show="x">Show answer</button> opens/closes the element with id x
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-show]');
+  if (!b) return;
+  const box = document.getElementById(b.dataset.show);
+  box.classList.toggle('hidden');
+  b.textContent = box.classList.contains('hidden') ? (b.dataset.label || 'Show the answer') : 'Hide';
+});
+
+// buttons in a group: only one is "on"
+function oneOf(sel, fn) {
+  $$(sel).forEach(b => b.onclick = () => {
+    $$(sel).forEach(x => x.classList.toggle('on', x === b));
+    fn(b);
+  });
+}
+
+
+/* ================= hill climbing on a map ================= */
+// steepest: look at all the neighbours (ABC order), take the first one with the smallest h,
+// move only if it is better (smaller h). Goal test first.
+function hillMap(m) {
+  const steps = [];
+  let cur = m.start;
+  for (;;) {
+    if (cur === m.goal) { steps.push({ cur, kind: 'goal' }); break; }
+    const nb = m.next(cur).map(s => [s, m.h[s]]);
+    let best = nb[0];
+    for (const x of nb) if (x[1] < best[1]) best = x;
+    if (best[1] >= m.h[cur]) { steps.push({ cur, nb, best, kind: 'stuck' }); break; }
+    steps.push({ cur, nb, best, kind: 'move' });
+    cur = best[0];
+  }
+  return steps;
+}
+const routeOf = (m, steps, upTo) => steps.slice(0, upTo + 1).map(s => s.cur);
+const kmOf = (m, route) => route.slice(1).reduce((sum, s, i) => sum + m.cost(route[i], s), 0);
+
+function stepText(m, st) {
+  if (st.kind === 'goal') return `<b>${st.cur}</b> is the goal (h = 0). <span class="yes">Stop: success.</span>`;
+  const list = st.nb.map(([s, h]) => `${s} ${h}`).join(', ');
+  const head = `At <b>${st.cur}</b> (h = ${m.h[st.cur]}). Neighbours: ${list}. The best: <b>${st.best[0]}</b> (${st.best[1]}).`;
+  if (st.kind === 'move') return `${head} ${st.best[1]} &lt; ${m.h[st.cur]}, so <b>move to ${st.best[0]}</b>.`;
+  return `${head} ${st.best[1]} is not smaller than ${m.h[st.cur]}: no neighbour is better. `
+    + `<span class="no">Stop. ${st.cur} is not the goal: stuck.</span>`;
+}
+
+/* ================= 1. the idea ================= */
+let ideaH = 'gps', ideaI = 0;
+function drawIdea() {
+  const m = cityMap(H_CITY[ideaH]), steps = hillMap(m), st = steps[ideaI];
+  const route = routeOf(m, steps, ideaI), passed = new Set(route.slice(0, -1));
+  const edges = new Set(); for (let i = 1; i < route.length; i++) edges.add(edgeKey(route[i - 1], route[i]));
+  const nbs = new Set(st.nb ? st.nb.map(x => x[0]) : []);
+  const done = st.kind === 'goal';
+  drawMap($('#ideaSvg'), m, {
+    edge: (a, b) => edges.has(edgeKey(a, b)) ? (done ? 'e-path' : 'e-cur') : 'e',
+    node: s => {
+      if (done && route.includes(s)) return 'st-path';
+      if (s === st.cur) return st.kind === 'stuck' ? 'st-bad' : 'st-cur';
+      if (st.best && s === st.best[0] && st.kind === 'move') return 'st-just';
+      if (nbs.has(s)) return 'st-q';
+      if (passed.has(s)) return 'st-ex';
+      return 'st-new';
+    },
+  });
+  let end = '';
+  if (ideaI === steps.length - 1) {
+    end = `<br>Route: ${route.join(' → ')}` + (done ? ` · <b>${kmOf(m, route)} km</b>` : '');
+  }
+  $('#ideaMsg').innerHTML = `<span class="stepno">Step ${ideaI + 1} of ${steps.length}</span>${stepText(m, st)}${end}`;
+  $('#iBack').disabled = ideaI === 0;
+  $('#iStep').disabled = ideaI === steps.length - 1;
+}
+oneOf('[data-ih]', b => { ideaH = b.dataset.ih; ideaI = 0; drawIdea(); });
+$('#iReset').onclick = () => { ideaI = 0; drawIdea(); };
+$('#iBack').onclick = () => { ideaI = Math.max(0, ideaI - 1); drawIdea(); };
+$('#iStep').onclick = () => { ideaI++; drawIdea(); };
+
+/* ================= 2. 8-queens ================= */
+// board[c] = the row of the queen in column c (0 = top row). Every row is used once (a permutation).
+// h = pairs of queens on the same diagonal (rows and columns are always fine)
+function qh(b) {
+  let n = 0;
+  for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++)
+    if (Math.abs(b[i] - b[j]) === j - i) n++;
+  return n;
+}
+const swapped = (b, i, j) => { const x = b.slice(); [x[i], x[j]] = [x[j], x[i]]; return x; };
+// all 28 neighbours: h after each swap; best = the first smallest (1↔2, 1↔3, ..., 2↔3, ...)
+function qLook(b) {
+  const grid = {}, best = { h: Infinity, i: -1, j: -1 };
+  for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) {
+    const v = qh(swapped(b, i, j));
+    grid[i + ',' + j] = v;
+    if (v < best.h) { best.h = v; best.i = i; best.j = j; }
+  }
+  return { grid, best };
+}
+// the queens that are attacked (on a diagonal with another queen)
+function qAttacked(b) {
+  const set = new Set();
+  for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++)
+    if (Math.abs(b[i] - b[j]) === j - i) { set.add(i); set.add(j); }
+  return set;
+}
+// the two examples (found and checked in code, on all 40,320 boards): one best swap at every step, no ties
+const Q_EXAMPLES = [
+  { b: [0, 1, 3, 4, 5, 2, 7, 6], name: 'Example 1' },
+  { b: [0, 1, 2, 5, 6, 7, 4, 3], name: 'Example 2' },
+];
+let qHist = [], qInfo = '';  // qHist = the boards of this climb (start ... now)
+const qNow = () => qHist[qHist.length - 1];
+function qStatus(b) {
+  const cur = qh(b);
+  if (cur === 0) return 'goal';
+  return qLook(b).best.h < cur ? 'move' : 'stuck';
+}
+function qLoad(b, info) { qHist = [b.slice()]; qInfo = info || ''; drawQ(); }
+function qStep() {
+  const b = qNow();
+  if (qStatus(b) !== 'move') return false;
+  const { best } = qLook(b);
+  qHist.push(swapped(b, best.i, best.j));
+  return true;
+}
+function drawQ() {
+  const b = qNow(), cur = qh(b), st = qStatus(b), { grid, best } = qLook(b), hit = qAttacked(b);
+  const swapCols = st === 'move' ? new Set([best.i, best.j]) : new Set();
+  let html = '<thead><tr><th></th>' + [1, 2, 3, 4, 5, 6, 7, 8].map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
+  for (let r = 0; r < 8; r++) {
+    html += `<tr><th>${r + 1}</th>`;
+    for (let c = 0; c < 8; c++) {
+      const dark = (r + c) % 2 ? ' dark' : '';
+      if (b[c] !== r) { html += `<td class="${dark}"></td>`; continue; }
+      const cls = st === 'goal' ? ' good' : swapCols.has(c) ? ' swap' : hit.has(c) ? ' hit' : '';
+      html += `<td class="queen${cls}${dark}">♛</td>`;
+    }
+    html += '</tr>';
+  }
+  $('#qBoard').innerHTML = html;
+
+  let sw = '<tr><th></th>' + [2, 3, 4, 5, 6, 7, 8].map(j => `<th>${j}</th>`).join('') + '</tr>';
+  for (let i = 0; i < 7; i++) {
+    sw += `<tr><th>${i + 1}</th>`;
+    for (let j = 1; j < 8; j++) {
+      if (j <= i) { sw += '<td class="none"></td>'; continue; }
+      const v = grid[i + ',' + j], isBest = st === 'move' && i === best.i && j === best.j;
+      sw += `<td class="${isBest ? 'best' : v === best.h ? 'low' : ''}">${v}</td>`;
+    }
+    sw += '</tr>';
+  }
+  $('#qSwap').innerHTML = sw;
+
+  const moves = qHist.length - 1;
+  let text;
+  if (st === 'goal') text = `h = 0: no queen attacks another. <span class="yes">Solved</span> after ${moves} move${moves === 1 ? '' : 's'}.`;
+  else if (st === 'move') text = `h = <b>${cur}</b>. The best swap: the queens of column <b>${best.i + 1}</b> and column <b>${best.j + 1}</b>`
+    + ` (h = ${best.h}). ${best.h} &lt; ${cur}, so we swap them.`;
+  else text = `h = <b>${cur}</b>. The smallest h after a swap is <b>${best.h}</b>. ${best.h} is not smaller than ${cur}: `
+    + `<span class="no">stuck</span> (${best.h === cur ? 'a flat place: the best swap gives the same h' : 'a local minimum: every swap is worse'}).`;
+  $('#qMsg').innerHTML = `<span class="stepno">${qInfo}</span>${text}`;
+
+  $('#qStats').innerHTML = [[qh(qHist[0]), 'h at the start'], [cur, 'h now'], [moves, 'moves'], [28, 'neighbours']]
+    .map(([v, t]) => `<div class="stat"><b>${v}</b><span>${t}</span></div>`).join('');
+
+  const log = [];
+  for (let i = 1; i < qHist.length; i++) {
+    const a = qHist[i - 1], z = qHist[i], cols = [];
+    z.forEach((r, k) => { if (r !== a[k]) cols.push(k + 1); });
+    log.push(`<li><b>${i}.</b> swap column ${cols[0]} and column ${cols[1]} · h ${qh(a)} → ${qh(z)}</li>`);
+  }
+  $('#log').innerHTML = log.length ? log.reverse().join('') : '<li>No move yet.</li>';
+  $('#qBack').disabled = qHist.length === 1;
+  $('#qStep').disabled = $('#qEnd').disabled = st !== 'move';
+}
+// a random board: the rows 0..7 in a random order (Fisher-Yates shuffle)
+function randomBoard() {
+  const b = [0, 1, 2, 3, 4, 5, 6, 7];
+  for (let i = 7; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [b[i], b[k]] = [b[k], b[i]]; }
+  return b;
+}
+oneOf('[data-qb]', btn => {
+  const v = btn.dataset.qb;
+  if (v === 'rnd') qLoad(randomBoard(), 'A random board');
+  else qLoad(Q_EXAMPLES[+v].b, Q_EXAMPLES[+v].name);
+});
+$('#qReset').onclick = () => { qHist = [qHist[0]]; drawQ(); };
+$('#qBack').onclick = () => { if (qHist.length > 1) qHist.pop(); drawQ(); };
+$('#qStep').onclick = () => { qStep(); drawQ(); };
+$('#qEnd').onclick = () => { while (qStep()); drawQ(); };
+$('#qRestart').onclick = () => {
+  $$('[data-qb]').forEach(x => x.classList.remove('on'));
+  const climbs = [];
+  for (let n = 1; n <= 1000; n++) {
+    const start = randomBoard();
+    qHist = [start];
+    while (qStep());
+    const end = qNow();
+    climbs.push(`h ${qh(start)} → ${qh(end)}${qh(end) === 0 ? ' solved' : ' stuck'}`);
+    if (qh(end) === 0) break;
+  }
+  qInfo = `Random restart: solved on climb ${climbs.length}. `
+    + (climbs.length > 1 ? `Before: ${climbs.slice(0, -1).join(' · ')}. ` : '')
+    + 'Below: the last climb.';
+  drawQ();
+};
+
+/* ================= 3. pseudo code + traces ================= */
+// [text, changed for maximization?]
+const hcLines = max => [
+  ['<span class="kw">function</span> HillClimbing(problem):'],
+  ['    current ← the start state'],
+  ['    <span class="kw">loop</span>:'],
+  ['        <span class="kw">if</span> isGoal(current): <span class="kw">return</span> current    <span class="com"># success</span>'],
+  [max ? '        best ← the neighbour with the <b>biggest</b> h'
+       : '        best ← the neighbour with the <b>smallest</b> h', true],
+  ['        <span class="com"># same h: take the first one</span>'],
+  [max ? '        <span class="kw">if</span> h(best) <b>&lt;=</b> h(current):'
+       : '        <span class="kw">if</span> h(best) <b>&gt;=</b> h(current):', true],
+  ['            <span class="kw">return</span> stuck           <span class="com"># no neighbour is better</span>'],
+  ['        current ← best'],
+].map(([l, chg]) => `<span class="ln${max && chg ? ' chg' : ''}">${l}</span>`).join('');
+$('#hcCode').innerHTML = hcLines(false);
+$('#hcCodeMax').innerHTML = hcLines(true);
+
+function traceTable(m) {
+  const steps = hillMap(m);
+  return '<tr><th class="r">#</th><th>Current (h)</th><th>Neighbours (h)</th><th>Best</th><th>What happens</th></tr>'
+    + steps.map((st, i) => {
+      if (st.kind === 'goal') return `<tr><td class="r">${i + 1}</td><td><b>${st.cur}</b> (0)</td><td></td><td></td><td><span class="yes">goal: stop</span></td></tr>`;
+      return `<tr><td class="r">${i + 1}</td><td><b>${st.cur}</b> (${m.h[st.cur]})</td><td class="mono">${st.nb.map(([s, h]) => s + ' ' + h).join(', ')}</td>`
+        + `<td><b>${st.best[0]}</b> (${st.best[1]})</td><td>${st.kind === 'move' ? `${st.best[1]} &lt; ${m.h[st.cur]}: move` : `${st.best[1]} ≥ ${m.h[st.cur]}: <span class="no">stuck</span>`}</td></tr>`;
+    }).join('')
+    + (steps[steps.length - 1].kind === 'goal'
+      ? `<tr><td></td><td colspan="4">Route: <b>${steps.map(s => s.cur).join(' → ')}</b> · ${kmOf(m, steps.map(s => s.cur))} km</td></tr>`
+      : `<tr><td></td><td colspan="4"><span class="no">Stuck at ${steps[steps.length - 1].cur}</span>, not the goal.</td></tr>`);
+}
+$('#traceA').innerHTML = traceTable(cityMap(H_CITY.gps));
+$('#traceB').innerHTML = traceTable(cityMap(H_CITY.bad));
+
+/* ================= 4. where it gets stuck ================= */
+// a line of 16 places; neighbours = left and right
+const LAND = [9, 7, 5, 4, 5, 6, 6, 6, 6, 5, 3, 1, 0, 2, 4, 6];
+const LX = i => 30 + i * 38.6, LY = h => 26 + (9 - h) * 22;
+let landPath = null;
+function landWalk(i) {
+  const path = [i];
+  for (;;) {
+    if (LAND[i] === 0) return { path, end: 'goal' };
+    const nb = [i - 1, i + 1].filter(j => j >= 0 && j < LAND.length);
+    let best = nb[0];
+    for (const j of nb) if (LAND[j] < LAND[best]) best = j;
+    if (LAND[best] >= LAND[i]) return { path, end: LAND[best] === LAND[i] ? 'plateau' : 'local' };
+    i = best; path.push(i);
+  }
+}
+function drawLand() {
+  const pts = LAND.map((h, i) => `${LX(i)},${LY(h)}`).join(' ');
+  const walk = landPath ? new Set(landPath.path) : new Set();
+  const last = landPath ? landPath.path[landPath.path.length - 1] : -1;
+  let s = `<polyline class="ground" points="${pts}"/>`;
+  s += `<text class="tag" x="${LX(3)}" y="${LY(4) + 34}">local minimum</text>`;
+  s += `<text class="tag" x="${(LX(5) + LX(8)) / 2}" y="${LY(6) - 16}">plateau</text>`;
+  s += `<text class="tag" x="${LX(12)}" y="${LY(0) + 34}">goal (h = 0)</text>`;
+  LAND.forEach((h, i) => {
+    let cls = '';
+    if (i === last) cls = landPath.end === 'goal' ? 'goal' : 'stuck';
+    else if (landPath && i === landPath.path[0]) cls = 'cur';
+    else if (walk.has(i)) cls = 'walk';
+    s += `<g class="pt ${cls}" data-i="${i}"><circle cx="${LX(i)}" cy="${LY(h)}" r="9"/>`
+      + `<text class="hv" x="${LX(i)}" y="${LY(h) + 22}">${h}</text></g>`;
+  });
+  $('#landSvg').innerHTML = s;
+  if (!landPath) { $('#landMsg').innerHTML = 'Click a point. The number under a point is its h.'; return; }
+  const p = landPath.path, word = { goal: '<span class="yes">the goal: success</span>',
+    local: '<span class="no">a local minimum: both neighbours are worse</span>',
+    plateau: '<span class="no">a plateau: no neighbour is better (the same h)</span>' }[landPath.end];
+  $('#landMsg').innerHTML = `Start h = ${LAND[p[0]]}. Path: ${p.map(i => LAND[i]).join(' → ')}. It stops at h = ${LAND[p[p.length - 1]]}: ${word}.`;
+}
+$('#landSvg').addEventListener('click', e => {
+  const g = e.target.closest('.pt');
+  if (g) { landPath = landWalk(+g.dataset.i); drawLand(); }
+});
+
+// the ridge: h = 3·|x − y| + (8 − x − y). The goal is the bottom right square (h = 0).
+const RH = (x, y) => 3 * Math.abs(x - y) + (8 - x - y);
+let ridgeWalk = null;
+function walkRidge(x, y) {
+  const path = [[x, y]];
+  for (;;) {
+    if (RH(x, y) === 0) return { path, end: 'goal' };
+    // up, down, left, right
+    const nb = [[x, y - 1], [x, y + 1], [x - 1, y], [x + 1, y]].filter(([a, b]) => a >= 0 && a < 5 && b >= 0 && b < 5);
+    let best = nb[0];
+    for (const p of nb) if (RH(...p) < RH(...best)) best = p;
+    if (RH(...best) >= RH(x, y)) return { path, end: 'stuck' };
+    [x, y] = best; path.push(best);
+  }
+}
+function drawRidge() {
+  const key = p => p[0] + ',' + p[1];
+  let html = '';
+  // the example (nothing clicked yet): the middle square, its 4 neighbours, and the better diagonal square
+  if (!ridgeWalk) {
+    const nb = new Set(['2,1', '2,3', '1,2', '3,2']);
+    for (let y = 0; y < 5; y++) {
+      html += '<tr>';
+      for (let x = 0; x < 5; x++) {
+        const k = key([x, y]);
+        const cls = k === '2,2' ? 'cur' : nb.has(k) ? 'nb' : k === '3,3' ? 'better' : x === y ? 'diag' : '';
+        html += `<td class="${cls}" data-x="${x}" data-y="${y}">${RH(x, y)}</td>`;
+      }
+      html += '</tr>';
+    }
+    $('#ridge').innerHTML = html;
+    $('#ridgeMsg').innerHTML = 'We are on <b>4</b>. The neighbours (orange) are 8, 6, 8, 6: all worse, so we stop. '
+      + 'The <b>2</b> (green) is better, but it is a diagonal step: <span class="no">not a neighbour</span>.';
+    return;
+  }
+  const walk = new Set(ridgeWalk.path.map(key));
+  const first = key(ridgeWalk.path[0]), last = key(ridgeWalk.path[ridgeWalk.path.length - 1]);
+  for (let y = 0; y < 5; y++) {
+    html += '<tr>';
+    for (let x = 0; x < 5; x++) {
+      const k = key([x, y]);
+      let cls = x === y ? 'diag' : '';
+      if (k === last) cls = ridgeWalk.end === 'goal' ? 'goal' : 'stuck';
+      else if (k === first) cls = 'cur';
+      else if (walk.has(k)) cls = 'walk';
+      html += `<td class="${cls}" data-x="${x}" data-y="${y}">${RH(x, y)}</td>`;
+    }
+    html += '</tr>';
+  }
+  $('#ridge').innerHTML = html;
+  const p = ridgeWalk.path, endH = RH(...p[p.length - 1]);
+  $('#ridgeMsg').innerHTML = `Path: ${p.map(q => RH(...q)).join(' → ')}. `
+    + (ridgeWalk.end === 'goal' ? '<span class="yes">The goal: success.</span>'
+      : `<span class="no">Stuck at h = ${endH}</span>: every step up, down, left or right goes up.`
+        + (p[p.length - 1][0] === p[p.length - 1][1] ? ' It is on the ridge (the blue diagonal).' : ''));
+}
+$('#ridge').addEventListener('click', e => {
+  const td = e.target.closest('td');
+  if (td) { ridgeWalk = walkRidge(+td.dataset.x, +td.dataset.y); drawRidge(); }
+});
+
+/* ================= start ================= */
+drawIdea();
+qLoad(Q_EXAMPLES[0].b, Q_EXAMPLES[0].name);
+drawLand();
+drawRidge();
+setupTabs(['The idea', '8-queens', 'Pseudo code', 'Where it gets stuck', 'Is it good?'], 'hill-tab');
+</script>
+</body>
+</html>
