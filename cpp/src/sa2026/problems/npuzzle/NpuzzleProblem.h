@@ -1,7 +1,9 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
+#include "sa2026/core/HeuristicFunction.h"
 #include "sa2026/core/IAction.h"
 #include "sa2026/core/Problem.h"
 #include "sa2026/core/State.h"
@@ -15,8 +17,8 @@ namespace sa2026::problems::npuzzle {
  * Goal:          1, 2, 3, ..., n*n-1 and the empty cell at the end.
  * Actions:       move the empty cell up, down, left, right.
  * Cost:          every move costs 1.
- *
- * There is no heuristic yet. We add it in a later session (for example the Hamming distance).
+ * Heuristic:     the Manhattan distance of the tiles (h2) by default.
+ *                Change it with setHeuristicFunction(std::make_shared<MisplacedTiles>()) to use h1.
  *
  * Checks on the start board:
  *  - The start board is checked: it must be n x n, have every number 0 .. n*n-1 once,
@@ -52,12 +54,19 @@ public:
     double getActionCost(const core::StatePtr& s, const core::ActionPtr& a,
                          const core::StatePtr& next) const override;
 
+    // used by Greedy and A*
+    std::shared_ptr<const core::HeuristicFunction> getHeuristicFunction() const override;
+
+    // choose another heuristic, for example std::make_shared<MisplacedTiles>()
+    void setHeuristicFunction(std::shared_ptr<const core::HeuristicFunction> newHeuristic);
+
 private:
     // checks the start board and throws an error with a clear message if it is wrong
     static void check(const std::vector<int>& tiles);
 
     core::StatePtr initialState;
     std::vector<core::ActionPtr> actions;
+    std::shared_ptr<const core::HeuristicFunction> heuristic;
 };
 
 }  // namespace sa2026::problems::npuzzle

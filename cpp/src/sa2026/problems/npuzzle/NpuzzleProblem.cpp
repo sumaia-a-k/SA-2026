@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "sa2026/problems/npuzzle/ManhattanDistance.h"
 #include "sa2026/problems/npuzzle/MoveEmptyAction.h"
 #include "sa2026/problems/npuzzle/NpuzzleState.h"
 
@@ -13,6 +14,7 @@ namespace sa2026::problems::npuzzle {
 NpuzzleProblem::NpuzzleProblem(const std::vector<int>& tiles) {
     check(tiles);
     initialState = std::make_shared<NpuzzleState>(tiles);
+    heuristic = std::make_shared<ManhattanDistance>();
 
     // the order of this vector is the order the algorithms try the actions
     actions.push_back(std::make_shared<MoveEmptyAction>("Move empty up", -1, 0));
@@ -92,6 +94,14 @@ std::vector<core::ActionPtr> NpuzzleProblem::getActions() const {
 double NpuzzleProblem::getActionCost(const core::StatePtr& s, const core::ActionPtr& a,
                                      const core::StatePtr& next) const {
     return 1;
+}
+
+std::shared_ptr<const core::HeuristicFunction> NpuzzleProblem::getHeuristicFunction() const {
+    return heuristic;
+}
+
+void NpuzzleProblem::setHeuristicFunction(std::shared_ptr<const core::HeuristicFunction> newHeuristic) {
+    heuristic = newHeuristic;
 }
 
 }  // namespace sa2026::problems::npuzzle
