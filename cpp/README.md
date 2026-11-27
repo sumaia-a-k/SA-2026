@@ -48,6 +48,7 @@ So the script builds and runs **one program each time**. You give the program na
 | Maze demo | `java -cp out sa2026.problems.maze.MazeDemo` | `.\run.bat sa2026.problems.maze.MazeDemo` |
 | Word ladder demo | `java -cp out sa2026.problems.wordladder.WordLadderDemo` | `.\run.bat sa2026.problems.wordladder.WordLadderDemo` |
 | City map demo | `java -cp out sa2026.problems.citymap.CityMapDemo` | `.\run.bat sa2026.problems.citymap.CityMapDemo` |
+| 8-queens demo (Hill Climbing) | `java -cp out sa2026.problems.queens.QueensDemo` | `.\run.bat sa2026.problems.queens.QueensDemo` |
 | Maze demo (student version) | `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` | `.\run.bat sa2026.problems.incomplete_code.maze.MazeDemo` |
 | Word ladder demo (student version) | `java -cp out sa2026.problems.incomplete_code.wordladder.WordLadderDemo` | `.\run.bat sa2026.problems.incomplete_code.wordladder.WordLadderDemo` |
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `.\run.bat sa2026.algorithms.incomplete_code.BFSDemo` |
@@ -56,6 +57,7 @@ So the script builds and runs **one program each time**. You give the program na
 | Check your Greedy (student version) | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` | `.\run.bat sa2026.algorithms.incomplete_code.GreedyDemo` |
 | Check your A* (student version) | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` | `.\run.bat sa2026.algorithms.incomplete_code.AStarDemo` |
 | Check your Beam Search (student version) | `java -cp out sa2026.algorithms.incomplete_code.BeamDemo` | `.\run.bat sa2026.algorithms.incomplete_code.BeamDemo` |
+| Check your Hill Climbing (student version) | `java -cp out sa2026.algorithms.incomplete_code.HillClimbingDemo` | `.\run.bat sa2026.algorithms.incomplete_code.HillClimbingDemo` |
 
 In Git Bash, Linux or macOS, write `./run.sh` instead of `.\run.bat`.
 
@@ -121,7 +123,8 @@ cpp/
     │   ├── Node.h, Node.cpp            Node.java
     │   ├── Problem.h, Problem.cpp      Problem.java
     │   ├── SearchAlgorithm.h, .cpp     SearchAlgorithm.java
-    │   └── HeuristicFunction.h         HeuristicFunction.java
+    │   ├── HeuristicFunction.h         HeuristicFunction.java
+    │   └── SeededRandom.h, .cpp        SeededRandom.java (the same random numbers in Java, Python and C++)
     ├── algorithms/
     │   ├── BFS.h, BFS.cpp              BFS.java
     │   ├── BFSOptimized.h, .cpp        BFSOptimized.java
@@ -133,6 +136,9 @@ cpp/
     │   ├── Greedy.h, Greedy.cpp        Greedy.java
     │   ├── AStar.h, AStar.cpp          AStar.java
     │   ├── BeamSearch.h, .cpp          BeamSearch.java
+    │   ├── HillClimbing.h, .cpp        HillClimbing.java
+    │   ├── StochasticHillClimbing.h, .cpp   StochasticHillClimbing.java
+    │   ├── RandomRestart.h, .cpp       RandomRestart.java
     │   └── incomplete_code/            the student versions: write the body of search()
     │       ├── BFS, BFSOptimized (.h + .cpp)
     │       ├── BFSDemo.cpp             checks your BFS with the finished one (BFSDemo.java)
@@ -144,7 +150,9 @@ cpp/
     │       ├── GreedyDemo.cpp          checks your Greedy with the finished one (GreedyDemo.java)
     │       ├── AStarDemo.cpp           checks your A* with the finished one (AStarDemo.java)
     │       ├── BeamSearch (.h + .cpp)
-    │       └── BeamDemo.cpp            checks your Beam Search with the finished one (BeamDemo.java)
+    │       ├── BeamDemo.cpp            checks your Beam Search with the finished one (BeamDemo.java)
+    │       ├── HillClimbing (.h + .cpp)     (write the body of climb())
+    │       └── HillClimbingDemo.cpp    checks your Hill Climbing with the finished one (HillClimbingDemo.java)
     └── problems/
         ├── maze/                       Maze, MazeState, MazeAction, MazeProblem (.h + .cpp), MazeDemo.cpp,
         │                               ManhattanDistance (.h + .cpp, the heuristic)
@@ -153,6 +161,8 @@ cpp/
         ├── wordladder/                 WordDictionary, WordLadderState, ChangeLetterAction, ... , WordLadderDemo.cpp
         ├── citymap/                    CityMap, CityState, DriveAction, CityMapProblem (.h + .cpp), CityMapDemo.cpp,
         │                               CityHeuristic (.h + .cpp, the heuristic: a table of guesses)
+        ├── queens/                     QueensState, SwapQueensAction, QueensProblem (.h + .cpp), QueensDemo.cpp,
+        │                               DiagonalAttacks (.h + .cpp, the heuristic)
         └── incomplete_code/            the student versions, with the same TODO steps as Java
             ├── maze/
             └── wordladder/
