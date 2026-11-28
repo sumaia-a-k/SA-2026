@@ -41,6 +41,7 @@ After every change, just run the command again.
 | Maze demo | `java -cp out sa2026.problems.maze.MazeDemo` | `python -m sa2026.problems.maze.maze_demo` |
 | Word ladder demo | `java -cp out sa2026.problems.wordladder.WordLadderDemo` | `python -m sa2026.problems.wordladder.word_ladder_demo` |
 | City map demo | `java -cp out sa2026.problems.citymap.CityMapDemo` | `python -m sa2026.problems.citymap.city_map_demo` |
+| 8-queens demo (Hill Climbing) | `java -cp out sa2026.problems.queens.QueensDemo` | `python -m sa2026.problems.queens.queens_demo` |
 | Maze demo (student version) | `java -cp out sa2026.problems.incomplete_code.maze.MazeDemo` | `python -m sa2026.problems.incomplete_code.maze.maze_demo` |
 | Word ladder demo (student version) | `java -cp out sa2026.problems.incomplete_code.wordladder.WordLadderDemo` | `python -m sa2026.problems.incomplete_code.wordladder.word_ladder_demo` |
 | Check your BFS (student version) | `java -cp out sa2026.algorithms.incomplete_code.BFSDemo` | `python -m sa2026.algorithms.incomplete_code.bfs_demo` |
@@ -48,6 +49,8 @@ After every change, just run the command again.
 | Check your UCS (student version) | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` | `python -m sa2026.algorithms.incomplete_code.ucs_demo` |
 | Check your Greedy (student version) | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` | `python -m sa2026.algorithms.incomplete_code.greedy_demo` |
 | Check your A* (student version) | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` | `python -m sa2026.algorithms.incomplete_code.a_star_demo` |
+| Check your Beam Search (student version) | `java -cp out sa2026.algorithms.incomplete_code.BeamDemo` | `python -m sa2026.algorithms.incomplete_code.beam_demo` |
+| Check your Hill Climbing (student version) | `java -cp out sa2026.algorithms.incomplete_code.HillClimbingDemo` | `python -m sa2026.algorithms.incomplete_code.hill_climbing_demo` |
 
 The rule is simple: take the Java class name, write the file name in `snake_case`, and don't add `.py`.
 
@@ -96,6 +99,10 @@ python/
     │   ├── ucs.py                  UCS.java
     │   ├── greedy.py               Greedy.java
     │   ├── a_star.py               AStar.java
+    │   ├── beam_search.py          BeamSearch.java
+    │   ├── hill_climbing.py        HillClimbing.java
+    │   ├── stochastic_hill_climbing.py   StochasticHillClimbing.java
+    │   ├── random_restart.py       RandomRestart.java
     │   └── incomplete_code/        the student versions: write the body of search()
     │       ├── bfs.py, bfs_optimized.py
     │       ├── bfs_demo.py         checks your BFS with the finished one (BFSDemo.java)
@@ -105,7 +112,11 @@ python/
     │       ├── ucs_demo.py         checks your UCS with the finished one (UCSDemo.java)
     │       ├── greedy.py, a_star.py
     │       ├── greedy_demo.py      checks your Greedy with the finished one (GreedyDemo.java)
-    │       └── a_star_demo.py      checks your A* with the finished one (AStarDemo.java)
+    │       ├── a_star_demo.py      checks your A* with the finished one (AStarDemo.java)
+    │       ├── beam_search.py
+    │       ├── beam_demo.py        checks your Beam Search with the finished one (BeamDemo.java)
+    │       ├── hill_climbing.py    (write the body of climb())
+    │       └── hill_climbing_demo.py   checks your Hill Climbing with the finished one (HillClimbingDemo.java)
     └── problems/
         ├── maze/                   maze.py, maze_state.py, maze_action.py, maze_problem.py, maze_demo.py,
         │                           manhattan_distance.py (the heuristic)
@@ -114,6 +125,8 @@ python/
         ├── wordladder/             word_dictionary.py, word_ladder_state.py, change_letter_action.py, ...
         ├── citymap/                city_map.py, city_state.py, drive_action.py, city_map_problem.py, city_map_demo.py,
         │                           city_heuristic.py (the heuristic: a table of guesses)
+        ├── queens/                 queens_state.py, swap_queens_action.py, queens_problem.py, queens_demo.py,
+        │                           diagonal_attacks.py (the heuristic)
         └── incomplete_code/        the student versions, with the same TODO steps as Java
             ├── maze/
             └── wordladder/

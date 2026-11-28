@@ -11,6 +11,10 @@ std::shared_ptr<const HeuristicFunction> Problem::getHeuristicFunction() const {
     throw std::logic_error("This problem does not have a heuristic function.");
 }
 
+StatePtr Problem::getRandomState(std::mt19937& random) const {
+    throw std::logic_error("This problem can not make a random start state.");
+}
+
 NodePtr Problem::solve(SearchAlgorithm& algorithm) const {
     return algorithm.search(*this);  // *this = this problem object
 }

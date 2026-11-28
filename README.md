@@ -8,7 +8,8 @@ The code is added step by step, one session at a time.
 
 - How to describe a problem as states and actions.
 - Uninformed search: BFS, DFS, Depth-Limited DFS, Uniform Cost Search.
-- Informed search: Greedy Best-First Search and A*.
+- Informed search: Greedy Best-First Search, A* and Beam Search.
+- Local search: Hill Climbing (steepest, stochastic and random restart), with the 8-queens problem.
 - How to design and use heuristic functions.
 
 ## The code structure (start here)
@@ -111,8 +112,10 @@ search for `TODO` in the files and follow the steps. The same tasks are in the P
 | `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `UCS`. | `java -cp out sa2026.algorithms.incomplete_code.UCSDemo` |
 | `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `Greedy`. | `java -cp out sa2026.algorithms.incomplete_code.GreedyDemo` |
 | `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `AStar`. | `java -cp out sa2026.algorithms.incomplete_code.AStarDemo` |
+| `src/sa2026/algorithms/incomplete_code/` | Write the body of `search()` in `BeamSearch`. | `java -cp out sa2026.algorithms.incomplete_code.BeamDemo` |
+| `src/sa2026/algorithms/incomplete_code/` | Write the body of `climb()` in `HillClimbing`. | `java -cp out sa2026.algorithms.incomplete_code.HillClimbingDemo` |
 
-`BFSDemo` runs your BFS and the finished BFS on the same problems. `DFSDemo` does the same for the DFS versions, `UCSDemo` for UCS, `GreedyDemo` for Greedy and `AStarDemo` for A*.
+`BFSDemo` runs your BFS and the finished BFS on the same problems. `DFSDemo` does the same for the DFS versions, `UCSDemo` for UCS, `GreedyDemo` for Greedy, `AStarDemo` for A*, `BeamDemo` for Beam Search and `HillClimbingDemo` for Hill Climbing.
 For each check it prints `OK`, or `NOT YET` with what is still different (for example `generated nodes = 49, it should be 50`).
 If it does not stop, your search never ends: stop it with `Ctrl+C` and look at your loop.
 

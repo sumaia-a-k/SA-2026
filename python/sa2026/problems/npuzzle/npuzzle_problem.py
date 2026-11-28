@@ -1,8 +1,10 @@
 import math
 
+from sa2026.core.heuristic_function import HeuristicFunction
 from sa2026.core.i_action import IAction
 from sa2026.core.problem import Problem
 from sa2026.core.state import State
+from sa2026.problems.npuzzle.manhattan_distance import ManhattanDistance
 from sa2026.problems.npuzzle.move_empty_action import MoveEmptyAction
 from sa2026.problems.npuzzle.npuzzle_state import NpuzzleState
 
@@ -15,8 +17,8 @@ class NpuzzleProblem(Problem):
     Goal:          1, 2, 3, ..., n*n-1 and the empty cell at the end.
     Actions:       move the empty cell up, down, left, right.
     Cost:          every move costs 1.
-
-    There is no heuristic yet. We add it in a later session (for example the Hamming distance).
+    Heuristic:     the Manhattan distance of the tiles (h2) by default.
+                   Change it with set_heuristic_function(MisplacedTiles()) to use h1.
 
     Checks on the start board:
      - The start board is checked: it must be n x n, have every number 0 .. n*n-1 once,
@@ -29,6 +31,7 @@ class NpuzzleProblem(Problem):
     def __init__(self, *tiles: int):
         NpuzzleProblem._check(tiles)
         self._initial_state = NpuzzleState(tiles)
+        self._heuristic: HeuristicFunction = ManhattanDistance()
 
         # the order of this list is the order the algorithms try the actions
         self._actions: list[IAction] = [
@@ -97,3 +100,11 @@ class NpuzzleProblem(Problem):
     # every move costs the same
     def get_action_cost(self, s: State, a: IAction, next_state: State) -> float:
         return 1
+
+    # used by Greedy and A*
+    def get_heuristic_function(self) -> HeuristicFunction:
+        return self._heuristic
+
+    # choose another heuristic, for example MisplacedTiles()
+    def set_heuristic_function(self, heuristic: HeuristicFunction):
+        self._heuristic = heuristic

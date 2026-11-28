@@ -3,6 +3,7 @@ package sa2026.problems.npuzzle;
 import java.util.ArrayList;
 import java.util.List;
 
+import sa2026.core.HeuristicFunction;
 import sa2026.core.IAction;
 import sa2026.core.Problem;
 import sa2026.core.State;
@@ -14,8 +15,8 @@ import sa2026.core.State;
  * Goal:          1, 2, 3, ..., n*n-1 and the empty cell at the end.
  * Actions:       move the empty cell up, down, left, right.
  * Cost:          every move costs 1.
- *
- * There is no heuristic yet. We add it in a later session (for example the Hamming distance).
+ * Heuristic:     the Manhattan distance of the tiles (h2) by default.
+ *                Change it with setHeuristicFunction(new MisplacedTiles()) to use h1.
  *
  * Checks on the start board:
  *  - The start board is checked: it must be n x n, have every number 0 .. n*n-1 once,
@@ -26,6 +27,7 @@ public class NpuzzleProblem extends Problem {
 
     private final State initialState;
     private final List<IAction> actions = new ArrayList<>();
+    private HeuristicFunction heuristic = new ManhattanDistance();
 
     /*
      * "int..." (varargs): give the tiles row by row, for example
@@ -124,5 +126,16 @@ public class NpuzzleProblem extends Problem {
     @Override
     public double getActionCost(State s, IAction a, State next) {
         return 1;
+    }
+
+    // used by Greedy and A*
+    @Override
+    public HeuristicFunction getHeuristicFunction() {
+        return heuristic;
+    }
+
+    // choose another heuristic, for example new MisplacedTiles()
+    public void setHeuristicFunction(HeuristicFunction heuristic) {
+        this.heuristic = heuristic;
     }
 }
