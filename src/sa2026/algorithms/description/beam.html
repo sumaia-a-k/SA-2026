@@ -409,30 +409,6 @@ a { color: var(--accent); }
           <div class="badbox"><b>Bad:</b> not complete, not optimal. A bad guess or a small k can throw away the goal.</div>
           <p>Next lesson: <a href="hillclimbing.html"><b>Hill Climbing →</b></a> It keeps only <b>one</b> state, like k = 1.</p>
         </div>
-        <div class="card">
-          <h2>Check yourself</h2>
-          <ol class="tasks">
-            <li>Beam Search with <b>no limit</b> on k is the same as which algorithm?
-              <button data-show="q1">Show the answer</button>
-              <div class="ans hidden" id="q1">Greedy Best-First Search. Nothing is thrown away.</div></li>
-            <li>With the GPS guess, Beam Search (k = 1) and Greedy find the same path. So why use Beam Search?
-              <button data-show="q2">Show the answer</button>
-              <div class="ans hidden" id="q2">Same answer, less memory. After each step, its frontier has at most 1 node.
-                Greedy's frontier grows to <span class="gMax2"></span> nodes. On a big problem this matters a lot.</div></li>
-            <li>Misleading guess, graph search, k = 1: why does Beam Search stop with failure?
-              <button data-show="q3">Show the answer</button>
-              <div class="ans hidden" id="q3">At C, the copy of A (h = 2) takes the only place, and F (h = 6) is thrown away.
-                A is already explored, so it is skipped. The frontier is empty.</div></li>
-            <li><b>What happens if</b> Beam Search does not add a child that is already explored?
-              Run the misleading guess, graph search, k = 1 again, by hand.
-              <button data-show="q4">Show the answer</button>
-              <div class="ans hidden" id="q4">At A, S is explored, so only C<sub>1</sub> and D<sub>7</sub> are added. Keep C.
-                At C, A is explored, so only F<sub>6</sub> is added. Keep F.
-                At F, C is explored, so only G<sub>0</sub> is added. Take G: the goal.
-                Path S → A → C → F → G, 18 km. This time it works (and it is even the cheapest path, by luck).
-                A place in the frontier is not wasted on an explored city.</div></li>
-          </ol>
-        </div>
       </div>
     </div>
   </section>
@@ -947,7 +923,6 @@ $('#traceB').innerHTML = traceTable(beamRun('bad', 2));
 const G_GPS = beamRun('gps', 0);
 $('#gPath').textContent = pathOf(beamRun('gps', 1).found) + ', ' + beamRun('gps', 1).found.g + ' km';
 $('#gMax').textContent = G_GPS.maxFront;
-$$('.gMax2').forEach(e => e.textContent = G_GPS.maxFront);
 
 /* ================= start ================= */
 drawIdea();
