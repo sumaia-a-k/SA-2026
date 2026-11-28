@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from random import Random
 from typing import TYPE_CHECKING
 
 from sa2026.core.heuristic_function import HeuristicFunction
@@ -46,6 +47,12 @@ class Problem(ABC):
     # Override it if your problem has a heuristic.
     def get_heuristic_function(self) -> HeuristicFunction:
         raise NotImplementedError("This problem does not have a heuristic function.")
+
+    # A random start state, used by RandomRestart.
+    # By default a problem can not make one, so this method raises an error.
+    # Override it if any state of your problem can be a start (for example 8-queens).
+    def get_random_state(self, random: Random) -> State:
+        raise NotImplementedError("This problem can not make a random start state.")
 
     # solves this problem with the given algorithm and returns the goal node (or None)
     def solve(self, algorithm: "SearchAlgorithm") -> Node | None:

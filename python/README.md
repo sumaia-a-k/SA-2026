@@ -88,8 +88,7 @@ python/
     │   ├── node.py                 Node.java
     │   ├── problem.py              Problem.java
     │   ├── search_algorithm.py     SearchAlgorithm.java
-    │   ├── heuristic_function.py   HeuristicFunction.java
-    │   └── seeded_random.py        SeededRandom.java (the same random numbers in Java, Python and C++)
+    │   └── heuristic_function.py   HeuristicFunction.java
     ├── algorithms/
     │   ├── bfs.py                  BFS.java
     │   ├── bfs_optimized.py        BFSOptimized.java

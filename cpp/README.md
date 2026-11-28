@@ -123,8 +123,7 @@ cpp/
     │   ├── Node.h, Node.cpp            Node.java
     │   ├── Problem.h, Problem.cpp      Problem.java
     │   ├── SearchAlgorithm.h, .cpp     SearchAlgorithm.java
-    │   ├── HeuristicFunction.h         HeuristicFunction.java
-    │   └── SeededRandom.h, .cpp        SeededRandom.java (the same random numbers in Java, Python and C++)
+    │   └── HeuristicFunction.h         HeuristicFunction.java
     ├── algorithms/
     │   ├── BFS.h, BFS.cpp              BFS.java
     │   ├── BFSOptimized.h, .cpp        BFSOptimized.java

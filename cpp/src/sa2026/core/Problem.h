@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <random>  // std::mt19937
 #include <vector>
 
 #include "sa2026/core/HeuristicFunction.h"
@@ -45,6 +46,13 @@ public:
      * Override it if your problem has a heuristic.
      */
     virtual std::shared_ptr<const HeuristicFunction> getHeuristicFunction() const;
+
+    /*
+     * A random start state, used by RandomRestart.
+     * By default a problem can not make one, so this method throws an error.
+     * Override it if any state of your problem can be a start (for example 8-queens).
+     */
+    virtual StatePtr getRandomState(std::mt19937& random) const;
 
     // solves this problem with the given algorithm and returns the goal node (or nullptr)
     NodePtr solve(SearchAlgorithm& algorithm) const;
